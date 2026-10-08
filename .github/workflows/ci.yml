@@ -48,6 +48,12 @@ jobs:
       - run: pip install --require-hashes -r requirements.lock && pip install --no-deps -e . && pip install pytest==9.1.1 && pytest -q
         working-directory: services/worker
       - run: python scripts/generate_contracts.py && git diff --exit-code contracts
+  container-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --progress=plain -t ruxi-core:ci -f infra/core.production.Dockerfile .
+      - run: docker build --progress=plain -t ruxi-worker:ci services/worker
   protocol-client:
     runs-on: ubuntu-latest
     steps:

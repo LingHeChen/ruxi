@@ -24,21 +24,22 @@ try {
  const begin=Date.now();let next=begin;
  interval=setInterval(()=>console.log(JSON.stringify({elapsed_s:Math.round((Date.now()-begin)/1000),attempts,errors,errorCodes,inflight})),60000);
  for(let index=0;Date.now()-begin<duration*1000;index++){
-  let p=players[index%players.length];
+  const p=players[index%players.length];
   if(p.paused){next+=1000/rate;await sleep(Math.max(0,next-Date.now()));continue;}
   if(inflight>=rate*5) throw Error('stop condition: outstanding requests exceed five seconds of workload');
-  attempts++;inflight++;p.loadInflight=(p.loadInflight??0)+1;const t=Date.now();
-  p.command('chat_send',{text:'synthetic load '+index}).then(()=>samples.push(Date.now()-t)).catch(e=>{errors++;const key=e.code??e.message;errorCodes[key]=(errorCodes[key]??0)+1;}).finally(()=>{inflight--;p.loadInflight--;p.frames=[];p.events=[];});
+  attempts++;inflight++;const t=Date.now();
+  p.command('chat_send',{text:'synthetic load '+index}).then(()=>samples.push(Date.now()-t)).catch(e=>{errors++;const key=e.code??e.message;errorCodes[key]=(errorCodes[key]??0)+1;}).finally(()=>{inflight--;p.frames=[];p.events=[];});
   next+=1000/rate;await sleep(Math.max(0,next-Date.now()));
   // Reconnect 10% of clients during the last five minutes, at most one every five seconds.
   const storm=(stormOnly || duration>=1500 && Date.now()-begin>=1200000) && index%Math.max(1,Math.round(rate*5))===0;
   if (storm || Date.now()-p.authAt>600000) {
-    if(storm){p=players[Math.floor(index/Math.max(1,Math.round(rate*5)))%Math.max(1,Math.ceil(players.length*.1))];stormMembers.add(p.member);}
-    if(p.paused)continue;
-    p.paused=true;
-    const target=p;
+    const target=storm?players[Math.floor(index/Math.max(1,Math.round(rate*5)))%Math.max(1,Math.ceil(players.length*.1))]:p;
+    if(storm)stormMembers.add(target.member);
+    if(target.paused)continue;
+    target.paused=true;
     const task=(async()=>{const p=target;
-      while(p.loadInflight>0) await sleep(50);
+      const drainUntil=Date.now()+15000;
+      while(p.loadInflight>0){if(Date.now()>drainUntil)throw Error('reconnect drain timed out');await sleep(50);}
       if(Date.now()-p.authAt>600000){const auth=await p.http('POST','/v1/auth/refresh',{refresh_token:p.refreshToken,device_id:p.device,refresh_request_id:crypto.randomUUID()});p.token=auth.access_token;p.refreshToken=auth.refresh_token;p.authAt=Date.now();}
       await p.close();await sleep(100);await p.connect(p.room,true);reconnects++;
     })().catch(e=>{errors++;const key=e.code??e.message;errorCodes[key]=(errorCodes[key]??0)+1;}).finally(()=>{target.paused=false;reconnectTasks.delete(task);});

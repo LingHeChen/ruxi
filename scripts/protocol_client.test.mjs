@@ -12,3 +12,14 @@ test('persistent projection gap has a bounded buffer',()=>{
  const p=new Player();p.view={};for(let seq=2;seq<=201;seq++)p.ingest(event(seq,'future'));
  assert.throws(()=>p.ingest(event(202,'overflow')),/bounded buffer/);assert.equal(p.seq,0);
 });
+
+test('in-flight accounting stays with the actor when the caller changes reconnect target',async()=>{
+ const first=new Player(),second=new Player();let finishFirst,finishSecond;
+ first.call=()=>new Promise(r=>finishFirst=r);second.call=()=>new Promise(r=>finishSecond=r);
+ let target=first;const a=target.command('start',{}, {}, {});target=second;const b=target.command('start',{}, {}, {});
+ assert.equal(first.loadInflight,1);assert.equal(second.loadInflight,1);
+ finishSecond({response:{status:'committed',receipt_seq:0}});await b;
+ assert.equal(second.loadInflight,0);assert.equal(first.loadInflight,1);
+ finishFirst({response:{error:{code:'TARGET_CHANGED'}}});await assert.rejects(a,e=>e.code==='TARGET_CHANGED');
+ assert.equal(first.loadInflight,0);
+});

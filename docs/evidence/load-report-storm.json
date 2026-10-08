@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-08T15:04:00.010Z",
+  "host": {
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpu": "Apple M4",
+    "logical_cpus": 10,
+    "memory_bytes": 34359738368
+  },
+  "rooms": 100,
+  "sockets": 300,
+  "requested_rate": 100,
+  "duration_s": 300,
+  "attempts": 29992,
+  "errors": 0,
+  "errorCodes": {},
+  "reconnections": 60,
+  "storm_distinct_members": 30,
+  "storm_only": true,
+  "successful": 29992,
+  "projection_gaps_repaired": 0,
+  "round_trip_and_local_view_apply_ms": {
+    "p50": 65,
+    "p95": 126,
+    "p99": 129
+  },
+  "total_elapsed_s": 379.476,
+  "limitations": [
+    "Loopback HTTP/WS; no TLS proxy, WAN, phone rendering or video traffic.",
+    "Measured intent-to-receipt/local projection application, not isolated commit-to-other-client latency.",
+    "Briefing chat workload; media confirmation and voting races covered separately."
+  ]
+}
