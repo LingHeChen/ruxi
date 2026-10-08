@@ -1,0 +1,637 @@
+入戏多人互动剧数据设计
+关系模型  数据字典  事务一致性  私有视图
+版本 1.0  |  2026 年 10 月 8 日  |  对应产品 2.0 与技术 1.0  |  统一修订 C1
+本文件面向 Flutter 客户端、Elixir 核心服务和 Python 任务服务的实现者，定义入戏三人协作样片的数据边界、字段、约束、索引与生命周期。它将技术文档中的表级草案细化为可评审的数据方案，覆盖建房、选角、调查、共享、道具交付、投票、提示和中断恢复。
+数据库采用 PostgreSQL；只有 Elixir 核心服务可以变更游戏事实。视频、音频、字幕文件存对象存储；数据库保存元数据和授权依据。Flutter 保存的是当前成员的可见缓存，Python 接收的是任务授权输入，两者都不拥有完整房间的裁定权。
+设计决策
+本版确定方案
+事实与快照
+结构化列负责可约束、可查询的事实；state_json 负责小型剧情状态及同事务生成的恢复缓存。
+身份与权限
+账号、房间席位、角色、控制设备分别建模；房主身份不增加信息权限。
+事件与通知
+内部事件只供核心服务审计；每成员拥有独立连续的可见事件流。
+幂等与并发
+命令回执、唯一键、room 行锁共同保证业务效果最多一次；推送仍为至少一次。
+内容冻结
+房间引用不可变内容版本；发布不修改已有版本，旧房间不自动迁移剧本。
+实现程度
+本文是逻辑与物理设计基线，含 SQL 片段和验收用例；尚未执行迁移、并发测试或恢复演练。
+阅读顺序
+第 1—2 节说明存储边界；第 3—13 节给出数据字典；第 14—15 节定义事务、查询与权限；第 16—18 节定义保留、迁移、容量及验收；附录提供可复制的 Mermaid 关系源码。UI 1.1 中的 pending、confirmed、shared 等状态由这里的业务事实驱动。
+1 存储边界与建模规则
+数据域
+存储与写入者
+读取边界
+账号与登录
+PostgreSQL；Accounts
+凭证不进入玩家事件或任务输入
+内容与资产
+版本图 JSONB、资产元数据；Catalog
+公开目录只含摘要；完整谜底仅内容编辑与核心服务
+房间与玩法
+PostgreSQL；RoomStore
+先按成员投影，再通过 WS 或 HTTP 输出
+任务
+PostgreSQL 工作单、Oban 调度；Jobs
+Python 通过内部领取和回调接口，不直连业务库
+媒体文件
+私有对象存储；受限上传与处理身份
+核心服务授权后签发短期 URL
+本地缓存
+Flutter 按账号和成员分区
+只缓存已授权内容；退出账号清理私有缓存
+日志与分析
+脱敏日志、异步批次分析事件
+禁止记录线索全文、票型、提示正文和长效凭证
+主键使用服务端生成的 UUID；客户端生成协议规定的设备、幂等请求及埋点 ID，服务端仍校验格式与作用域。时间统一 timestamptz，以 UTC 存储；展示时转换本地时区。时长为 bigint 毫秒，不能用浮点秒保存截止依据。JSON 字段有独立 schema_version，未知字段默认拒绝或不投影。简写字段中 *_id 与 created_by 为 UUID，*_at 与 *_until 为 timestamptz，*_hash、状态、名称和正文为 text；其他类型另行标注。
+字典中的 ? 表示可空，未标注者为 NOT NULL；id 默认 UUID PK；所有实体带 created_at，可变实体另带 updated_at。计数和代次为非负 bigint，状态使用 text 加命名 CHECK。JSON 默认空对象或空数组只用于确实允许空值的字段，不能掩盖缺失的必填数据。
+member_id 是物理字段名，协议中的 membership_id 是同一身份；revision 对应技术文档的 room_revision。items / offers 在本版定名 room_items / item_offers。命名映射不改变既有协议语义。
+约束层次
+数据库负责主键、外键、非空、唯一、行内范围和枚举；服务事务负责人数、角色是否属于版本、阶段合法性及信息权限。跨行规则不能伪装成 CHECK；跨表引用可用外键时优先外键。PostgreSQL 外键不会自动为引用侧建立索引，按查询与删除路径补齐。[D1]
+2 实体关系与事实归属
+核心关联为内容版本 → 房间 → 固定成员；道具、投票和命令都属于房间。成员可见事件再进入 outbox。所有子对象查询同时带 room_id，避免凭对象 ID 访问别的房间。附录提供两张关系图的 Mermaid 源码。
+erDiagram
+  content_versions ||--o{ rooms : binds
+  rooms ||--o{ room_members : seats
+  rooms ||--o{ room_items : contains
+  rooms ||--o{ vote_rounds : decides
+  room_members ||--o{ member_view_events : receives
+  member_view_events ||--o| outbox : dispatches
+数据
+唯一事实来源
+state_json 中的处理
+生命周期、阶段、截止
+rooms 的结构化列
+可镜像供恢复；不反向覆盖列
+角色、控制代次、游标
+room_members
+可镜像；不接受客户端修改
+道具所有权与版本
+room_items
+仅恢复缓存；发现不一致以表为准并报警
+投票与结算
+vote_rounds、votes、vote_settlements
+只缓存本轮汇总/指针；客户端不拿全票
+发现记录、个人知情、公开标志
+state_json.world / knowledge
+是这些剧情字段的权威值
+剧情配置和权限规则
+content_versions.graph
+房间存版本 ID 与状态，不复制可修改规则
+推送序号
+room_members.view_seq
+不能用全房间 revision 替代
+每次有效业务变更在同一事务内更新结构化表、state_json、revision、内部事件、成员视图事件与 outbox。state_json 禁止其他服务直接改写。恢复读取当前事务快照，不依赖把历史事件全部重放；本版不采用完整事件溯源。
+所有引用席位的房间子表使用复合外键 (room_id, member_id) → room_members(room_id,id)，父表增加 UNIQUE(room_id,id)。物品、轮次也提供同样的复合唯一键；不能只验证 member_id 存在却允许跨房间引用。
+3 剧目与不可变内容版本
+stories 与 content_versions
+字段与类型
+约束与含义
+stories.id / slug text
+slug 唯一；展示目录的稳定身份。
+title text / summary text
+只存无剧透的目录摘要；封面关联公开资产。
+current_version_id uuid?
+新房间默认版本；发布事务校验该版本属于同 story。
+content_versions.id / story_id uuid
+story_id FK；UNIQUE(story_id,version_no)。
+version_no integer / schema_version integer
+正整数；内容迭代与内容格式迭代分开。
+status text / revision bigint
+draft、approved、published；草稿修改递增 revision。
+graph jsonb / content_hash text
+包含角色、阶段、行动、线索、媒体引用、结局和固定提示；规范化后 SHA-256。
+seat_count smallint
+CHECK 2—4；样片固定 3，必须与 graph 角色数一致。
+approved_hash text? / approved_by uuid?
+审批绑定确切内容 hash；草稿变更清空审批。
+published_at timestamptz?
+published 后 graph/hash/版本号不可变；撤回销售用独立 availability。
+availability text / blocked_reason text?
+available、unlisted、blocked；blocked 是安全运营动作，不修改剧情图。
+content_hash 覆盖 graph 及引用资产的内容摘要，不包含签名 URL。发布事务检查全部资产 ready、审批 hash 匹配、角色与超时路径有效，再冻结并更新 stories.current_version_id；审计记录同事务写入。数据库写权限只授予发布入口，冻结字段另用 UPDATE 触发器保护。
+最小 graph 顶层：schema_version、roles[]、phases[]、actions[]、clues[]、endings[]、media[]、hints[]。每个节点有版本内稳定 code；scope 只允许 public 或 role，加 role_code。完整 graph 含谜底，不作为普通客户端可下载的配置包。
+新版本撤回后仅改变新开局默认版本；旧房间保留原 content_version_id。被引用版本禁止硬删除。紧急 blocked 时经 RoomStore 将相关尚未结算活动房间挂起并发安全公告，后台不得直接替换房间剧本。
+4 房间及持久化时钟
+rooms
+字段与类型
+约束与含义
+id / content_version_id uuid
+版本 FK，删除 RESTRICT；创建即绑定发布版本。
+lifecycle text / phase_code text?
+lobby、running、paused、suspended、finished、abandoned；阶段 briefing / exploration / decision / ending。
+phase_id uuid? / phase_epoch bigint
+每次进入新阶段生成 ID；暂停恢复不更换。大厅无 phase_id。
+revision bigint / state_schema_version integer
+revision 每个业务变更事务加一；只服务端可见。
+state_json jsonb
+剧情权威字段与恢复缓存；初始软预算 256 KiB，越限报警并阻止内容发布扩大状态。
+host_member_id uuid? / locked_at timestamptz?
+host 复合 FK 指向本房成员；locked_at 后席位和角色不变。
+deadline_at timestamptz? / remaining_ms bigint?
+阶段计时唯一权威；暂停清空 deadline，保留非负剩余时长。
+timer_generation bigint / lifecycle_deadline_at timestamptz?
+阶段定时器代次；生命周期截止负责暂停 5min、挂起 24h 和大厅空闲。
+owner_instance text? / owner_epoch bigint
+后端进程持有者及栅栏代次；与产品房主不同。
+lease_until timestamptz? / finished_at timestamptz?
+租约期限；终态时间用于保留期起点。
+last_activity_at timestamptz / suspension_reason text?
+有效大厅操作刷新空闲时间；挂起记录原因。
+统一使用 rooms.deadline_at 裁定当前阶段。vote_rounds 不另存一个可独立修改的 deadline；读取轮次截止需联接 rooms。对应技术 1.0 的轮次 deadline_at 是读模型字段。历史截止变化写入内部事件，结算保存最终截止。这样暂停恢复不会出现两套时间。
+取得 room 行锁后调用 clock_timestamp() 获取决策时间；CURRENT_TIMESTAMP / now() 是事务开始时间，不能让等待锁的迟到投票获得旧时间。[D2] 若 deadline 已过，先执行一次截止，再处理新命令。终态清空运行定时字段。
+5 固定成员与协作确认
+room_members
+字段与类型
+约束与含义
+id / room_id uuid / user_id uuid
+room 与 user 外键；UNIQUE(room_id,user_id)、UNIQUE(room_id,id)。
+role_code text? / status text
+角色版本内 code；UNIQUE(room_id,role_code)，NULL 表示未选角；status 为 joined / left。
+ready boolean / joined_at timestamptz
+默认 false；选角变更取消相关准备；joined_at 作为房主转移排序，同值按 id 排序。
+control_generation bigint / controller_device_id uuid?
+接管递增代次，绑定该用户设备；必须同用户校验。
+view_seq bigint / replay_floor_seq bigint
+初始 0；floor 表示已删除历史的最大连续序号，游标小于 floor 要快照。
+last_seen_at timestamptz / disconnected_at timestamptz?
+presence 可内存更新；在线/离线边界持久化，不逐心跳写库。
+connection_epoch bigint
+重连增加代次，旧连接的离线回调不得覆盖新连接状态。
+resume_ack_generation bigint?
+暂停恢复确认绑定 room.timer_generation；新暂停自动令旧确认失效。
+大厅退出保留身份、清空角色并设 left；重进复用身份。开局后至结算前退出只挂起，不允许补位；ending 退出不挂起。换角必须对方确认后在 room 锁事务内暂清双方角色再分配，双方取消准备；请求规则见第 19 节，开局校验无待处理交换。
+协作确认放入 state_json.progress
+字段与类型
+约束与含义
+briefing_ack[member_id]
+已确认的公共/私有 media_epoch 集合；必须包含该角色所需全部授权片段。
+early_finish_acks[] / pause_request
+确认集合绑定 phase_id；pause_request 含请求 ID、成员确认集合及状态。
+manual_pause_used[phase_id]
+全员同意主动暂停时消耗一次；自动掉线暂停不消耗。
+ending_acks[] / media_anchor
+结局确认；公共播放 media_id、media_epoch、start_at、position_ms、rate。
+6 账号 邀请及入口幂等
+身份与短期凭证
+字段与类型
+约束与含义
+users：id, display_name, status
+status active / disabled / erased；擦除账号保留墓碑 ID，不能重用。
+auth_identities：id, user_id, provider, subject
+UNIQUE(provider,subject)；第三方主体标识不在房间事件输出。
+devices：id, user_id, revoked_at?
+设备 ID 不是凭证；与当前登录用户绑定。
+sessions：id, user_id, device_id, refresh_hash
+加 expires_at、revoked_at?；只存高熵 token 的哈希，轮换时撤销旧 token。
+socket_tickets：id, token_hash, room_id, member_id
+加 device_id、control_generation、expires_at、consumed_at?；60 秒、一次性条件 UPDATE 消费。
+room_invites：id, room_id, code_hash, key_version
+加 expires_at、revoked_at?、created_by；默认 24h，开局或大厅关闭即失效。短码用带服务端密钥的 HMAC，不能仅普通 hash。
+邀请码熵有限，必须限流、校验有效期和人数，不能当作房间内身份。保持 code_hash 在保留期间唯一；实际码通过安全随机生成，碰撞重试。邀请码只允许进入大厅，开始后的恢复通过原 user/member 身份，不通过邀请码占用新席位。
+account_commands
+字段与类型
+约束与含义
+user_id uuid / operation text / command_id uuid
+复合 PK；覆盖 room.create、room.join、room.takeover、invite.rotate 及 admin 业务 POST；operation 命名以接口为准。
+payload_hash text / response_json jsonb
+同 ID 同摘要返回原结果；不同摘要拒绝。
+created_at / expires_at timestamptz
+成功回执与创建房间/加入成员在同一事务提交。默认保留 30 天；过期新发请求不得自动沿用旧 ID。
+入口幂等锁按 user_id 与 command_id 的事务级锁串行，再锁 room；全系统固定此前置顺序。room 内命令不回头锁入口幂等。相同创建请求不能先建多个房间再靠冲突删掉；登录、匿名搜索等不塞进房间命令表。账号及鉴权方案沿用既有协议，此处新增数据字段供实现评审。
+7 剧情状态与玩家知情记录
+首版每房 2—4 人、线索数量有限，知情记录随 state_json 保存，避免为每个剧情布尔变量新建表；需要跨房统计时由事件异步提取。道具所有权仍在独立表，不能藏进 JSON 当作唯一依据。
+{
+  "schema_version": 1,
+  "world": {
+    "discovered": {"member-A": ["C1"], "member-B": ["C2"]},
+    "shared_clues": ["C1"],
+    "action_claims": ["member-A:camera", "member-B:phone"],
+    "flags": {"cabinet_open": false}
+  },
+  "knowledge": {
+    "member-A": {"clue_codes": ["C1"], "media_codes": []},
+    "member-B": {"clue_codes": ["C1", "C2"]},
+    "member-C": {"clue_codes": ["C1"]}
+  },
+  "progress": {"early_finish_acks": []},
+  "cache": {"revision": 12, "round": null,
+    "items": [{"item_code": "C2",
+      "owner_member_id": "member-B", "version": 1}]}
+}
+例中 member-A 等是可读占位符，正式使用 UUID。线索描述来自固定内容版本；状态只存 code，避免每次改变状态都复制大段私有文本。公开 C1 时同时更新共享集合与全体知情集合。C2 被接收后给接收者增加知情记录，原持有者的知识不删除；是否能使用 C2 只看 room_items.owner_member_id。
+字段
+去重与校验
+action_claims
+以成员 + 行动 code 唯一，房间锁事务检查；重复调查不再次发物品。
+shared_clues
+只增不减；验证发起者知情且允许公开；未知 code 拒绝。
+knowledge
+只由 Rules 改变；对外生成本人子集，不输出所有成员的映射。
+flags
+只允许版本 schema 已声明字段；发布阻止任意表达式执行。
+cache.revision
+必须等于 rooms.revision；不一致停止响应变更、重建缓存并报警。
+snapshot API 不返回以上原始 JSON。它返回 Projector 的 public_scene、own_role、own_clues、visible_items、available_actions、own_vote、members 等接口第 9 节模型 和 base_seq；绝不包含 cache.revision 或完整条件表达式。
+8 道具与双向交付
+room_items
+字段与类型
+约束与含义
+id / room_id uuid / item_code text
+UNIQUE(room_id,item_code)；样片每种物品只有一份。
+owner_member_id uuid / version bigint
+复合 FK 限定同房成员；首次获得 version=1，所有权或可用状态变更加一。
+state text / acquired_at timestamptz
+owned / consumed；本版无落地拾取和堆叠数量。消耗后仍保留原归属用于审计。
+item_offers
+字段与类型
+约束与含义
+id / room_id uuid / item_id uuid
+FK(room_id,item_id)；每个物品至多一个 pending offer。
+from_member_id / to_member_id uuid
+均为本房成员；CHECK from <> to。
+phase_id uuid / expected_item_version bigint
+请求绑定发起阶段和物品版本；不绑定全房 revision。
+status text / expires_at timestamptz
+pending、accepted、rejected、cancelled、expired；默认 30 秒。
+resolved_at timestamptz? / reason text?
+终态写入实际时间；暂停、阶段变化等取消记录明确原因。
+CREATE UNIQUE INDEX one_pending_offer
+  ON item_offers(item_id) WHERE status = 'pending';
+CREATE INDEX offers_due
+  ON item_offers(expires_at, id) WHERE status = 'pending';
+pending 本身就是交付锁，不另存容易失配的 item.locked 布尔值。发起时锁 room→item，检查归属、版本、接收者在线且同阶段；插入 offer 后所有权不变。接受时锁 room→item→offer，再取当前时间；若已过期先标 expired，不允许“最后一次点击”绕过截止。
+成功接受同事务修改唯一 owner_member_id、递增 item.version、offer=accepted、接收者知情集合、两人的投影与回执。拒绝、取消或到期不增加物品版本；新 offer_id 区分新一轮邀请。暂停或阶段切换先关闭 pending offers；后台扫描只挑候选 ID，再按统一锁序执行，不先锁 offer 再锁 room。
+9 投票 选民与唯一结算
+vote_rounds 与 vote_electorate
+字段与类型
+约束与含义
+vote_rounds.id / room_id uuid / phase_id uuid
+UNIQUE(room_id,phase_id)；一个决策阶段一轮投票。
+status text / options_json jsonb
+open / settled；冻结候选 code 与展示文本，不存动态条件脚本。
+tie_priority jsonb / default_option text
+冻结优先序，必须覆盖全部候选且无重复；默认项必须属于候选。
+opened_at timestamptz / settled_at timestamptz?
+截止从当前 rooms.deadline_at 读取；暂停时无活动截止。
+vote_electorate：room_id, round_id, member_id
+PK(round_id,member_id)；分别复合 FK 至轮次和成员，开轮后禁止增删。
+votes 与 vote_settlements
+字段与类型
+约束与含义
+votes：room_id, round_id, member_id
+PK(round_id,member_id)；FK 至 electorate 保证投票者在冻结选民中。
+option_code text / last_command_id uuid
+选项是否在冻结集合由事务验证；改票更新同一行，命令回执独立保存。
+vote_settlements.round_id uuid PK
+每轮最多一条结算；复合 FK(room_id,round_id) 保证同房。
+winner_code text / tally_json jsonb
+保存每个候选票数；未投算弃权，无票用 default_option。
+reason text / cutoff_at timestamptz
+plurality / tie_priority / default；最终截止时间，供审计。
+room 行锁使投票与结算串行；每个新命令取锁后的 DB 时间裁定是否迟到。结算读取冻结选民中的票，写唯一 settlement、标 settled、切 ending、生成结局投影，同一事务提交。定时器、重连和后台扫描重复触发只返回既有结算。
+全员提前投票也不提前封票；掉线成员仍在 electorate。暂停仅冻结房间阶段时钟，不把 round.status 改为 settled。截止前 Projector 只输出 own_vote，不输出他人票型、逐候选计数或暗示票型的中间事件。
+10 命令回执与内部事件
+room_commands
+字段与类型
+约束与含义
+room_id / member_id / command_id uuid
+联合 PK；member 复合 FK；控制设备接管后仍使用同一成员身份。
+payload_hash text / protocol_version integer
+摘要覆盖 protocol_version、recovery_epoch、type、phase_id、target_version、payload；排除 control_generation 与传输 ref，规范化以接口第 6 节为准。
+status text / result_json jsonb
+committed / rejected；只保存最终结果，DB 故障不写永久拒绝。
+receipt_seq bigint / trace_id uuid
+成员事件水位；无新事件的拒绝为已有水位，不能凭 receipt 推断新事件必然存在。
+accepted_at timestamptz
+提交中的状态仅在事务内，不向其他请求伪装已成功。
+先验证当前账号、成员与控制权，再按命令 ID 查回执。新控制设备可查询或用当前代次重试该成员原意图；摘要排除 control_generation。原 ID 与原业务字段保持不变，阶段已变或 recovery_epoch 已变时不得自动重试。
+room_events
+字段与类型
+约束与含义
+id uuid / room_id uuid / revision bigint
+内部事件身份；UNIQUE(room_id,revision,event_index)。
+event_index smallint / event_type text
+同事务可产生多个领域事件；内部顺序，不是成员流序号。
+schema_version integer / private_payload jsonb
+允许含私有信息，仅核心服务可读；未知版本不能直接投影给玩家。
+actor_member_id uuid? / command_id uuid?
+用户行动引用成员；系统截止等 actor 为空，不能伪造成房主行为。
+trace_id uuid / occurred_at timestamptz
+排障关联字段，日志仅记录安全标识和结果码。
+语义拒绝写回执但不必增加房间 revision；有效玩法事务递增一次 revision。租约续期、dispatcher attempt、连接水位探测等基础设施字段不递增业务 revision，也不向成员广播。数据库死锁或连接异常整笔回滚，客户端用原 ID 重试。
+11 成员视图流与事务发件箱
+member_view_events
+字段与类型
+约束与含义
+id uuid / room_id uuid / member_id uuid
+只对指定成员输出；FK(room_id,member_id)。
+seq bigint / protocol_version integer
+UNIQUE(room_id,member_id,seq)；由事务内更新 view_seq 分配，不用独立 sequence。
+phase_id uuid? / event_type text / payload jsonb
+仅包含投影后的白名单内容；大厅事件可无 phase_id。
+caused_by_event_id uuid?
+内部可选关联；玩家 payload 不输出此字段；清理内部事件时可置空。
+outbox
+字段与类型
+约束与含义
+id uuid / view_event_id uuid
+view_event_id FK 且 UNIQUE；不引用未投影的 room_events。
+status text / attempt integer / next_at timestamptz
+pending / processing / dispatched；失败指数退避，错误记录 code。
+locked_until timestamptz? / lock_token uuid?
+dispatcher 短租约；崩溃后可重新领取。
+dispatched_at timestamptz? / last_error_code text?
+推送提交成功后条件更新；不代表客户端已收到。
+一次私有调查只给该成员分配 seq；其他成员不获得空占位或隐藏事件提示。公共事件向各成员分别生成一条投影，每个成员自己的 seq 可以不同。业务提交后才有推送；客户端只按 next_seq 应用，重复忽略，缺口补发。
+dispatcher 领取时可用 FOR UPDATE SKIP LOCKED 减少 worker 争抢，领取事务立刻提交；网络发送在事务外，成功后凭 lock_token 条件更新。崩溃可能造成重复发送，不能承诺 exactly-once。多个 worker 可能乱序，客户端及补发接口负责按 seq 排序。
+快照：短事务锁 room，读取当前成员水位及一致世界状态，返回投影与 base_seq；锁序与写事务一致。恢复先订阅并缓冲，再读快照和持久事件直到高水位，最后切实时。客户端游标大于当前水位或小于 replay_floor_seq 时走快照，不返回空历史冒充同步完成。
+12 工作单 提示配额与聊天
+work_items
+字段与类型
+约束与含义
+id / kind text / status text
+pending、running、succeeded、failed、cancelled；kind 沿用接口第 12 节。
+attempt integer / lease_token_hash text?
+每次领取增加 attempt；worker 获得原 token，库仅存 hash。
+lease_until / next_attempt_at timestamptz?
+默认租约 60s，心跳 15s；过期后新 token，新 attempt。
+input_json jsonb / input_hash text / basis jsonb
+只含授权知识；basis 含 room/member/phase、knowledge_hash、hint_slot、reservation_id、prompt_version。
+result_ref text? / result_hash text?
+输出对象或小文本引用；不得保存无限制外部 URL。
+supersedes_id uuid? / error_code text?
+强制重做是新工作单，保留前任关系；不复活旧完成状态。
+hint_slots 与 chat_messages
+字段与类型
+约束与含义
+hint_slots：room_id, member_id, phase_id, slot_no
+联合 PK；slot_no CHECK IN (1,2)，同成员阶段最多两格。
+status / reservation_id uuid? / work_id uuid?
+available / pending / consumed；pending 部分唯一索引限定成员阶段只能一个。
+due_at / source? / text? / knowledge_hash?
+8 秒回退期限；AI 或固定提示成功都 consumed；真失败释放为 available。
+chat_messages：id, room_id, sender_member_id, body
+room/member 复合 FK；正文不超过 500 字，关联 command_id；不与私有提示共用正文。
+status / created_at / moderated_at?
+visible / removed；历史输出也检查删除标记，日志不留全文。
+hint slot 每次预留生成新 reservation_id；旧任务即使引用同一 slot_no，也因 reservation 或 work_id 不匹配而失效。回调核验 attempt、租约、阶段、当前知识 hash 与预留；固定提示和 AI 竞争同一 room→slot 锁，胜者消耗一次，晚到结果不得覆盖。暂停取消 pending 并释放格子。
+任务领取不持 room 锁；完成流程按 room→slot→work 锁并重新验租约，避免 work→room 的死锁。聊天经同一房间命令和投影流发送；若正文后续被移除，补发也需过滤对应历史投影或强制新快照，不能让旧 payload 绕过删除。
+13 媒体 资产与审计
+assets 与 content_version_assets
+字段与类型
+约束与含义
+assets.id / kind / mime_type text
+video、audio、subtitle、image、text；上传后实际探测类型。
+object_key text / sha256 text / size_bytes bigint
+key 唯一；字节数非负；不存永久公开 URL 或已签名 URL。
+status text / duration_ms bigint?
+uploaded / processing / ready / quarantined；按媒体类型检查时长等元数据。
+width / height integer? / metadata_json jsonb
+字幕语言、编码等类型化元数据；允许字段由 kind schema 限制。
+rights_source text / rights_ref text?
+制作或许可来源；不把空值当作已获授权。
+content_version_assets：version_id, asset_id, usage_code
+联合 PK(version_id,usage_code)；分别 FK；用途可绑定同一字节资产。
+scope text / role_code text? / unlock_code text?
+scope=public 或 role；role 范围必须有角色。public 只表示房内共同可见，并不自动全网公开。
+目录封面有独立 catalog_public 标记和审核；其余视频和字幕即使房内 public 也要验证阶段授权。签发 URL 时检查内容版本、成员角色、已解锁 media 与 control_generation；过期失效由短时授权限制，不能承诺收回已经下载的字节。
+worker 输出到 work_id/attempt 专属临时 key，核心验收后插入 ready 资产并绑定版本。相同物理哈希不等于相同授权，不向普通用户暴露跨剧目去重命中。清理只删除无版本/任务引用且超过宽限期的对象；数据库引用先解除，对象删除任务可重试。
+audit_logs
+字段与类型
+约束与含义
+id / actor_user_id uuid? / actor_service text?
+操作者与服务来源；不能仅记录任意客户端用户名。
+action / object_type / object_id / trace_id
+发布、撤回、接管、人工访问、擦除等动作；对象类型采用允许列表。
+before_hash? / after_hash? / reason?
+记录摘要与原因，默认不保存全量秘密正文。
+created_at / metadata jsonb
+仅追加；常规应用角色禁止 UPDATE/DELETE，定期归档。
+本版免费样片不创建支付订单和财务流水表。后续房间权益单独建 room_entitlements，与支付供应商交易和退款记录隔离；禁止先用 rooms.paid=true 代替可追溯权益。该扩展待商业化设计确认后迁移。
+14 事务边界与约束示例
+事务
+同一次提交必须完成
+失败处理
+开始房间
+校验版本、固定人数、角色唯一和全员准备；locked_at、phase_id、初始状态、事件、投影、回执
+任一条件失败不进入 running
+公开线索
+校验角色知情；共享标志、全员知情、各自事件与命令回执
+公开过则安全返回，不重复增长业务状态
+接受交付
+校验 offer 与物品；变更唯一 owner、知识、offer 终态、双方投影和回执
+已过期或版本冲突保持原所有权
+投票结算
+冻结轮次统计；唯一 settlement、ending、媒体锚、投影
+重复截止读取已有结果
+设备接管
+验证账号；control_generation 加一、设备绑定、票据撤销、审计
+旧连接后续命令拒绝；已下载数据不可远程销毁
+-- Representative constraints; not a full migration.
+ALTER TABLE room_members
+  ADD CONSTRAINT member_room_pair UNIQUE (room_id, id),
+  ADD CONSTRAINT one_user_per_room UNIQUE (room_id, user_id),
+  ADD CONSTRAINT one_role_per_room UNIQUE (room_id, role_code);
+ALTER TABLE room_items ADD CONSTRAINT item_owner_same_room
+  FOREIGN KEY (room_id, owner_member_id)
+  REFERENCES room_members(room_id, id);
+ALTER TABLE item_offers ADD CONSTRAINT distinct_participants
+  CHECK (from_member_id <> to_member_id);
+ALTER TABLE hint_slots ADD CONSTRAINT valid_slot
+  CHECK (slot_no IN (1,2));
+固定锁序为 room → 成员（按 ID）→ item → offer → round → slot → work；只锁当前事务需要的行。定时器和管理员修复也不绕过。业务事务不执行 AI、转码、CDN 或其他外部请求；数据库锁跨进程有效，GenServer 只负责房间协调。[D3]
+owner 租约只由当前 epoch 的持有者续期；取得 room 锁后校验 epoch 与 lease，再执行短事务。长锁期间其他 owner 不能接管；若租约已失效则拒绝写入并重新路由。多节点启用前必须验证路由和旧 owner 被隔离，字段存在不等于已实现高可用。
+15 查询路径 索引与权限
+访问路径
+索引基线
+限制
+用户恢复房间
+room_members(user_id,status,room_id)
+联接 rooms，只返回该用户有权恢复的席位
+成员补发事件
+UNIQUE(room_id,member_id,seq)
+游标分页 limit≤200，禁止 OFFSET 深翻页
+查询命令结果
+PK(room_id,member_id,command_id)
+认证身份决定 member，不信任请求 actor
+阶段与生命周期扫描
+rooms(deadline_at) 与 lifecycle_deadline_at 的非空索引
+只扫候选，执行仍需 room 锁和代次检查
+待推送领取
+outbox(next_at,id) WHERE status=pending
+processing 超时另按 locked_until 索引重置
+工作领取与超时
+work_items(status,next_attempt_at,id)；运行态 lease_until
+领取 token 不进入日志
+清理与审计
+events(room_id,created_at)；audit(object_type,object_id,created_at)
+终态按房间分批；初期不做分区
+道具与投票
+room_items(room_id,owner_member_id)；electorate/votes 主键
+不要重复创建与唯一键等价索引
+SELECT seq, id AS event_id, event_type, payload
+FROM member_view_events
+WHERE room_id = $1 AND member_id = $2 AND seq > $3
+ORDER BY seq ASC LIMIT 200;
+-- $1/$2 come from the authenticated membership scope.
+普通 Flutter 客户端不持数据库凭据。运行角色拆分 core_app、dispatcher、migration、analytics；dispatcher 只读授权投影和更新 outbox，不能读 room_events/state_json。Python 仅内部 API。MVP 不把 RLS 作为已实现保护；应用查询必须显式带成员作用域并做跨账号验收，后续若引入 RLS 再单独验证连接池会话隔离。
+不预建整个 state_json 或 graph 的 GIN 索引；只有明确查询出现后再加表达式索引或提取列。慢查询验证使用接近目标数据量的 EXPLAIN ANALYZE，关注扫描行数、锁等待和回表，不把“小表有索引”当成已验证性能。
+16 保留 清理与账号擦除
+以下为产品数据保留的工程提案，不是法规结论。终态定义为 finished 或 abandoned；活动、paused、suspended 的恢复数据不按创建日期清理。实际上线前需在隐私说明和运营需求中确认保留期。
+数据
+初始保留规则
+删除或过期后行为
+视图与内部事件、命令回执
+活动期间完整；终态后 7 天
+事件不足改走快照；终态不再接受新玩法命令
+outbox
+完成投递的条目最多留到事件清理；未完成先重试或记录告警后终止
+先清引用 outbox，再删事件；不能因 FK 失败停整批
+房间状态与成员关系
+终态后 180 天供本人复盘
+到期整房清理；产品需说明复盘保存期限
+聊天、AI 输入输出
+终态后 7 天清正文；180 天快照不保留聊天或提示全文
+删除关联视图及快照内副本；保留无正文错误计数
+账号会话与票据
+到期后 24h 清票据；撤销会话保留 7 天安全诊断
+凭证哈希和设备关联一并清理
+临时媒体与孤儿输出
+无引用且已失效超过 24h 后清理
+只清临时对象；已发布引用对象不自动删
+审计与匿名聚合
+审计 180 天；去标识聚合另定
+不把用户 ID 哈希直接称为匿名数据
+清理游标事件只删连续前缀，并在同事务推进 replay_floor_seq。若因敏感内容撤除而必须删除中间 payload，先截断到该事件的连续前缀，提升 floor，清 outbox 后发不含原文的移除通知；旧客户端恢复必须快照。终态快照依然按本人授权生成，不使用全量 room_events 拼复盘。
+账号擦除先撤销会话和控制票据、停止新写入；活动席位不得补人，可挂起或按既定规则终止。去掉账号标识、昵称、身份绑定和正文中的个人信息，保留不可复用的墓碑 user_id 与必要关系；涉及其他成员的共同结果采用去标识处理，不能盲目级联删除整局。所有快照、事件、任务输入和对象副本都列入擦除范围。
+备份不在线逐行修改：维护独立擦除清单，恢复隔离环境后先重放清单再开放服务；备份按既定期限轮换。注销与数据导出的鉴权、产品文案及适用要求需上线前单独确认。
+17 数据迁移与恢复
+场景
+执行规则
+新增字段
+先允许旧版本读取的可空/默认字段；部署兼容读写，再分批回填、验证约束，最后收紧。
+重命名或拆字段
+先读旧写新或双写；监测差异、回填；所有客户端兼容后移除旧字段。
+state_schema_version 升级
+纯函数逐版 upcast；锁 room 后转换并原子提交；保留原快照备份和转换记录。
+事件协议升级
+内部 schema_version 与公开 protocol_version 独立；补发保留历史解释器或改走新快照。
+剧目升级
+新 content_version，旧房间继续旧版；不把数据库 schema 迁移等同于改剧本。
+索引与大表变更
+先测锁时长和计划；在线索引单独迁移；失败后检查残留，不盲目自动重跑。
+一版迁移包含 up、可行的 rollback、兼容窗口、数据校验和失败中断点。删除列、改语义、擦除数据不能靠 down 脚本恢复，先备份再执行。建议 first migrations 顺序：账号与内容 → rooms/members → 子表与复合 FK → outbox/任务 → 索引与权限。rooms.host_member_id 的循环依赖在建完成员表后添加可延迟 FK。
+备份和恢复目标
+上线试运行目标 RPO≤5 分钟、RTO≤60 分钟，均为待演练目标。采用加密基线备份和连续 WAL 归档，PITR 的恢复范围取决于完整基线及其所需 WAL；仅有每天逻辑导出不满足该目标。[D4] 建议基线备份每日、连续归档、保留 14 天，并为资产启用独立版本/备份策略。
+恢复先在隔离环境：还原 DB 与资产引用；重放擦除清单；撤销所有会话和票据；使 room owner、worker、outbox 旧租约失效；尚未结算活动房间转 suspended；ending 房间保留已结算事实并按截止转 finished；核对快照与子表、结算、对象 hash；最后原成员重新认证恢复。不能把旧备份中的 lease_token 继续当有效。
+从备份回滚可能丢失曾已回复成功的最新事务，必须明确 RPO 的用户影响。灾难恢复切换服务级 recovery_epoch，旧客户端缓存失效并强制全量快照；epoch 由恢复控制面生成，不能从回退的备份复用。正常重连不需要此字段变化。每月至少演练一次恢复并记录真实耗时。
+18 容量假设 埋点与验收
+容量仅用于预算：假设每天 1,000 局、每局 3 人、200 条内部事件、450 条总成员视图事件、120 条命令；内部事件均值 1 KiB、视图 0.8 KiB、命令 0.4 KiB、快照 32 KiB。这里 450 已是全房间合计，不能再乘三。
+数据
+每日逻辑量
+按本版保留估算
+内部事件
+约 195 MiB
+7 天约 1.34 GiB
+成员视图
+约 352 MiB
+7 天约 2.40 GiB
+命令回执
+约 47 MiB
+7 天约 0.32 GiB
+终态快照
+约 31 MiB
+180 天约 5.49 GiB
+以上合计约 9.55 GiB，不含活跃局额外驻留、行开销、索引、outbox、聊天、任务、备份和 WAL；初步预算可预留 2—3 倍并用真实样片压测校准。媒体容量与 CDN 流量另算；不能从数据库容量推导视频成本。首版暂不分库分表，事件量增长后再依据查询与清理压力评估分区。
+分析数据不阻塞玩法
+客户端埋点异步分批发送，后台或定时批量刷新；限制内存队列和磁盘占用，失败退避，不占用主交互帧。最小字段 event_id、event_name、schema_version、occurred_at、received_at、匿名会话标识、app_version、白名单属性；接收端按 event_id 去重。建房、开局、完成、挂起等业务指标以服务端提交事实为准，客户端点击不能直接算成功。
+不在玩家端埋点上传私有线索、他人投票、提示正文、完整 state_json 或可长期关联的明文凭证。每日统计只保存必要维度，数据分析服务只读专用去标识投影，不查询生产秘密表。
+验收编号
+测试与必须成立的结果
+D01—D03
+跨房外键插入失败；同房角色不能重复；三人开局冻结版本和成员。
+D04—D06
+同命令重复提交只生效一次；两人并发接受不能双重持有；锁等待后的迟到票被拒绝。
+D07—D09
+私有事件不改变他人 seq；commit 后推送失败仍可补发；快照和 base_seq 一致。
+D10—D12
+AI 与固定提示竞争只消耗一格；旧 reservation/lease 回调无效；截止只结算一次。
+D13—D15
+清理后游标正确回快照；升级旧 schema 保持结局一致；隔离恢复后旧凭证与租约失效。
+附录 关系源码与实现边界
+玩法关系
+erDiagram
+  rooms ||--o{ room_members : contains
+  rooms ||--o{ room_items : owns
+  room_items ||--o{ item_offers : offers
+  rooms ||--o{ vote_rounds : runs
+  vote_rounds ||--|{ vote_electorate : freezes
+  vote_electorate ||--o| votes : submits
+  vote_rounds ||--o| vote_settlements : settles
+可靠通知关系
+erDiagram
+  room_members ||--o{ room_commands : issues
+  rooms ||--o{ room_events : records
+  room_members ||--o{ member_view_events : receives
+  member_view_events ||--o| outbox : dispatches
+ER 表示实体关联，不表示全部外键列；复合外键与唯一键以正文为准。以上源码可直接粘贴到 Mermaid 渲染器，适合与 Ecto schema 一同维护。Oban 自带任务表使用其官方迁移，不复制其内部 schema；work_items 保存领域任务，Oban 负责唤醒和重试调度。
+变化
+决策与原因
+内容与事件版本演进
+现在实现版本边界。历史数据和客户端协议迁移代价高，后补不只是机械重构。
+媒体与模型供应商替换
+现在隔离 object key、任务输入输出契约；供应商字段放受控 metadata，不污染房间事实。
+数据库替换与分区
+暂缓万能存储适配和分区。RoomStore 是最小边界，首版以 PostgreSQL 原子事务为准。
+商业化与多租户
+预留独立权益域，暂不建支付与租户全套表；首版单运营方，不能宣称已有 SaaS 隔离。
+本版新增的保留时长、容量和恢复目标是待评审参数；其余字段是对技术 1.0 的数据落地。正式开发仍需生成完整 Ecto migrations、JSON schema、权限脚本与 D01—D15 测试。本文 SQL 是约束示意，不能直接作为完整建库脚本执行。
+附录 依据与文档一致性
+本文件以当前产品 2.0 和技术 1.0 为业务依据，保留三人固定角色、120 秒掉线暂停、5 分钟暂停窗口、24 小时挂起恢复、30 秒道具邀请、45 秒投票及每阶段两次提示规则。UI 1.1 只决定这些状态如何呈现，不另建一套业务状态源。
+对技术 1.0 的细化
+本版解释
+member_id 与 membership_id
+物理字段和协议字段的同义映射，不新增第二种成员身份。
+vote_rounds.deadline_at
+规范为联接 rooms 的读模型字段；房间阶段时钟是唯一事实源。
+state_json 与关系表
+明确哪些 JSON 是权威剧情状态、哪些只是缓存；同事务保持一致。
+内容发布与下架
+published 冻结内容；availability 独立表示目录下架或安全阻断。
+create/join 幂等
+新增账号级 account_commands，解决尚无 room/member 作用域的重试。
+配额与迟到回调
+hint reservation_id 避免取消后重新使用槽位时旧任务错误生效。
+灾难恢复
+新增 recovery_epoch 使备份回退后的客户端缓存失效；普通重连保持既有协议。
+技术资料
+以下为 PostgreSQL 官方资料，核查日期 2026 年 10 月 8 日；引用用于数据库机制，具体表、保留期和容量均为本项目方案。以 PostgreSQL 18 文档核对示例，实际部署需锁定测试过的小版本。
+[D1] Constraints：唯一约束 外键与 CHECK 边界
+[D2] Date Time Functions：事务时间与实时时钟
+[D3] Explicit Locking：行锁与死锁
+[D4] Continuous Archiving：WAL 与时间点恢复
+
+19 协作与投影数据补充
+原子换角的状态
+state_json.progress.role_swap 为 null 或 {id,from_member_id,to_member_id,from_role_code,to_role_code,status,expires_at}，ID 为 UUID，status 为 pending/accepted/rejected/cancelled/expired。每房至多一个 pending，30 秒到期；两人须在 lobby、在线且已选不同角色。接受时锁 room→两 member（ID 排序），复核双方角色与请求一致、未过期，再原子交换并取消双方 ready。选角、退出或断线使涉及的请求 cancelled；ready=true 和 start 遇 pending 返回 NOT_ALLOWED。
+媒体进度与唯一时钟
+progress.exploration_step=active/interlude，仅 exploration 存在；中场确认用 progress.interlude_acks 成员集合。active 截止变更为 interlude 五分钟截止，rooms.timer_generation 增长；全员确认进入 decision。中场截止后 suspended，remaining_ms=300000 供恢复，不能恢复即再次过期。ending 使用 rooms.deadline_at 五分钟不可暂停窗口；普通断线及退出不得改为 suspended。
+冻结投票展示
+vote_rounds.options_json 仍只保存可投集合；新增 display_options_json jsonb，冻结安全展示对象 {option_id,label,eligible,reason_code?,reason_text?}。eligible=true 的 ID 集合必须严格等于 options_json；disabled 文案来自内容版本显式 public 展示文本，不直接序列化条件表达式。发布校验默认与平票优先序覆盖可投集合。
+任务回执及数值
+work_items 新增 result_json jsonb? 与 completion_response_json jsonb?、completed_attempt integer?，存 accepted/ignored 最终回执并保留 result_hash。result_ref 可继续指向输出对象，不能取代 tagged union；完成回执按 job/attempt 去重。公开 seq、generation、version 输出前检查≤2^53−1；内部存 bigint。graph.schema_version=2；state_json.schema_version 与 rooms.state_schema_version 为 1。
+
+20 认证与后台幂等数据补充
+游客恢复
+users 增 recovery_code_hash text?（唯一非空索引）、recovery_generation bigint。首次游客创建生成 256 位随机恢复码，仅一次展示，数据库存摘要。恢复锁 user，校验码、轮换新码并撤销该 user 所有旧会话/票据，创建新设备会话；新码与凭证的 60 秒重试响应加密保存。日志不记录码。恢复点中不存在的 user 无法恢复；无凭证又无恢复码不能按设备 ID 找回。
+后台身份
+admin_roles(user_id uuid FK, role text)，联合 PK，role∈editor/reviewer/publisher。admin_login_codes(id uuid PK,user_id uuid FK,token_hash text UNIQUE,expires_at,consumed_at?)，五分钟单次有效，仅部署 CLI 可生成或撤销；CLI 指定已有受控 user，不能接受游客自行申请。部署操作者留审计身份。sessions 增 audience=player/admin、family_id uuid、绝对 expires_at；admin refresh 最长 8 小时，access 最长 15 分钟。
+轮换与请求重试
+sessions 之外增加 auth_refresh_tokens(id,family_id,token_hash UNIQUE,expires_at,consumed_at?,revoked_at?)，轮换保留已消费 hash 以识别重放。auth_retry_cache(scope,key_hash PK,request_hash,response_ciphertext,expires_at) 保存 guest.create / guest.recover / admin.exchange / auth.refresh 的 60 秒加密响应；scope 包含相应请求 ID、码/token 摘要及设备。同键异参拒绝，过期清理，非明文凭证长存。
+后台业务幂等
+account_commands 覆盖所有 admin 业务 POST，operation 为接口附录的固定名称，payload_hash 包含路径目标 ID 与正文，默认保留 30 天。PUT 草稿使用 revision 条件更新，成功后重发旧 revision 返回 REVISION_CONFLICT，客户端 GET 查证，不承诺重复成功。账号前置锁→内容行/资产行；不得在持 room 锁后反向锁账号。上传意图重试返回原资产与原链接，链接过期须新 command_id 申请新意图。
+灾难恢复与凭证
+灾难恢复撤销会话、一次性登录码、票据及重试缓存；保留恢复点内 user 的恢复码摘要，原玩家用恢复码重新认证。部署管理员重新签发后台登录码。恢复点之后创建或轮换的恢复码可能无效，作为 RPO 数据损失告知，不伪造身份自动接管。
+pause_request 增 requested_by_member_id，创建时确认集合包含发起者；房主转移或探索转中场取消。media_epoch 按授权片段存于 progress.media_epochs[usage_code]，公共锚引用同一值；所有确认集合按 media_id 与 media_epoch 绑定，不能确认旧锚。后台业务幂等记录可存资源标识，任何临时签名URL必须加密保存；日志不记录完整地址。

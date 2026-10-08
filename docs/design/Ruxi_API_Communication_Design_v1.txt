@@ -1,0 +1,575 @@
+入戏接口与通信协议设计
+HTTP  WebSocket  成员投影  内部任务
+版本 1.0  |  2026 年 10 月 8 日  |  评审与实现基线  |  统一修订 C1
+本文件面向 Flutter、Elixir Phoenix 与 Python 的实现者，定义三人协作互动剧的外部接口、实时消息、恢复过程和任务交接。它承接产品 2.0、技术 1.0、数据 1.0 与交互 UI 1.1，普通玩法命令统一走 Phoenix Channels over WSS；账号、目录、恢复读取和媒体授权走 HTTPS。
+所有玩法结果由 Elixir 在数据库事务中确定。客户端只接收本成员的授权视图；Python 只接收任务所需输入。传输成功、业务提交成功、客户端已应用三个状态必须分别处理。本文是拟定契约，未实现服务端、生成 SDK 或执行联调。
+契约层
+版本与职责
+HTTP
+/v1；UTF-8 JSON；账号、房间入口、恢复、媒体与后台
+Phoenix 传输
+V2 JSON serializer；vsn=2.0.0；不是裸 WS JSON 协议
+业务消息
+protocol_version=1；命令、回执、成员事件与同步控制
+内容格式
+schema_version=2；完整剧情图只供后台与核心服务
+内部任务
+/internal/work；独立服务凭证；契约版本 1
+灾难恢复
+recovery_epoch；备份回退时强制缓存失效
+阅读导航
+第 1—4 节为通用约定与 HTTP；第 5—10 节为实时帧、命令、视图及恢复；第 11—13 节为媒体、任务和后台；第 14—16 节为错误、兼容与验收。附录提供 Mermaid 时序源码与样片联调路径。
+下文新增字段、接口路径和限制是本版具体化的设计决定，不是框架默认功能。未另行标为可选的请求字段均必填；示例中 R、M、P、C 等短标识只用于说明，实际线上相应 ID 必须为 UUID。
+1 通用字段与安全边界
+约定
+线上要求
+ID 与代码
+room_id、membership_id、phase_id、command_id、event_id、job_id 为 UUID；role_code、item_id、clue_id、action_id 是版本内稳定字符串，1—64 个 ASCII 字符。
+数值
+seq、generation、数值 epoch 和 version 为 JSON 非负整数（recovery_epoch 是不透明字符串），上限 2^53−1；客户端不得转浮点计算。达到上限前执行显式升级或新建流，不允许回绕。
+时间
+UTC RFC3339 毫秒精度，以 Z 结尾；duration / position / remaining 使用整数毫秒。DB 时间裁定截止，客户端倒计时仅展示。
+空值与未知字段
+可空字段显式 null；请求未知字段拒绝，重复 JSON 键拒绝；响应允许新增可选字段，客户端忽略未知可选字段。
+身份
+Bearer 会话决定 user；成员从该用户在 room 的关系推导。客户端 actor、owner、权限标记均拒绝。
+控制设备
+房间私有 HTTP 请求带 X-Device-ID 与 X-Control-Generation；WS 由已认证 socket 绑定。接管后旧代次不能读私有数据或写命令。
+追踪
+响应 X-Request-ID 与 JSON trace_id 使用同一服务端生成值；不接受客户端 trace 作为身份。日志不含票据、线索正文、私有票型和提示正文。
+HTTP 成功体为 {data, meta:{trace_id,server_time}}；列表 data 为 {items,next_cursor}，游标不透明且绑定账号与筛选条件，默认 20、最大 100。恢复事件接口上限另定 200。错误体为 {error:{code,message,retryable,trace_id,details?,retry_after_ms?}}；message 可本地化，业务判断只能使用 code。
+私有 HTTP 响应设置 Cache-Control: no-store。所有连接 TLS；后台浏览器仅允许明确 Origin，首版使用 Bearer，不把 cookie 认证混入同一入口。未知房间、他人的资源与无权限资源统一返回 RESOURCE_NOT_FOUND，避免存在性探测。
+2 账号 会话与控制设备
+方法与路径
+请求字段
+成功响应 data
+POST /v1/auth/guest
+device_id，command_id
+201：user_id、access_token、refresh_token、expires_at、recovery_code
+POST /v1/auth/refresh
+refresh_token，device_id，refresh_request_id
+200：user_id、access_token、refresh_token、expires_at；不返回或轮换恢复码
+POST /v1/auth/logout
+{}；Bearer
+200：revoked=true
+GET /v1/me
+Bearer
+200：user_id、display_name、is_guest
+POST /v1/rooms/{id}/socket-ticket
+device_id，takeover=false；接管另带 command_id
+200：socket_ticket、expires_at、membership_id、control_generation、recovery_epoch
+首版采用游客身份与受控后台账号；游客换机不可凭 device_id 找回账号，使用首次保存的恢复码恢复原身份。device_id 是安装标识，不是秘密。正式手机号或第三方登录另做身份绑定，不伪造现成供应商端点。游客创建用 command_id 的短期请求缓存处理网络重试；服务端限流，不向未持凭证者开放按 ID 查询身份。
+拟定 access 有效 15 分钟、refresh 有效 30 天；refresh 单次轮换，客户端串行刷新。相同 refresh_request_id 和旧 token 在 60 秒内允许返回同一加密缓存响应；不同 request_id 重放已消费 token 撤销该会话族。缓存到期仍拿旧 token 则要求重新认证，不能悄悄再造会话。退出撤销整个会话族并关闭关联 socket。
+socket-ticket 必须有有效 Bearer 且该账号是成员。首次进入绑定设备；同设备可重新取票。其他设备 takeover=false 返回 CONTROL_CONFIRMATION_REQUIRED；用户明确确认后 takeover=true，账号级 command_id 保证重试不重复增加代次。接管成功后旧 channel 关闭，新代次写入才有效。
+票据只可消费一次、60 秒有效，绑定账号、成员、设备与控制代次。返回后丢失可重新签发；签发本身不算玩法操作。连接授权至多 15 分钟，并不超过当前会话期限；到期前 30 秒发 auth_expiring，客户端刷新后重新取票和连接，首版不做 socket 内热换凭证。
+3 目录与房间入口
+方法与路径
+请求或筛选
+成功响应 data
+GET /v1/stories
+cursor?、limit?
+items：story_id、title、summary、cover_url、seat_count、availability
+GET /v1/stories/{id}
+公开或 Bearer
+story_id、title、summary、seat_count、duration_range_ms、current_version_id
+POST /v1/rooms
+story_id、command_id
+201：room_id、membership_id、content_version_id、seat_count、invite_code、invite_expires_at
+POST /v1/rooms/join
+invite_code、command_id
+200：room_id、membership_id、content_version_id、seat_count
+GET /v1/rooms
+Bearer；cursor?、limit?
+本人房间摘要：room_id、title、lifecycle、can_resume、updated_at
+POST /v1/rooms/{id}/invites
+command_id；当前房主设备
+201：invite_code、invite_expires_at；旧码撤销
+建房绑定当时已发布可用版本，并创建本人席位。首部样片固定三人，框架允许版本声明 2—4 人。加入只允许 lobby 且未满；账号在房间已有席位时复用原 membership_id，开局后不补位。同一账号同局不得拥有多个角色。
+建房、加入、接管与邀请码轮换使用 account_commands，作用域为 user_id、operation、command_id；operation 分别为 room.create / room.join / room.takeover / invite.rotate，摘要包含目标 room 和业务字段。重复相同输入返回原成功或最终拒绝，不再次建房。邀请码返回只对有权者开放。
+邀请码为随机 8 位无混淆字母数字，首版 24 小时有效，开局或大厅关闭时失效；限流基线为账号每分钟 5 次失败、IP 每分钟 20 次失败。无效、过期、满员等未加入者统一 INVITE_UNAVAILABLE；已获房间权限的成员可得到具体状态。规则为本版拟定，上线按滥用测试调整。
+POST /v1/rooms
+{"story_id":"11111111-1111-4111-8111-111111111111",
+ "command_id":"22222222-2222-4222-8222-222222222222"}
+
+HTTP 201
+{"data":{"room_id":"R","membership_id":"M",
+ "content_version_id":"V","seat_count":3,
+ "invite_code":"7KQ8HM2N","invite_expires_at":"2026-10-09T06:00:00Z"},
+ "meta":{"trace_id":"t1","server_time":"2026-10-08T06:00:00Z"}}
+4 快照 事件与回执读取
+路径均为 GET /v1/rooms/{id}
+参数
+响应 data
+/snapshot
+无；需当前设备代次
+snapshot、base_seq、recovery_epoch、protocol_version、server_time
+/events
+after_seq、limit≤200、recovery_epoch；through_seq?
+events[]、next_after_seq、high_watermark、has_more、recovery_epoch
+/commands/{command_id}
+当前成员
+已保存的 CommandResult；缺失为 404 COMMAND_NOT_FOUND
+/watermark
+recovery_epoch
+view_seq、replay_floor_seq、recovery_epoch、server_time
+snapshot 与 base_seq 在同一一致事务读取；只包含请求者投影。events 首次请求冻结 high_watermark，后续带 through_seq=该值，返回 (after_seq,high_watermark] 的连续事件。next_after_seq 为本页最后 seq，空页保持 after_seq；has_more 表示尚未读到冻结水位。
+after_seq 小于 replay_floor_seq 返回 409 RESYNC_REQUIRED；大于当前 view_seq 返回 CURSOR_AHEAD；recovery_epoch 不同返回 RECOVERY_CHANGED。清理竞态导致中间分页缺失时也要求快照，禁止跳号继续。读取终态历史仍校验本人权限，保留期结束返回 HISTORY_EXPIRED。
+COMMAND_NOT_FOUND 只说明此刻没有保存回执，不能证明旧请求永远不会提交。客户端只能重发原 command_id 与原载荷。终态回执已清理时不再允许新玩法写入；禁止换 ID 试探。
+{"data":{"events":[
+ {"protocol_version":1,"recovery_epoch":"recovery-A",
+  "seq":18,"event_id":"E","type":"transfer_offered",
+  "phase_id":"P","payload":{"replace":{
+   "offers":[{"offer_id":"O","item_id":"C2","status":"pending",
+    "from_member":"M2","to_member":"M3",
+    "expires_at":"2026-10-08T06:02:30Z"}]}},
+  "occurred_at":"2026-10-08T06:02:00Z"}],
+ "next_after_seq":18,"high_watermark":18,"has_more":false,
+ "recovery_epoch":"recovery-A"},"meta":{"trace_id":"t2",
+ "server_time":"2026-10-08T06:02:00Z"}}
+HTTP 读取与 WS 事件使用同一 ViewEvent 模型，不另写第二套字段映射。所有私有读取同时核验会话、room 成员和设备控制代次。房主无权获取其他角色 snapshot。
+5 Phoenix 连接与传输帧
+路径为 wss://{api_host}/socket/websocket?vsn=2.0.0&ticket={socket_ticket}。只允许短期一次性票据进查询参数；代理与错误报告必须清除此参数。票据消费失败重新申请，不能自动复用。配置 serializer V2 JSON 并验证 Dart 客户端兼容性。[P1]
+[join_ref, ref, topic, event, payload]
+
+["j1","1","player_room:R:M","phx_join",{
+ "protocol_version":1,"control_generation":2,
+ "recovery_epoch":"recovery-A","last_seq":17,"has_snapshot":true}]
+
+["j1","1","player_room:R:M","phx_reply",{
+ "status":"ok","response":{"protocol_version":1,
+ "sync_id":"S","mode":"replay","base_seq":17,
+ "recovery_epoch":"recovery-A","auth_expires_at":"UTC"}}]
+
+[null,"2","phoenix","heartbeat",{}]
+join_ref 标识一次加入，ref 标识一次传输请求，二者均为连接内字符串；重新 join 使用新 join_ref。topic 必须是票据绑定的 player_room:{room_id}:{membership_id}。客户端提交的控制代次必须匹配认证上下文，不能通过改 payload 接管。
+帧事件
+约定
+phx_join / phx_reply
+join 成功只表示授权与同步流程启动，尚不能操作；join 失败 response.error 使用统一错误模型。
+command / phx_reply
+业务回执只放 phx_reply.response；不额外推送同名 command_result。业务提交成功才返回 committed。
+view_event
+服务端可靠事件；ref 可为 null；按业务 seq 去重，不能按 ref 去重。
+heartbeat
+25 秒一次；10 秒未回复重连；独立于 clock_ping 的时间估计。
+phx_leave / phx_close / phx_error
+离开频道、被关闭或频道异常；仅断开不等于玩家主动离局。主动退出必须 leave_room 命令。
+本版不启用长轮询回退。TCP/WebSocket 有序不代表 outbox、重连与应用恢复端到端无重复；业务层仍按 seq 补发。Phoenix 帧格式与本项目业务 protocol_version 是两个独立版本。
+6 命令信封与幂等
+{"protocol_version":1,"command_id":"C",
+ "recovery_epoch":"recovery-A","phase_id":"P",
+ "control_generation":2,"type":"offer_item","target_version":4,
+ "payload":{"item_id":"C2","to_member":"M3"}}
+字段
+约束
+command_id
+UUID；一次用户意图一个 ID，网络重试不换 ID。
+phase_id
+大厅为 null；玩法必须等于当前阶段实例。暂停恢复仍为原 phase_id。
+control_generation
+必须等于 socket 当前代次；旧设备即使持旧回执也不能读写。
+recovery_epoch
+必须等于当前服务恢复 epoch；不同则拒绝并强制重新同步。
+type / payload
+只允许第 7—8 及 17 节列出的类型及字段；不接受任意 state patch。
+target_version
+仅 offer_item 必填；其他命令省略，由 offer/round/request 的稳定 ID 定位。
+幂等键为 room_id、membership_id、command_id。摘要计算覆盖 protocol_version、recovery_epoch、phase_id、type、target_version 和 payload：校验后递归按键名排序，省略不存在字段，保留显式 null，以 UTF-8 紧凑 JSON 作 SHA-256；不包含传输 ref、重试时间和 control_generation。这样同一用户接管后以新代次查询或重试既有意图仍能命中回执。整数格式统一，禁止浮点和 NaN。
+先验证当前身份、控制代次及 recovery_epoch，再锁 room、验证 owner、查幂等记录。相同 ID 相同摘要返回原结果；不同摘要为 IDEMPOTENCY_CONFLICT。没有记录才处理过期阶段、权限和业务条件。确定性拒绝保存 rejected 回执；限流、认证失败、基础设施失败不写最终业务回执。
+{"status":"ok","response":{
+ "command_id":"C","status":"committed","receipt_seq":18,
+ "trace_id":"t3","result":{"offer_id":"O"}}}
+
+{"status":"error","response":{
+ "command_id":"C","status":"rejected","receipt_seq":18,
+ "trace_id":"t4","error":{"code":"TARGET_CHANGED",
+ "message":"道具状态已变化","retryable":false,"trace_id":"t4"}}}
+CommandResult 为内层 response：status=committed/rejected，receipt_seq 是提交时本人流水位，未必比提交前增加。临时失败用 error 信封，无最终 status。回执不携带玩法 patch；客户端只用视图事件更新事实。若 receipt_seq 已应用，立即解除 pending，否则显示已提交正在同步。
+7 大厅 协作与生命周期命令
+type 与 payload
+允许条件
+committed.result
+select_role {role_code}
+lobby，角色空闲，绑定版本存在
+role_code
+ready {ready:boolean}
+lobby，true 时已选角色
+ready
+start {}
+房主；固定人数到齐且全员 ready
+phase_id
+media_complete {media_id,media_epoch,mode}
+briefing/exploration.interlude/ending；本人获授权；mode=video/summary
+acknowledged=true
+confirm_exploration_end {}
+running exploration.active；确认只增不撤
+confirmed=true
+request_pause {}
+仅房主；running exploration.active/decision；同阶段最多一次成功主动暂停，且仅一个待处理请求
+pause_request_id
+confirm_pause {pause_request_id}
+请求仍有效；全体确认才 paused
+confirmed=true
+cancel_pause {pause_request_id}
+发起者；请求仍待处理
+cancelled=true
+resume {timer_generation}
+paused/suspended；内容非 blocked、未超24h恢复期，原成员在线且逐人确认
+confirmed=true；全员后恢复
+leave_room {}
+lobby 清角色设 left；开局后且 ending 前立即 suspended；ending/finished 只离开页面，不改变结局
+left=true
+所有命令使用第 6 节信封，大厅 phase_id=null。确认不是客户端直接切阶段：服务端判断集合是否齐全并生成唯一变更。暂停请求 30 秒过期或阶段变化时取消；该协商截止不替代 rooms.deadline_at。房主不能单方面跳过别人看片，也不能读取秘密。
+resume 携带的 timer_generation 绑定本次暂停，避免旧确认复用。全员在线且确认后，服务端重建截止时间并递增 timer_generation。ending 前掉线 120 秒自动暂停、暂停 5 分钟挂起、挂起 24 小时失效均由服务端定时机制触发，不提供客户端“设置生命周期”接口。
+lobby 选角冲突返回 ROLE_TAKEN；人数不足或未准备为 ROOM_NOT_READY；start 的并发重复由 room 锁和状态校验约束。已经完成确认的重复意图若用新 ID，返回 committed 的无副作用结果，不重复推进。
+phx_leave、切后台、视频播放暂停不等同 leave_room。客户端可关闭 socket，但房间继续按在线与掉线规则运行。暂停、恢复、探索转中场与阶段切换同时取消未完成交付；暂停、探索转中场和阶段切换均取消 pending 提示并释放预留。
+8 探索 交付 投票与提示命令
+type 与 payload
+服务端条件
+committed.result
+investigate {action_id}
+running exploration.active；规则、角色与前置条件满足
+action_id
+share_clue {clue_id}
+running exploration.active；本人已知且可公开；UI 先确认不可撤回
+clue_id、shared=true
+offer_item {item_id,to_member}
+running exploration.active；target_version 必填；本人拥有、无 pending offer；接收者有效在线
+offer_id、expires_at
+accept_offer {offer_id}
+本人为接收者；同阶段、未过期、物品版本/owner 仍匹配
+offer_id、status=accepted
+reject_offer {offer_id}
+本人为接收者且 pending
+offer_id、status=rejected
+cancel_offer {offer_id}
+本人为发送者且 pending
+offer_id、status=cancelled
+vote {round_id,option_id}
+running decision；DB 时间早于 deadline；冻结可选项内
+round_id、option_id
+request_hint {hint_level}
+running exploration.active 或 decision；hint_level=1/2；尚有槽位且无 pending
+job_id、reservation_id
+chat_send {text}
+已锁定成员；running/paused/suspended；500 Unicode 字符内
+message_id
+线索公开不可撤回。道具默认 30 秒超时，拒绝、取消和过期不改变 owner 或 item version，接受才原子转移并增加版本。发送者保留已知描述；只有使用权转移。失败结果不得透露不可见对象是否存在。
+投票可在截止前修改，同成员同轮只有一个当前票型；不支持客户端主动结算，也不提前封票。截止前只下发本人票型，不下发其他人的投票行为或计数。截止后公布选项汇总和最终结局，个人票型仍不公开。
+request_hint 的 committed 仅表示任务与槽位预留成功；hint_pending 之后，hint_ready 或 hint_failed 才表示内容结果。8 秒固定提示兜底与 AI 输出竞争同一 reservation，每阶段最多两个成功提示。hint_level 是请求的提示强度，不是剩余次数。
+聊天按纯文本呈现，不渲染 HTML，不自动解析命令。失败重试复用原 command_id；只保留本地草稿不能自动发送。首版无私聊与附件；聊天广播给固定成员，因此 UI 应提示不要把私人线索误发到公共聊天。
+9 成员视图与事件归并
+Snapshot 为当前成员的完整可见模型，含 room、self、members、public_scene、own_role、own_clues、visible_items、offers、available_actions、own_vote、vote_round、hints、chat、media、collaboration。未知秘密不能用 null 占位或隐藏数量泄露。成员 ID 对玩家可见，user_id、owner_epoch、内部 revision 不可见。
+模型
+必备字段与范围
+room / self
+room：room_id、content_version_id、lifecycle、phase_id?、phase_code?、exploration_step?、deadline_at?、remaining_ms?、timer_generation、host_membership_id；self：membership_id、control_generation、role_code?。
+members / scene
+members[]：membership_id、display_name、role_code?、ready、online；public_scene：title、description、shared_clues[]。
+线索与道具
+clue：clue_id、title、text、shared；item：item_id、title、owner_membership_id、version、transferable；仅输出本人可见对象。
+行动 / 投票
+action：action_id、label、enabled、reason_code?；vote_round：round_id、options[{option_id,label}]、display_options[{option_id,label,eligible,reason_code?,reason_text?}]、deadline_at、status、tally?、winner?；own_vote 为 {round_id,option_id} 或 null。
+提示 / 聊天 / 媒体
+hints：remaining、pending_job_id?、entries[{hint_id,text,source}]；chat 最近 50 条 {message_id,sender_member,text,sent_at}；media：授权列表及公共播放锚。
+collaboration
+media_acks 仅含公共片段与本人片段，为 {media_id,members[]} 列表；early_finish_acks、interlude_acks、resume_acks 为成员 ID 集合；pause_request 为 {id,expires_at,confirmed_members} 或 null；manual_pause_used 为 boolean；role_swap 见第 17 节。
+offers
+仅参与者可见；offer_id、item_id、from_member、to_member、status、expires_at。终态保留当前阶段，下一阶段清空。
+9 续 事件模型与隐私边界
+ViewEvent 字段固定为 protocol_version、recovery_epoch、seq、event_id、type、phase_id、occurred_at、payload。payload={replace:{...}}，键只能是 Snapshot 顶层白名单；对出现的顶层字段整体替换，未出现的保留。没有任意 JSON Patch、递增运算或客户端推算业务效果。一个事件的全部替换原子应用。
+事件类型为 member_changed、role_selected、ready_changed、room_started、phase_changed、lifecycle_changed、clue_discovered、clue_shared、transfer_offered、transfer_resolved、vote_recorded、vote_settled、hint_pending、hint_ready、hint_failed、chat_added、media_changed、collaboration_changed。type 用于动画与提示，状态始终由 replace 驱动；未知 type 停止应用并提示协议升级，禁止跳 seq。
+本人投票只改变本人 own_vote；他人流不增长。提示与私有调查同理。公共变化复制成每个成员各自的事件和序号。聊天、提示在保留期清理后，快照也必须去掉正文；不依赖旧客户端永久保留。
+事件类别
+通常替换字段
+接收者
+clue_discovered
+own_clues、available_actions、visible_items
+获知该线索者
+clue_shared
+public_scene、own_clues、available_actions
+所有固定成员的各自投影
+transfer_offered / resolved
+offers、visible_items、own_clues、available_actions
+受影响且有权查看的成员
+vote_recorded
+own_vote
+仅投票本人
+vote_settled
+vote_round、room、media、available_actions
+所有固定成员；只有汇总
+hint_pending / ready / failed
+hints
+仅请求者
+collaboration_changed
+collaboration
+各成员授权后的确认状态
+phase / lifecycle / media 变化
+room、media、collaboration 及受影响字段
+每成员单独投影
+上表不是强制填充所有字段；同一事务只发送实际改变且获授权的顶层字段。自身 role 对象 own_role 为 {role_code,title,description} 或 null；vote_round.tally 为 {option_id:count}，winner 为 option_id。hints.source 为 ai/template；pending 时 remaining 排除预留槽位，失败释放后恢复。
+10 同步 恢复与水位
+控制消息
+字段与规则
+sync_snapshot 服务端推送
+sync_id、snapshot、base_seq、recovery_epoch；原子替换后 last_seq=base_seq。
+sync_complete 服务端推送
+sync_id、through_seq、recovery_epoch；客户端应用到 through_seq 后才进入 live。
+sync_ack 客户端推送
+sync_id、last_seq；服务端验证本连接同步水位已覆盖，再放行业务命令。
+watermark 服务端每 5 秒
+view_seq、replay_floor_seq、recovery_epoch；客户端缺尾事件也可触发 HTTP 补发。
+resync_required 服务端推送
+reason、recovery_epoch；清同步缓存后重连并声明 has_snapshot=false。
+clock_ping / phx_reply
+客户端 nonce、client_sent_at；返回 nonce、server_received_at、server_sent_at。不进入可靠流。
+presence_hint / auth_expiring
+前者 members 在线提示非权威；后者 expires_at。两者可合并丢弃，不占 seq。
+Channel 先订阅并缓冲实时事件，再判定恢复方式：epoch 一致、has_snapshot=true、floor≤last_seq≤current 才可 replay，否则发送一致快照。读取持久事件到固定水位 H，再合并缓冲、补齐缺口，确定 H2；按序发送至 H2 后发 sync_complete(H2)。后来的事件继续排队，不能混入旧 join_ref。
+客户端丢弃 seq≤last_seq 的重复，只应用 last_seq+1；更大 seq 进入缓冲并请求补发。缓冲超过 200 条或 1 MiB 重新快照。切换 live 不允许越过缺口；sync_ack 仅用于连接握手，不是持久投递 ACK，outbox 仍至少一次。HTTP 快照请求不能独立让未订阅客户端变 live。
+恢复后先查未确认命令。已有回执解除 pending；未查到且原阶段仍有效，用原 ID、原业务字段和当前控制代次重试；阶段变化提示结果未确认，不自动把旧操作迁移到新阶段。recovery_epoch 变化则所有旧 pending 都停止自动重试，先展示恢复后的事实。
+断网重连以 1、2、4、8 秒指数退避，封顶 30 秒，加 0—30% 抖动。每次新握手用新票据。认证到期先刷新；控制被接管停止重连，不争抢接管。服务端可靠队列超过同样上限时发 resync_required 后关闭，不能悄悄丢事件。
+11 媒体授权与播放同步
+接口或模型
+字段与规则
+POST /v1/media/access
+请求 room_id、asset_id、device_id、control_generation；响应 url、expires_at、mime_type、duration_ms、subtitle?、summary?。
+授权校验
+核验当前账号、设备代次、房间绑定版本、角色知识与内容 availability。blocked 禁止签发。字幕、海报和摘要执行相同权限。
+URL 期限
+拟定 120 秒，按需刷新；返回 URL 为临时访问能力，不写长效缓存或日志。下载失败需重新鉴权，不无限重试 403。
+公共播放锚
+media_id、media_epoch、start_at、position_ms、rate=1；锚在 media 模型内；media_id 为 usage_code，通过授权列表映射 asset_id UUID。
+私人片段
+每角色独立播放和确认；不得把其他角色资产 ID、标题或 URL 放到共享列表。
+播放完成
+media_complete 是用户体验确认，不证明真实观看；不用于发放有价奖励。
+客户端用 clock_ping 的低 RTT 样本平滑时间偏差；预期位置为 position_ms + (估计服务器时间 − start_at)×rate，并约束到片长内。未到 start_at 保持锚位置等待。偏差小于 250ms 不处理，250—1000ms 在播放器支持并实测后小幅调速，超过 1 秒选择适当位置 seek。
+视频字节由 CDN 经 HTTPS 传输，不能装入 WS。暂停恢复由服务端发新媒体锚；私有片段无共同锚。来电或切后台只暂停本机，不能用本地播放器回调决定全房间阶段。播放失败 30 秒可切授权图文摘要，完成确认 mode=summary。
+媒体已下载后无法远程撤回。旧设备失去控制后不能申请新地址，但已签名地址在有效期内可能继续可用；若需即时撤销必须另建在线校验分发方案，首版不承诺此能力。
+{"media":{"public_anchor":{"media_id":"A",
+ "media_epoch":3,"start_at":"2026-10-08T06:01:00Z",
+ "position_ms":0,"rate":1},
+ "authorized":[{"media_id":"A","asset_id":"A","kind":"public"},
+ {"media_id":"B","asset_id":"B","kind":"own_role","media_epoch":1}]}}
+12 Python 工作领取与回调
+以下均为内部 HTTPS 接口，由 Elixir Jobs 提供；Python 使用独立服务凭证，凭证绑定 worker_id 和 allowed_kinds。玩家 access token 永远不能调用。每请求带 X-Work-Protocol: 1；首版 lease=60 秒、heartbeat=15 秒。
+POST 路径
+请求
+成功响应 data
+/internal/work/claim
+worker_id、supported_kinds[]、claim_id
+200：job_id、kind、attempt、lease_token、lease_until、input、basis；无任务 204
+/internal/work/{id}/heartbeat
+attempt、lease_token
+200：lease_until、cancel_requested
+/internal/work/{id}/complete
+attempt、lease_token、result_hash、result
+200：status=accepted/ignored、reason?
+/internal/work/{id}/fail
+attempt、lease_token、code、retryable
+200：status=retry_scheduled/failed/ignored
+claim_id 为 worker 生成 UUID，60 秒内同 worker 同 ID 返回同次领取；租约已过不返回可用旧租约。attempt 与随机 lease_token 必须同时匹配，心跳不能复活过期租约。任务类别为 player_hint、draft_branches、validate_story、transcribe、transcode、thumbnail。
+complete 的 result 为 tagged union：player_hint 用 {narrative,evidence_ids[]}，narrative 最多 2000 字；媒体用 {outputs:[{asset_id,object_key,sha256,mime_type,size_bytes}]}；编辑任务用 {proposal_ref,sha256}。对象路径必须属于该 job/attempt 的授权前缀。不得接收任意 URL、shell 参数或房间状态补丁。result_hash 是规范化 result 的 SHA-256；本服务验证对象内容后才标 ready。
+同 job/attempt 相同 result_hash 的已完成回调返回原回执，即使租约此时已到期；不同 hash 返回 RESULT_CONFLICT。无保存回执且租约失效返回 STALE_LEASE。业务阶段、knowledge_hash 或 reservation 不再适用时保存 ignored 回执，不变更玩法。取消不能保证模型停止计费。
+{"job_id":"J","kind":"player_hint","attempt":1,
+ "lease_token":"opaque-secret","lease_until":"UTC",
+ "input":{"own_role":"conductor","known_clues":[],
+ "public_clues":[],"hint_level":1},
+ "basis":{"room_id":"R","member_id":"M","phase_id":"P",
+ "knowledge_hash":"sha256","hint_slot":1,
+ "reservation_id":"H","prompt_version":"hint-v1"}}
+8 秒兜底由 Elixir 完成同一 reservation 并消耗一次提示；晚到 AI 只可 ignored。Python 无法直接读写房间表，任务 status 与成员 hint_ready 也不能混为同一完成状态。
+13 制作后台 上传与分析接口
+接口
+请求与响应关键字段
+POST /v1/admin/stories
+editor；title、summary、seat_count、command_id → story_id
+POST /v1/admin/stories/{id}/versions
+editor；base_version_id?、command_id → version_id、revision
+GET 或 PUT /v1/admin/versions/{id}
+editor；GET 返回 graph、revision、hash；PUT 带 revision、graph，校验后返回新 revision/hash
+POST /v1/admin/versions/{id}/validate
+editor；revision、command_id → job_id；报告从 GET /v1/admin/jobs/{id} 读取
+POST /v1/admin/versions/{id}/approve
+reviewer；revision、content_hash、command_id → approved_hash
+POST /v1/admin/versions/{id}/publish
+publisher；revision、approved_hash、command_id → published_at、content_version_id
+POST /v1/admin/versions/{id}/availability
+publisher；availability、reason、command_id → availability
+POST /v1/admin/assets/upload-intents
+editor；filename、mime_type、size_bytes、sha256、command_id → asset_id、upload_url、headers、expires_at
+POST /v1/admin/assets/{id}/complete
+editor；sha256、size_bytes、command_id → processing、job_id
+POST /v1/analytics/batches
+Bearer；batch_id、events[] → accepted_ids[]、rejected[{event_id,code}]
+后台与玩家权限独立。草稿 PUT 的 revision 冲突为 REVISION_CONFLICT，不盲覆盖。validate 只生成报告，不自动审批；publish 必须所有资产 ready、审批 hash 精确匹配。发布后 graph 不可改，availability=available/unlisted/blocked 单独维护。后台业务变更在事务中审计，业务 POST 均使用 command_id；认证端点使用独立重试键；validate 相同版本 revision 可复用现有任务。
+上传 URL 拟定 15 分钟，单文件上限 500 MiB；仅准许服务端给定 object key、大小与 MIME。complete 核对实际对象，不信任上传者 hash 声明；就绪前不能发布。大文件分片与续传不在首版契约，超限返回 PAYLOAD_TOO_LARGE。
+13 续 分析与传输约束
+埋点事件为 event_id、event_name、schema_version、occurred_at、app_version、session_id、properties 白名单。异步每 10 秒或 20 条刷新，单批至多 50 条/64 KiB，内存上限 200 条、磁盘上限 1 MiB；满时丢最旧低优先级事件，不阻塞交互。按 event_id 去重，重试保留 ID；无效事件不重试。业务成功指标由服务端提交事实生成。
+普通命令 2 秒显示正在确认、8 秒进入结果未知并开放查证。超时本身不代表拒绝。取消本地等待不能撤销已提交的分享或投票；需要业务撤销的仅使用明确 cancel_offer 等命令。
+基线限制：业务命令 payload≤16 KiB，每成员每秒 5 条、突发 10；聊天 5 秒 3 条；WS ViewEvent≤128 KiB，完整快照≤512 KiB。超大投影视为内容/服务错误，不允许发送半个事件。容量与时限是待压测配置，不是 SLA。
+连接与可观测性
+WS 默认不启用消息压缩，防止大解压载荷；限制按解码后的实际字节执行。代理空闲超时至少 75 秒，须实测心跳与移动网络行为。TLS 终止层设置明确 WebSocket Origin 策略；无 Origin 的原生客户端仍必须票据认证。
+服务端记录命令耗时、事务失败率、view_seq 补发量、outbox 最老延迟、房间暂停原因、任务租约过期和回调忽略原因。以 trace_id 关联入口、事务和任务，不采集完整私有输入。每成员水位只发本人，不发送全房间 revision。
+分析接口为尽力交付；accepted_ids 包含已入队或已去重成功的 ID，不能表示业务交易已经发生。429 与 503 使用指数退避；后台系统不保证有运行时间，未投递数据保留在有界队列，退出账号清除账号关联缓存。
+所有角色动作事件的响应模型需要限制字符串和集合大小；超出预算应在内容发布前阻止。客户端保留聊天输入和滚动位置等本地 UI 状态，不把它们混入服务端 replace 模型。
+14 错误码与重试决策
+code
+HTTP
+客户端动作
+INVALID_ARGUMENT / PAYLOAD_TOO_LARGE
+400 / 413
+修正字段或缩小载荷；不重试原请求
+UNAUTHORIZED / AUTH_EXPIRED
+401
+刷新一次；失败重新登录
+RESOURCE_NOT_FOUND / NOT_MEMBER
+404 / 403
+停止访问；不泄露对象存在性
+CONTROL_CONFIRMATION_REQUIRED
+409
+展示用户确认；不得自动接管
+CONTROL_REPLACED
+409
+停止重连和操作，显示已在另一设备控制
+INVITE_UNAVAILABLE / ROOM_NOT_READY
+409
+更新邀请或等待成员准备
+ROLE_TAKEN / PHASE_CHANGED
+409
+同步状态，重新让用户决策
+TARGET_CHANGED / OFFER_EXPIRED
+409
+更新物品或邀请；旧意图不自动换 ID
+NOT_ALLOWED / DEADLINE_PASSED
+403 / 409
+停止本意图；截止后显示结算
+IDEMPOTENCY_CONFLICT / RESULT_CONFLICT
+409
+实现错误或同 ID 改内容；禁止盲重试
+RESYNC_REQUIRED / CURSOR_AHEAD / RECOVERY_CHANGED
+409
+重新快照；恢复 epoch 变化清旧 pending
+COMMAND_NOT_FOUND / HISTORY_EXPIRED
+404 / 410
+前者可同 ID 查证或重试；后者提示过期
+UPGRADE_REQUIRED / SYNC_REQUIRED
+409
+升级客户端或完成同步后操作
+RATE_LIMITED
+429
+遵循 retry_after_ms，不生成新 ID
+TEMPORARILY_UNAVAILABLE
+503
+同 ID 退避重试；状态未知不显示失败完成
+STALE_LEASE / REVISION_CONFLICT
+409
+worker 放弃旧输出；编辑重新读取草稿
+WS 没有每消息 HTTP 状态码，按相同 code 与 retryable 处理。HTTP 表示建议映射。AUTH_EXPIRED、SYNC_REQUIRED、RATE_LIMITED、TEMPORARILY_UNAVAILABLE 可在恢复条件满足后同 ID 重试；业务拒绝即使状态后来改变，也必须新用户意图和新 ID。
+15 版本 演进与实现边界
+本版 HTTP /v1 与 protocol_version=1 只支持一套明确契约。新增响应可选字段可兼容；删除、改类型、改枚举含义或新增必须执行的事件类型属于破坏性变化，升协议版本。请求 schema 使用 additionalProperties=false；客户端响应模型容忍未知可选字段。未知核心事件不能静默略过。
+发布服务先兼容旧客户端，再发布客户端，再在明示最低版本后收紧；不能先改服务使已开房间无法继续。历史视图按协商协议转换；无法可靠转换则提供新快照，仍无法解释内容时拒绝并要求升级。内容版本与传输协议独立，数据库 schema 迁移不改变老房剧本。
+与既有文件的衔接
+本版明确规则
+技术示例中的 command_result
+定为 phx_reply.response 的业务模型名称，不另推一次结果。
+member_id 与 membership_id
+内部数据/worker basis 用 member_id，公开协议统一 membership_id；既有 to_member/from_member 引用同一 UUID。
+物品 target_version
+仅 offer_item 信封必填；accept 通过 offer 保存的 item version 校验。
+投票 deadline_at
+来自 rooms 阶段时钟，暂停恢复后投影刷新；不由客户端或独立轮次时钟裁定。
+控制代次与幂等
+每次请求检查当前代次；摘要排除代次，允许同账号接管后确认旧意图。
+同步握手
+新增 sync_id、sync_ack，明确什么时候客户端和服务端可以开放操作。
+灾难恢复
+epoch 变化先重新认证与快照；不自动重放备份回退前的未确认意图。
+工程交付时从本文件建立 contracts/http/openapi.yaml、contracts/ws/*.schema.json、contracts/work/*.schema.json 与正反例 fixtures。它们应进同一仓库评审，Flutter/Elixir/Python CI 共用样例；不能三个语言各自默写协议。本文未附机器可执行 schema，字段表和示例不等同已生成的 SDK。
+首版不增加 HTTP 玩法备用写接口，不做通用 RPC 总线、语音传输、支付或开放匹配。未来若增加备用入口，必须复用同一 CommandHandler、幂等键与授权，不复制玩法实现。
+16 联调验收与交付要求
+编号
+操作与预期
+A01 帧兼容
+真实 Phoenix 服务器验证 join_ref/ref、heartbeat、reply、重连；裸 WS 能连接不算通过。
+A02 身份隔离
+改 topic 中成员 ID、请求他人 snapshot/媒体/回执全部失败，错误体不含秘密。
+A03 设备接管
+旧设备的命令、快照、补发、媒体授权全部失效；新设备可查自己的旧回执。
+A04 幂等
+同 ID 连发与断线重发只生效一次；改 payload 返回冲突；更换合法控制代次仍命中旧回执。
+A05 回执乱序
+回执先到和事件先到均只应用一次效果；无可见变化的 committed 不永久 pending。
+A06 恢复竞态
+快照读取期间另一个人操作；同步到水位无缺口；sync_complete 前不放行业务写入。
+A07 丢失尾事件
+只丢最后推送，5 秒水位发现并补齐；重复和乱序事件均不重复应用。
+A08 私有序列
+A 私有调查与改票不能增长 B/C 的 seq，不发送秘密占位。
+A09 截止竞态
+命令等待 DB 锁后过期被拒；投票只结算一次；不按客户端时间放行。
+A10 交付竞争
+accept 与 expiry/pause 同时发生，唯一 owner、唯一 offer 终态。
+A11 提示竞争
+固定模板先完成后 AI 回调 ignored；只扣一次槽位，旧 reservation 不污染新任务。
+A12 Worker 重试
+complete 丢响应后相同结果返回原回执；不同 hash 冲突；旧 attempt 不覆盖资产。
+A13 内容与媒体
+旧房绑定旧版；后台无权限发布失败；私有字幕和摘要也不能越权。
+A14 恢复与清理
+epoch 改变禁止旧 pending 自动重放；游标超保留范围回快照。
+A15 背压与版本
+慢消费者重同步而非丢可靠事件；未知事件停应用；埋点阻塞不影响玩法。
+每项留请求帧、脱敏响应、数据库断言和客户端状态证据。至少用三个独立身份并发，不用同账号三窗口代替固定三席位。以上为验收计划，尚未执行；真实手机弱网与后台恢复仍需真机证明。
+附录 同步时序与样片路径
+sequenceDiagram
+  participant F as Flutter
+  participant C as Channel
+  participant D as PostgreSQL
+  F->>C: join last_seq and epoch
+  C->>C: subscribe and buffer
+  C->>D: read consistent baseline
+  D-->>C: snapshot and base_seq
+  C-->>F: sync_snapshot if needed
+  C->>D: fetch events through watermark
+  D-->>C: authorized contiguous events
+  C-->>F: view_event sequence
+  C-->>F: sync_complete through_seq
+  F->>C: sync_ack after applying
+  F->>C: command with stable command_id
+  C->>D: transaction and receipt
+  D-->>C: commit
+  C-->>F: phx_reply committed
+此图为可复制的 Mermaid 源码；事务提交后的 outbox 事件可能先于 phx_reply 到达，顺序不作承诺。服务端完成同步后仍以数据库事务鉴权，不把 sync_ack 当用户权限。
+三人联调路线
+A 建房，B/C 加入，各自取得票据并同步；选 investigator / passenger / conductor，准备后房主 start。各自完成授权片段确认。A investigate 发现 C1 并 share_clue；B 发现 C2，offer_item 给 C，C accept_offer；C 执行 open_cabinet 取得并公开 C3。全员确认结束探索，完成公共中场确认后进入 decision，两票 publish，截止结算 E1。
+对照路线：未公开 C3 时 publish 不在冻结选项中；两票 wait 得 E2；两票 leave 得 E3；三个选项各一票或全弃权按规则得 E3。每条路线同时核查公共状态、本人私有状态与其他成员不可见字段。
+依据
+项目依据为当前产品 2.0、技术 1.0、数据 1.0 与 UI 1.1。Phoenix 官方资料仅支持传输帧及频道机制；本文件中的业务字段、路径、时限和错误码为入戏设计。核查日期为 2026 年 10 月 8 日。
+[P1] Phoenix Writing a Channels Client
+
+17 大厅交换与媒体补充契约
+换角命令
+request_role_swap {to_member} → {role_swap_id,expires_at}；accept_role_swap {role_swap_id} → {role_swap_id,status:"accepted"}；reject_role_swap 与 cancel_role_swap 使用相同 ID，分别返回 rejected/cancelled。大厅 phase_id=null，双方在线、已选不同角色，一房仅一个 pending，期限 30 秒。只有接收者能接受/拒绝，只有发起者能取消。失败用 NOT_ALLOWED、TARGET_CHANGED 或 DEADLINE_PASSED，不新增隐式抢角。
+换角投影与并发
+collaboration.role_swap 为 null 或 {id,from_member,to_member,from_role_code,to_role_code,status,expires_at}，成员及公开角色对全房可见。新请求替换上一次终态展示。request/拒绝/取消/过期使用 collaboration_changed；接受使用 role_selected，原子 replace members、self、own_role、collaboration。两方取消 ready。涉及者选角、退出、断线取消请求；pending 时双方 ready=true 拒绝，start 拒绝。
+中场与结局
+room.exploration_step 为 active/interlude，仅 exploration 输出。进入 interlude 后 investigate/share_clue/offer_item/request_hint/confirm_exploration_end/request_pause 均 NOT_ALLOWED；允许授权 media_complete、聊天和必要恢复。公共中场全员确认才创建 decision；五分钟未齐则 suspended，恢复重给中场五分钟等待窗口。ending 五分钟自动 finished，离线和 leave_room 不挂起，resume/request_pause 不适用。
+投票与回执
+display_options 是冻结安全展示集合，options 仍仅可投集合，vote 只能提交 options 的 ID。公开 C3 前安全禁用原因 reason_code=EVIDENCE_REQUIRED、reason_text="需公开关键证据"；不下发私有 C3 标题。所有投影视图以 payload.replace 原子应用。committed 只证明提交，UI 等 receipt_seq 覆盖后再结束同步。
+媒体标识与确认
+media_id 为内容版本内媒体 usage_code，asset_id 为 UUID；public_anchor.media_id 与 media_complete.media_id 均用 usage_code，授权列表把两者映射。own_role 授权项补 media_epoch，供本人完成确认；公共项取 anchor.media_epoch。不得从他人私有片段 ID 推断状态；members 可带 briefing_ready 布尔摘要表示本人全部必要片段已确认，不携带其资产 ID。
+
+18 身份恢复与后台登录契约
+游客恢复
+POST /v1/auth/recover 请求 {recovery_code,device_id,recovery_request_id}，成功 200 返回 user_id、access_token、refresh_token、expires_at、新 recovery_code。成功撤销旧会话族和票据，恢复原 user；随后重新申请房间票据和快照。首次 guest 响应额外提供恢复码。恢复码 256 位随机，单次轮换；相同码/请求 ID/设备在 60 秒内重试返回加密缓存原响应，异参拒绝；无效或不在恢复点中统一 UNAUTHORIZED。
+受控后台登录
+部署 CLI 创建受控 user、赋 editor/reviewer/publisher 角色并签发五分钟一次性登录码；这不是公开 HTTP 接口。POST /v1/admin/auth/exchange 请求 {login_code,device_id,login_request_id}，返回 {user_id,roles,access_token,refresh_token,expires_at}。原子消费码并创建 audience=admin 会话；同码同请求同设备 60 秒幂等，不同请求复用已消费码为 UNAUTHORIZED。
+会话隔离
+POST /v1/admin/auth/refresh 与 /logout 分别采用玩家 refresh/logout 的请求结构；仅接受 admin audience。admin access≤15 分钟，refresh 家族绝对有效期≤8 小时，轮换不延长绝对期限；玩家 refresh 为 30 天。后台每次请求校验实际 admin_roles，撤权立即阻止业务；玩家 Bearer 访问后台返回 NOT_ALLOWED，不能以客户端 roles 字段升权。
+认证限流与错误
+exchange/recover 每 IP 每分钟最多 20 次失败、每码摘要每分钟 5 次失败，超出 RATE_LIMITED 并给 retry_after_ms。登录码、恢复码、token 不写日志、URL 或埋点。认证重试缓存 60 秒后清理；游客创建缓存也为 60 秒，超期无身份凭据不得按 command_id 查询秘密。灾难恢复清会话与缓存，游客用恢复码、后台由部署 CLI 重新发码。
+后台幂等 operation
+全部后台业务 POST 使用 account_commands：admin.story.create、admin.version.create、admin.version.validate、admin.version.approve、admin.version.publish、admin.version.availability、admin.asset.upload_intent、admin.asset.complete；摘要含路径目标 ID 与正文。同 ID 异参冲突。PUT 使用 revision 乐观锁，丢响应后 GET 对账，不能将旧 revision 重放当成功。分析批次按 event_id 去重，认证端点不使用 account_commands。
+补充边界：pause_request 默认包含发起房主的确认；房主转移或探索转中场即取消请求，不消耗 manual_pause_used。media_complete 仅 running 时接受；暂停时先恢复。briefing 公共片段全员确认后才授权各自角色片段。所有到期判断使用 DB 时间≥expires_at 为到期，lobby 闲置到期为 abandoned。

@@ -1,0 +1,23 @@
+{
+  "envId": "tnt-like-d2gmmbwti62706aae",
+  "region": "ap-shanghai",
+  "database": {
+    "engine": "postgresql",
+    "schema": "ruxi",
+    "migration": "20261008120500_ruxi_initial"
+  },
+  "core": {
+    "serverName": "ruxi-core",
+    "serverType": "container",
+    "dockerfile": "infra/core.production.Dockerfile",
+    "port": 4000,
+    "minInstances": 1,
+    "maxInstances": 1
+  },
+  "worker": {
+    "serverName": "ruxi-worker",
+    "serverType": "container",
+    "dockerfile": "services/worker/Dockerfile",
+    "port": 8000
+  }
+}

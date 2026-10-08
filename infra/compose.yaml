@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ruxi
+      POSTGRES_PASSWORD: local-development
+      POSTGRES_DB: ruxi_dev
+    ports: ["55432:5432"]
+    volumes: ["ruxi-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ruxi -d ruxi_dev"]
+      interval: 2s
+      retries: 20
+  core:
+    build:
+      context: ..
+      dockerfile: infra/core.Dockerfile
+    environment:
+      DATABASE_URL: postgres://ruxi:local-development@postgres:5432/ruxi_dev
+      PORT: "4000"
+      CORE_INSTANCE: core-1
+      WORKER_TOKEN: local-worker-change-me
+      RECOVERY_EPOCH: compose-C1
+    ports: ["4000:4000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  worker:
+    build:
+      context: ../services/worker
+    environment:
+      CORE_URL: http://core:4000
+      WORKER_TOKEN: local-worker-change-me
+    ports: ["8000:8000"]
+    depends_on: [core]
+volumes:
+  ruxi-db:

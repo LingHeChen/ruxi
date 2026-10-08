@@ -1,0 +1,172 @@
+defmodule Ruxi.Media do
+  alias Ruxi.{DB, Util, Auth, Store, Content, Rules}
+  def root, do: System.get_env("MEDIA_ROOT", Path.expand("../../content/demo/media", File.cwd!()))
+
+  def manifest do
+    case File.read(Path.join(root(), "manifest.json")) do
+      {:ok, data} -> Jason.decode!(data)
+      _ -> []
+    end
+  end
+
+  def ready?, do: ready?(Content.demo_graph())
+
+  def ready?(g) do
+    assets = if is_map(g), do: g["assets"], else: nil
+
+    is_list(assets) and assets != [] and
+      Enum.all?(assets, fn declared ->
+        asset = Enum.find(manifest(), &(&1["asset_id"] == declared["asset_id"]))
+
+        if asset && asset["sha256"] == declared["sha256"] do
+          file = Path.join(root(), asset["file"])
+          File.exists?(file) and Util.hash(File.read!(file)) == asset["sha256"]
+        else
+          false
+        end
+      end)
+  rescue
+    _ -> false
+  end
+
+  def access(ctx, p, origin) do
+    DB.transaction(fn ->
+      c = Auth.member_context(ctx, p["room_id"], p["device_id"], p["control_generation"])
+      s = Store.load!(c.room, true)["state_json"]
+      Store.auth!(s, c)
+
+      v =
+        DB.one("SELECT availability,graph FROM content_versions WHERE id=$1", [
+          DB.uuid(s["content_version_id"])
+        ])
+
+      Util.require!(v["availability"] != "blocked", "CONTENT_BLOCKED")
+
+      media =
+        Enum.find(
+          Rules.project(s, c.member)["media"]["authorized"],
+          &(&1["asset_id"] == p["asset_id"])
+        )
+
+      Util.require!(media != nil, "RESOURCE_NOT_FOUND")
+
+      asset =
+        if v["graph"]["asset_status"] == "programmatic_demo_ready",
+          do: Enum.find(manifest(), &(&1["asset_id"] == p["asset_id"])),
+          else: nil
+
+      declared = Enum.find(v["graph"]["assets"] || [], &(&1["asset_id"] == p["asset_id"]))
+
+      summary =
+        if declared,
+          do: declared["summary"],
+          else: Content.summary(media["media_id"], Rules.member(s, c.member)["role"])
+
+      if asset do
+        declared = Enum.find(v["graph"]["assets"] || [], &(&1["asset_id"] == asset["asset_id"]))
+        Util.require!(declared && declared["sha256"] == asset["sha256"], "RESOURCE_NOT_FOUND")
+        summary = asset["summary"] || summary
+
+        cap = %{
+          "asset_id" => asset["asset_id"],
+          "version_id" => s["content_version_id"],
+          "sha256" => asset["sha256"]
+        }
+
+        video = Phoenix.Token.sign(RuxiWeb.Endpoint, "media", Map.put(cap, "kind", "video"))
+        subtitle = Phoenix.Token.sign(RuxiWeb.Endpoint, "media", Map.put(cap, "kind", "subtitle"))
+
+        %{
+          "url" => origin <> "/media/" <> video,
+          "expires_at" => Util.iso(DB.time() + 120_000),
+          "mime_type" => "video/mp4",
+          "duration_ms" => asset["duration_ms"],
+          "subtitle" => %{"url" => origin <> "/media/" <> subtitle, "language" => "zh-CN"},
+          "summary" => summary,
+          "asset_status" => "programmatic_demo_ready"
+        }
+      else
+        %{
+          "url" => nil,
+          "expires_at" => Util.iso(DB.time() + 120_000),
+          "mime_type" => "text/plain",
+          "duration_ms" => 0,
+          "summary" => summary,
+          "asset_status" => "missing_original_video"
+        }
+      end
+    end)
+  end
+
+  def stream(conn, token) do
+    import Plug.Conn
+
+    case Phoenix.Token.verify(RuxiWeb.Endpoint, "media", token, max_age: 120) do
+      {:ok, cap} ->
+        version =
+          DB.one("SELECT availability,graph FROM content_versions WHERE id=$1", [
+            DB.uuid(cap["version_id"])
+          ])
+
+        asset = Enum.find(manifest(), &(&1["asset_id"] == cap["asset_id"]))
+
+        Util.require!(
+          version != nil and version["availability"] != "blocked" and asset != nil,
+          "RESOURCE_NOT_FOUND"
+        )
+
+        Util.require!(
+          cap["sha256"] == asset["sha256"] and
+            Enum.any?(
+              version["graph"]["assets"] || [],
+              &(&1["asset_id"] == cap["asset_id"] and &1["sha256"] == cap["sha256"])
+            ),
+          "RESOURCE_NOT_FOUND"
+        )
+
+        file =
+          Path.join(
+            root(),
+            if(cap["kind"] == "subtitle", do: asset["subtitle_file"], else: asset["file"])
+          )
+
+        size = File.stat!(file).size
+
+        conn =
+          conn
+          |> put_resp_header("cache-control", "no-store")
+          |> put_resp_header("accept-ranges", "bytes")
+          |> put_resp_content_type(
+            if(cap["kind"] == "subtitle", do: "text/vtt", else: "video/mp4")
+          )
+
+        case get_req_header(conn, "range") do
+          [] ->
+            send_file(conn, 200, file)
+
+          [range] ->
+            case Regex.run(~r/^bytes=(\d+)-(\d*)$/, range) do
+              [_, first, last] ->
+                start = String.to_integer(first)
+                stop = if(last == "", do: size - 1, else: min(size - 1, String.to_integer(last)))
+
+                if start < size and start <= stop do
+                  conn
+                  |> put_resp_header("content-range", "bytes #{start}-#{stop}/#{size}")
+                  |> send_file(206, file, start, stop - start + 1)
+                else
+                  conn
+                  |> put_resp_header("content-range", "bytes */#{size}")
+                  |> send_resp(416, "")
+                end
+
+              _ ->
+                conn |> put_resp_header("content-range", "bytes */#{size}") |> send_resp(416, "")
+            end
+        end
+
+      _ ->
+        conn |> put_resp_header("cache-control", "no-store") |> send_resp(403, "")
+    end
+  end
+end

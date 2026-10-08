@@ -1,0 +1,14 @@
+**/deps
+**/_build
+**/build
+**/.dart_tool
+**/.venv
+**/__pycache__
+.git
+.local
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+docs/design

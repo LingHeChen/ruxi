@@ -1,0 +1,534 @@
+入戏多人互动剧技术设计
+实时房间  权威状态  私有视图  可恢复执行
+2026 年 10 月 8 日  |  技术版本 1.0  |  对应产品版本 2.0  |  Flutter + Python + Elixir  |  统一修订 C1
+本文件是独立技术设计，承接产品需求 P01—P10。目标是让 Flutter Android/iOS 上的三名玩家可靠推进同一部互动剧；Elixir 管理实时房间和业务事务，Python 执行 AI 与媒体任务。首版一部三角色样片，框架允许剧目声明 2—4 个固定席位。
+核心决策是“服务端确定状态、按成员生成视图、提交成功后推送”。WS 不是数据库，房间进程不是永久存档，AI 输出不是直接可执行的裁定。以下协议、阈值和工期是拟定工程基线，尚未有性能实测或生产验证。
+阅读与实现顺序
+第 1—4 章确定边界与状态；第 5—9 章定义命令、WS、恢复、时间和隐私；第 10—14 章定义存储、Python、内容、Flutter 和 HTTP；第 15—19 章定义部署、测试、迁移与开发任务。先实现 T01—T06 基础验收，再扩展 AI。
+1 技术决策与不变量
+决策
+选择
+约束
+在线协议
+Phoenix Channels over WSS
+使用 Phoenix framing，不把裸 WS 当兼容客户端
+业务后端
+Phoenix + Ecto + PostgreSQL
+仅此服务可写房间、角色、权益与任务事实
+房间调度
+每活跃房间一个 GenServer
+服务重启从数据库恢复；不对空房常驻
+可靠通知
+事务内持久化成员视图事件与 outbox
+至少一次投递，客户端去重与缺口恢复
+AI 与媒体
+Python worker + 内部 FastAPI 控制面
+无房间表写权限，不阻塞房间进程
+部署
+首版单 BEAM 节点，多 worker 可独立扩展
+多节点 owner 路由与租约必须经过演练后开启
+
+必须始终成立：角色在同房间唯一；同一道具只有一个当前持有者；同一命令最多产生一次业务效果；同一投票轮只结算一次；未授权的私有字段不进入网络 payload；所有房间绑定不可变内容版本；只有持有当前房间所有权的写入才可提交。
+首次体验不依赖 AI 可用性；视频字节经 CDN，不经 WS。单人 HTTP 方案不再是本版主线，但账号、目录、媒体授权与恢复快照仍使用 HTTP。
+2 系统模块和依赖
+模块
+入口
+拥有的数据与职责
+Flutter RoomFeature
+页面与 Phoenix 客户端适配器
+连接状态、成员视图、本地未确认命令、播放器
+Accounts / Catalog
+HTTP
+身份、目录、固定剧目版本、房间权益
+RoomChannel
+WS join / handle_in
+认证、大小限制、限流、路由；不自行裁定
+RoomServer
+经认证的业务命令
+活动房间协调、恢复、计时触发
+Rules / Projector
+纯函数
+规则判定、效果计算、为每个角色投影可见结果
+RoomStore
+Ecto 事务
+锁、快照、事件、命令回执、outbox
+Jobs
+内部 HTTP 与 Oban
+工作单、租约、重试、结果验收
+Python workers
+领取工作单
+AI 提示、编辑建议、媒体转码；受限资源访问
+
+调用方向固定为 Channel → RoomRouter → RoomServer → Rules/RoomStore。广播器从持久化视图事件读取数据，不将 RoomServer 的完整 state 直接 JSON 编码。Python 只看到任务需要的最小输入，不能从连接数据库获得其他角色秘密。
+工程目录建议 apps/mobile、apps/creator、services/core、services/worker、contracts、content/demo、infra、docs。首版不引入万能插件系统、服务网格或多套队列；LLM、PlayerPort、支付适配和公开协议版本是需要明确隔离的变化边界。
+架构关系源码
+flowchart TB
+  F[Flutter clients] -->|WSS| C[Phoenix Channels]
+  F -->|HTTPS| H[HTTP API]
+  C --> R[RoomServer]
+  H --> R
+  R --> V[Rules and Projector]
+  R --> D[(PostgreSQL)]
+  D --> O[Outbox dispatcher]
+  O --> C
+  R --> J[Durable work items]
+  J <--> P[Python workers]
+  P --> S[(Object storage)]
+  S --> CDN[CDN]
+  CDN --> F
+以上为可复制到 Mermaid 的架构源码。HTTP 创建、快照等入口仍经过相同授权与 RoomStore；任何可以改变房间的入口都不能绕过统一命令处理器。
+3 状态模型与阶段状态机
+层次
+字段
+持久化策略
+RoomState
+room_id, content_version, lifecycle, phase_id, phase_epoch, room_revision
+每个有效变更更新快照；room_revision 仅内部使用
+MemberState
+membership_id, user_id, role_code, status, control_generation
+开局锁定成员角色；登录身份不由 payload 提供
+WorldState
+公开旗标、调查点、道具、投票轮
+服务端持有全量，客户端只收到投影
+RoleState
+私有线索、提示次数、私有资源授权
+按角色和成员绑定，结局不默认公开
+Timing
+remaining_ms, deadline_at, media_anchor, timer_generation
+数据库时间是截止判断依据，内存定时器只是唤醒
+Delivery
+view_seq、快照游标、outbox 状态
+每成员独立连续序号，不暴露全房间私有事件数量
+
+lifecycle 为 lobby、running、paused、suspended、finished、abandoned。phase 为 briefing、exploration、decision、ending，lifecycle 与 phase 分开存储，暂停不把 phase 改为不存在的节点。每次进入新阶段生成 phase_id 并递增 phase_epoch；同一阶段暂停恢复不生成新 phase_id，而递增 timer_generation。
+lobby 全员准备且满足人数和权益后开始；briefing 等所有成员确认；exploration 的 active 子状态默认三分钟或全员确认提前结束，随后 interlude 播中场并全员确认；decision 默认 45 秒；截止事务结算并进入 ending；全员确认结局或结局播放窗口结束后标记 finished。结束窗口默认五分钟，离线成员以后可看自己的结局记录。
+ending 之前，成员掉线 120 秒触发 paused，所有成员在线且确认继续后恢复；暂停 5 分钟未恢复转 suspended；suspended 原班组 24 小时内可以恢复，否则 abandoned。ending 之前全员离线直接 suspended。主动退出立即 suspended，允许原身份回来。首版开始后不增加、替换或踢除席位。
+确定性计时
+进入定时阶段时记录数据库 deadline_at；暂停事务计算 max(0,deadline_at-db_now) 保存 remaining_ms，清空截止时间；恢复设置新 deadline_at。计时唤醒携带 room_id、phase_id、timer_generation，只有匹配当前值才生效。恢复或进程重启重建定时器，过期阶段先补执行一次截止，再处理后到行动。
+4 房间进程与监督树
+Core.Supervisor
+  Repo
+  Phoenix.PubSub
+  Endpoint
+  RoomRegistry                 # single-node lookup
+  RoomDynamicSupervisor
+    RoomServer(room_id)
+  OutboxDispatcher
+  Oban
+Channel 进程对应某客户端加入的 topic，不等于房间进程。RoomRegistry 只用于首版单节点查找，RoomDynamicSupervisor 按需启动 RoomServer。GenServer 将一个房间的有效行动串行协调；不同房间可独立运行。[T1][T2]
+RoomServer 初始化读取快照、未完成阶段和当前 owner_epoch；同步重建定时器。房间空闲或 suspended 后可退出，后续访问通过确保启动恢复。进程内只缓存状态和调度信息，任何“已经成功”的回复都必须发生在事务提交之后。
+禁止在 handle_call 中等待模型或转码；数据库事务保持短小，不调用外部 HTTP。DB 暂时不可用时房间拒绝变更并明确提示重试，不先广播临时结果。语义拒绝与基础设施失败区分，后者不写成功回执。
+房主不是房间所有者进程
+host_membership_id 是产品管理权，owner_instance/owner_epoch 是后端调度权，两者不能混用。房主离线 30 秒后转移 host 给最早加入的在线成员（joined_at 相同时按 member UUID 排序），不能因此读取该角色秘密或改变数据归属。服务器迁移房间进程也不改变房主。
+5 命令语义与提交事务
+权威命令使用 protocol_version、recovery_epoch、command_id、phase_id、control_generation 和可选 target_version。客户端不携带全局 expected_room_revision：多人独立调查不应因为队友刚操作就全部冲突，而且全局版本可能透露私有行动数量。道具交付等共享目标使用该玩家可见的 target_version 或 offer_id 校验。
+同一意图重试使用相同 command_id 和规范化载荷摘要；摘要规则以接口第 6 节为准，包含 recovery_epoch，排除 control_generation 和传输 ref；唯一键为 (room_id,membership_id,command_id)。应用 schema 明确必填字段、枚举、长度和 unknown-field 拒绝。认证成员从服务端 socket/session 得到，忽略并拒绝客户端伪造 actor。
+事务步骤
+1 验证连接身份、房间成员、recovery_epoch 及当前控制代次。2 开事务锁 room 行，检查 owner_epoch 和租约，再检查命令回执。3 相同 ID 相同摘要返回保存回执；不同摘要返回 IDEMPOTENCY_CONFLICT。4 对新命令读取 DB 当前时间，先执行必要的到期处理，再验证 lifecycle、phase_id、目标版本和权限。5 纯规则函数产生 domain events 或确定性拒绝。6 成功时更新快照、道具/投票行、内部 revision。7 为受影响成员生成各自的视图事件，递增各自 view_seq；保存回执与 outbox。8 提交，再回复客户端；广播可随后发生。
+所有房间写入先锁 room，再按 ID 排序锁目标行，避免不同代码路径锁顺序不同。SELECT FOR UPDATE 是跨事务串行保护，GenServer 不是唯一保护。[T3] 语义拒绝可以保存最终拒绝回执；DB 故障回滚后使用相同命令重试。接管、定时器和工作回调也必须走相同锁与 owner 检查。
+回执只包含本成员可见结果及 receipt_seq。回执先到、事件后到时，UI 显示“已提交，正在同步”，不额外应用一次效果；视图事件到达后按 seq 应用。事件先到时，后到回执只解除 pending。日志中保留 trace_id、command_id、内部 revision，普通用户不可查询他人的回执。
+道具交付
+transfer_offer 创建唯一待处理 offer，持有者和物品版本不变但物品进入交付锁定。接收者在线、仍为原席位且在同阶段时可以 accept；同事务检查物品 owner/version 和 offer 状态，改变所有权一次并关闭 offer。默认 30 秒未接受则 expired；拒绝、阶段切换、暂停或 suspended 均取消 offer 并解除锁定。再次交付用新的 command_id/offer_id，不能复活旧 offer。
+6 WebSocket 协议
+使用 WSS /socket/websocket，Phoenix serializer 版本与客户端一同锁定。Phoenix 的 join、reply、heartbeat 与 ref 属于传输协议；业务 command_id 单独存在。选用 Dart Phoenix 客户端前必须以测试服务器证明 framing、join_ref、心跳和重连兼容，不能只测试“连接成功”。官方 Channel 文档说明 topic 授权和客户端消息机制。[T1]
+首版每个成员只加入 player_room:{room_id}:{membership_id} 这个私有投影 topic，公共事件也复制到每位成员的视图流。这样没有“公共流游标与私有流游标谁先谁后”的合并难题。join 时校验当前用户、成员状态和 control_generation；topic 名不是授权凭据。
+消息
+方向
+用途
+phx_join / phx_reply
+双方
+加入并协商 protocol_version；包含恢复信息
+command
+客户端到服务端
+investigate、share_clue、offer_item、accept_offer、vote、ready 等
+phx_reply.response
+服务端到发起人
+业务提交或拒绝；仅使用 Phoenix reply，不另推回执
+view_event
+服务端到成员
+seq、type、授权后的 payload；可靠流
+sync_complete
+服务端到成员
+快照基线之后补发完成；进入可操作状态
+clock_ping / phx_reply
+双方
+校准时钟；不进入可靠事件流
+presence_hint
+服务端到成员
+在线状态提示；非业务裁定依据
+resync_required
+服务端到成员
+客户端过慢或历史超窗，要求快照恢复
+
+业务载荷示例
+// event=command; enclosed in Phoenix transport frame
+{"protocol_version":1,"command_id":"uuid-command",
+ "recovery_epoch":"recovery-A",  "phase_id":"phase-explore-1","control_generation":2,
+ "type":"offer_item","target_version":4,
+ "payload":{"item_id":"C2","to_member":"member-C"}}
+
+// business reply; no global revision or private actor data
+{"command_id":"uuid-command","status":"committed",
+ "receipt_seq":18,"trace_id":"trace-123",
+ "result":{"offer_id":"offer-7"}}
+
+// authorized projection delivered only to this member
+{"protocol_version":1,"recovery_epoch":"recovery-A",  "seq":18,"event_id":"uuid-view",
+ "type":"transfer_offered","phase_id":"phase-explore-1",
+ "occurred_at":"UTC-time",  "payload":{"replace":{"offers":[{"offer_id":"offer-7",  "item_id":"C2","from_member":"member-B",  "to_member":"member-C","status":"pending",  "expires_at":"UTC-time"}]}}}
+uuid-command、phase-explore-1 等仅用于说明，正式字段按 schema 验证 UUID/枚举。error 统一包含 code、retryable、trace_id 与可选 retry_after_ms，禁止返回服务端原始 state。错误枚举：UNAUTHORIZED、NOT_MEMBER、CONTROL_REPLACED、PHASE_CHANGED、TARGET_CHANGED、NOT_ALLOWED、DEADLINE_PASSED、IDEMPOTENCY_CONFLICT、RATE_LIMITED、TEMPORARILY_UNAVAILABLE。
+连接认证和控制设备
+HTTP 登录后申请 60 秒一次性 socket_ticket，范围绑定 user、room、membership、device 和 control_generation。通过客户端适配器支持的握手机制发送，若需查询参数则只放此短期票据并在代理日志脱敏，不把长期 access/refresh token 写 URL。消费票据后，活动 socket 的授权上限 15 分钟；到期前走 HTTPS 刷新、取新票据并重连，不做 socket 内热换凭证。
+同一成员只允许一个可控制设备。第二台设备登录房间前显示“接管本角色”，用户确认后事务递增 control_generation，撤销旧设备控制并关闭其 channel。旧代次不能提交命令、请求快照或获取新媒体地址。已显示给本人旧设备的信息无法远程收回，不能承诺这种意义上的信息销毁。
+7 按成员投影与私密信息
+Projector.build(world_state, membership) 输出 public_scene、own_role、own_clues、visible_items、available_actions、own_vote、members 等接口第 9 节模型。它不输出完整角色表、所有条件表达式、内部房间 revision、隐藏资源路径或他人提示。未知字段默认不进入投影。
+普通公共事件也写成每个授权成员的一条 member_view_event，序号在各自流中连续增加。只影响 A 的私有调查，仅 A 的 seq 增长，B/C 不接收占位事件或“隐藏事件已发生”。管理员调试接口与玩家接口分开授权；制作预览不可复用线上管理员权限到玩家客户端。
+信息
+谁可见
+何时变化
+角色和在线状态
+房间锁定成员
+加入、断线和恢复
+未公开 C1/C2/C3
+持有或已被授权成员
+调查、交付、明确公开
+公开线索
+全部锁定成员
+share_clue 成功后不可撤回
+投票内容
+截止前仅本人；结算后公布汇总
+首版不展示个人票型，只有汇总票数
+AI 提示输入输出
+请求者与受控诊断权限
+不进入公共聊天或其他玩家快照
+媒体地址
+当前有访问权的玩家
+服务端核验后签发短期地址
+
+公开线索是不可逆的信息发布操作，客户端确认后服务端将公开标志与各成员事件同事务保存。交付道具不等于删除旧持有者记忆：其线索描述可以留在已知记录里，但使用权随唯一 owner 转移。样片 C2 定义为可交付物品和已知信息两层，客户端分别展示，避免“交出后忘记内容”的不合理规则。
+8 断线恢复与通知可靠性
+客户端持久化最后连续应用的 view_seq 和未确认 command_id。WebSocket 在连接中有序不等于应用端持久可靠；进程崩溃、推送失败和重连都可能丢通知，因此恢复基于数据库视图流。[T1] outbox 发布成功只表示服务器已尝试投递，不代表客户端已经收到了。
+首版历史保留建议为活动及 suspended 房间全部事件，finished/abandoned 后保留七天；超出可补发范围返回快照。快照包含当前授权视图、base_seq、phase_id 和控制代次，在同一短事务中读取 room 与成员游标，避免状态和游标来自不同时间点。
+无竞态的恢复顺序
+1 Channel 校验成员和代次，先订阅该成员实时通知并进入 buffering 模式。2 读取一致快照与 base_seq；若客户端已有合法较新基线，可以补发其后事件。3 将快照发给客户端，再按 seq 读取快照之后的持久事件直到某个 high_watermark。4 丢弃实时缓冲中 seq 不大于 high_watermark 的重复项，将其余按序发送，再发 sync_complete。5 切换 live 模式；收到乱序或缺口继续读库补齐，而非跳过。
+客户端只应用 next_seq；小于等于当前序号的事件忽略，大于 next_seq 的事件临时缓冲并触发补发。缓冲上限 200 条或 1MB，超过则丢本地缓存并重新请求快照。每五秒一次轻量游标水位检查可发现“最后一条推送丢失而后面没有事件”的情况，避免永久停留旧状态。
+恢复完成后先查询未确认命令回执：存在则标记完成，不存在且命令仍属当前阶段时用同 ID 重发；阶段已变化则提示该动作没有确认，用户重新决策。禁止把旧投票、旧交付自动用新 command_id 投到新阶段。离线草稿文字不自动变成聊天消息。
+背压与重连
+心跳间隔建议 25 秒、超时 10 秒；重连退避 1、2、4、8 秒至 30 秒并加随机抖动。后台暂停或系统杀进程后按完整恢复处理。单命令 payload 上限 16KB，聊天正文 500 字、5 秒最多 3 条；每成员业务命令建议每秒 5 条、突发 10 条。慢消费者先合并非可靠 presence/clock 消息，可靠事件超限时断开并要求快照，不能默默丢弃。
+9 投票 时钟与视频同步
+投票结算
+decision 开始时冻结 electorate 为全部锁定成员、eligible_options 为当时条件可用选项，存 round_id、tie_priority 和 default_option；截止唯一存于 rooms.deadline_at，轮次 deadline_at 仅为读模型。vote 行按 (round_id,membership_id) 唯一，改票是更新该行；每次改票命令仍独立幂等。只有数据库时间早于截止且 room 正在 running 才接受。
+截止处理锁 room 和 round，检查 round 未结算，然后统计已提交票；最高票胜，平票按冻结的优先顺序，无票默认离开。写唯一 settlement、结局状态与投影事件同事务提交。首版不提前封票。定时器延迟时，下一条命令或后台扫描先结算过期轮，再拒绝迟到票，不因调度慢多给投票窗口。
+公共视频
+服务器在共同片段开始前推送 media_id、media_epoch、start_at、position_ms、rate=1 和授权请求参数。客户端通过 ping/pong 估计 server_time offset，使用低 RTT 样本并平滑，预期位置为锚点位置加经过时间。漂移低于 250ms 不处理；250—1000ms 可在播放器验证支持后小幅调速，否则等边界修正；超过 1 秒在合适位置 seek。目标是体验接近，不承诺帧同步。
+缓冲状态仅上报低频摘要，不把每帧位置广播给全房间。公共片段结束需每人确认，没看完的玩家可继续，30 秒播放失败可选择授权图文摘要。私人片段分别播放并按角色确认，不使用同一个媒体锚。来电或切后台仅暂停本机，房间生命周期另按掉线规则处理。
+media_complete 命令检查成员对片段的授权及 media_epoch，重复确认无副作用；它是体验控制，不是观看防作弊证明。首版不按观看完成发有价奖励。截止阶段和视频就绪状态由 RoomServer 统一协调，Flutter 不自行推进全房间。
+10 数据库与事件结构
+表
+关键字段
+约束
+rooms
+content_version_id, lifecycle, phase_id, phase_epoch, revision, state_json, owner_epoch, lease_until
+主键 room_id；所有变更先锁该行
+room_members
+room_id, user_id, role_code, control_generation, view_seq, status
+room+user 唯一；room+role 唯一
+room_commands
+room_id, member_id, command_id, payload_hash, result_json
+三字段唯一；回执只面向发起成员
+room_events
+room_id, revision, event_index, type, private_payload
+仅服务端；room+revision+index 唯一
+member_view_events
+room_id, member_id, seq, event_id, payload
+room+member+seq 唯一；按成员分页
+outbox
+view_event_id, dispatched_at, attempt, next_at
+引用投影事件；至少一次投递
+items / offers
+owner_member, version / from,to,phase_id,status,expires_at
+每个 item 至多一个 pending offer
+vote_rounds / votes
+options,electorate,status；deadline 从 rooms 读取 / member,option
+round+member 唯一；round 结算唯一
+work_items
+kind,attempt,lease_token,input_hash,status,basis
+结果提交核对租约和业务适用条件
+content_versions
+schema_version,graph,hash,status
+发布不可变；房间外键禁止悬空
+assets / audit_logs
+key,hash,scope,status / actor,action,object
+签名 URL 不长存；发布与管理动作留痕
+
+PostgreSQL 是事实源，不同时在 Redis 中保留另一份可写房间状态。初期 state_json 快照随每次提交更新，小房间代价可控；内部事件用于审计和调试，不要求实现完整 Event Sourcing。恢复优先读取事务快照，不靠重放所有历史消息。
+room_events 可以保存私有内容，只有受控服务身份能读。outbox 只引用已投影事件，禁止其消费者按未经筛选的 room_events 广播。快照 JSONB 对外通过白名单模型输出，不直接透传。高频检索使用明确列和索引，不在全库扫描 JSONB。
+关键 SQL 约束示意
+UNIQUE (room_id, member_id, command_id) -- room_commands
+UNIQUE (room_id, member_id, seq)        -- member_view_events
+UNIQUE (round_id, member_id)           -- votes
+UNIQUE (room_id, role_code)              -- room_members
+CREATE UNIQUE INDEX one_pending_offer
+ON item_offers(item_id) WHERE status = 'pending';
+索引示意需按实际 schema 完善外键、非空和范围检查。道具只存一个 owner_member_id，变更时校验 version；禁止用两个玩家背包列表分别追加删除来模拟原子转移。角色集合和内容版本引用在开局事务验证。
+11 Python 任务与 AI 主持人
+Python Worker 通过 /internal/work/claim 领取任务，Phoenix 原子分配 attempt、lease_token 与租约。默认租约 60 秒、心跳 15 秒；媒体任务按实际运行心跳续租。Oban 负责生成、超时扫描与重试调度，不让一个 Oban job 长时间同步等待 Python 转码。FastAPI 处理内部健康与控制 API，不把 BackgroundTasks 当持久任务系统。[T4][T5]
+任务类别为 player_hint、draft_branches、validate_story、transcribe、transcode、thumbnail。内部请求使用独立服务凭证及 TLS；没有普通玩家直接调用 Python 的公开入口。工作输入包含对象资源的受限签名地址，不允许任意 URL 或任意 shell 参数。
+提示的权限与过期判定
+Elixir 为每次 player_hint 构造已授权上下文，包括本角色说明、已知线索、公开事件、hint_level 和允许的提示范围。不能先把完整谜底交给模型再靠 prompt 要求保密。Python 结果为 narrative 和引用 evidence_ids，不允许返回可直接应用的任意状态 patch。
+工作单 basis 包含 room_id、member_id、phase_id、knowledge_hash、hint_slot、reservation_id 与 prompt_version。回调时核验当前租约、任务未取消、成员仍有效、阶段未变化，并验证生成时的知识集合仍是当前可见集合的子集且引用仍被授权。使用保守的 knowledge_hash 全等也可；首版取全等，发生变化则丢弃旧提示，不因全局 room revision 改动盲目取消无关任务。
+提示八秒超时后 Elixir 用固定文本完成同一个 hint_slot，晚到 AI 结果不得再覆盖。仅探索行动期间与决策阶段可请求，每成员每阶段最多两个成功提示；开始任务先预留一个 slot，同阶段同成员只允许一个 pending 提示；成功或固定提示消耗一次，真正失败释放预留。暂停、探索转中场或阶段切换时取消未完成提示并释放预留。
+重试和结果提交
+claim 过期产生新 attempt；无已保存回执的旧 complete 返回 STALE_LEASE。同 job/attempt 已完成且 result_hash 相同则返回原回执，不同 hash 返回 RESULT_CONFLICT。强制重做创建新 job_id，保留 supersedes 链。外部模型调用可能被重复计费，优先传供应商幂等键，仍需预算限额。模型 JSON 经 schema 验证、长度与引用检查、必要内容过滤；两次格式修复后失败转固定模板。取消只能保证结果不生效，不能保证供应商立即停止计算。
+编辑侧 AI 与媒体
+编辑提案以 diff 展示，人工接受后更新草稿，发布不由模型触发。转码通过固定参数模板运行 FFmpeg，CPU/内存/时长受限，上传文件以内容检查而非扩展名判断。输出先存 attempt 专属 key，校验通过后由 Phoenix 标记 ready；过期 attempt 的资源由清理任务回收，不覆盖稳定资产 key。
+12 内容协议和发布
+{
+ "schema_version":2,"seat_count":3,
+ "roles":["investigator","passenger","conductor"],
+ "phases":["briefing","exploration","decision"],
+ "variables":{"evidence_shared":{"type":"bool","initial":false}},
+ "actions":[{
+   "id":"open_cabinet","role":"conductor",
+   "phase":"exploration",
+   "requires":{"all":[{"public_clue":"C1"},{"owns_item":"C2"}]},
+   "effects":[{"grant_clue":"C3","visibility":"actor"}]
+ }],
+ "decision":{"duration_ms":45000,
+   "options":["leave","wait","publish"],
+   "default_option":"leave","tie_priority":["leave","wait","publish"]}
+}
+示例是字段骨架，完整 schema 必须补齐 publish 的 evidence_shared 条件、资源、默认动作和结局映射。条件/效果使用白名单 AST，禁止任意脚本执行。所有变量声明类型与范围，未知字段、循环阶段引用、未定义角色和缺失默认结局拒绝发布。编译后的版本包含规范 JSON hash 和最低客户端协议版本。
+校验分三层：结构引用与类型；可达状态和角色权限；真实多角色模拟。状态枚举上限建议 50,000 个，超过时标记验证不完整并阻止正式发布，不能把资源耗尽视为通过。内容增长后可按阶段拆分验证，但不要首版引入复杂符号执行平台。
+审核冻结 content_hash；发布事务切 active_version，新房绑定它。老房间继续引用原 hash。内容安全下架将 version blocked、尚未结算活动房间 suspended，并在授权接口禁止继续获取资源。单纯切发布指针不能阻止旧客户端已缓存的媒体，紧急策略需同时缩短签名有效期和处理 CDN 缓存。
+13 Flutter 客户端实现
+采用 feature-first：lobby、room、player、clues、inventory、decision、chat、account。Riverpod 等状态工具只承载表现与已授权视图，规则裁定不在客户端复制。PhoenixClientPort 隔离握手和重连；RoomRepository 管理视图序号及回执；PlayerPort 管理媒体，不把播放器 position 更新导致整个房间页面重建。
+连接状态为 disconnected、connecting、joining、syncing、live、reconnecting、auth_expired。只有 live 且房间允许行动才开放业务按钮。snapshot 原子替换 UI 状态，view_event 按连续 seq 应用；聊天输入草稿和未确认命令与服务器视图分开存储。
+本地数据与原生边界
+SQLite 只保存当前成员授权快照、游标、命令 ID 和受限埋点队列；刷新 token 放 Keychain/Keystore。退出或切换账号清理角色缓存；不同账号缓存目录隔离。日志脱敏，不能在崩溃上传里附整个角色状态。
+播放器先使用 video_player；Flutter 官方文档说明 iOS/Android 的底层实现，桌面支持不能由 Flutter 框架能力直接推定。[T6] 一个活动解码器起步，预加载下一视频只在实机验证有效后开启。dispose、generation 防旧回调、音频焦点、锁屏、来电、后台恢复和屏幕旋转都纳入回归。
+HTTP 下载资源和 WS 不共享重试生命周期；WS 恢复期间不能因播放器完成回调自动推进阶段。视频资源签名过期时重新授权，不把 403 当无限重试。客户端播放 private 视频只能获取自己视角，图文降级走同一授权。
+UI 和性能预算
+界面视觉反馈目标 ≤100ms，服务端提交到其他在线成员可见 p95 ≤500ms；条件为 RTT≤100ms、三人房、基准并发负载，需实测。UI 在 60Hz 真机 p95 帧耗时目标≤16.7ms；30 分钟切换、线索面板与重连后内存不持续增长。低端机关闭玻璃背景模糊；字幕与选择不重叠，探索面板不遮挡必要的队友状态。
+14 HTTP 与内部接口
+接口
+关键请求
+返回或保护
+POST /v1/rooms
+story_id, command_id
+room_id 与三人样片人数要求
+POST /v1/rooms/join
+invite_code, command_id
+membership_id；邀请码限流
+POST /v1/rooms/{id}/socket-ticket
+device_id；必要时接管确认
+一次性票据和 control_generation
+GET /v1/rooms/{id}/snapshot
+成员身份与代次
+投影 snapshot、base_seq
+GET /v1/rooms/{id}/events
+after_seq, limit≤200
+只查本成员投影事件
+GET /v1/rooms/{id}/commands/{cid}
+当前成员
+仅本人的回执；不存在不等于永远未执行
+POST /v1/media/access
+room_id, asset_id
+验证版本、角色和阶段后短期 URL
+POST /v1/admin/versions/{id}/publish
+approved_hash, revision
+发布权限及审计
+POST /internal/work/claim
+worker_id, supported_kinds, claim_id
+原子领取、attempt、lease_token
+POST /internal/work/{id}/heartbeat
+attempt, lease_token
+续租或拒绝
+POST /internal/work/{id}/complete
+attempt、lease_token、result_hash、result
+业务适用性校验后接受
+
+首版普通行动统一走 WS，不做一套语义不同的 HTTP 备用行动 API。测试或未来备用入口若需要，必须复用同一 CommandHandler 与幂等键。HTTP 列表用游标分页，错误体与 WS 使用同一业务 code。重连后的回执“不存在”检查后仍可能有旧请求提交，因此只可重发同一个 ID，不能以此创建新命令。
+15 部署 多节点与故障恢复
+首版部署
+一台在线 Core 实例运行 Phoenix、RoomServer 和轻量 Oban；PostgreSQL 使用有备份的独立实例；Python AI 与转码 worker 可独立扩容且资源隔离；视频走对象存储/CDN。代理开启 WSS upgrade，空闲超时高于心跳间隔。开发 Compose 支持三模拟客户端，生产不以 Compose 自带单盘存储充当备份。
+首版即保留 owner_epoch 和 lease 字段，单节点启动房间也获取数据库租约；初始租约 15 秒、每 5 秒续租。一次变更事务持 room 锁验证 owner_epoch 与 lease_until；接管必须锁同一 room 行并增加 epoch。旧事务若先持锁则在接管前完成，接管成功后旧 epoch 不再有写权限。数据库不可用时停止接受业务变更，不凭本地缓存继续。
+多节点上线门槛
+多实例时 RoomRouter 读取 owner_instance 将命令路由到所有者，不能各自用本地 Registry 创建房间并期望自动唯一。租约过期后新实例原子接管、epoch+1、恢复快照和计时器。旧实例心跳失败停接命令；即使网络分区仍运行，其持久写入也被 epoch 阻断。跨节点 PubSub 仅传播通知，不负责 owner 选举。[T1]
+代理 sticky session 可以降低重连路由波动，但不是一致性条件。节点下线先禁止新建房和领取任务，已有房间保存后通过接管或重连恢复。多节点能力属于实现准备，不在单节点部署未经演练时宣称高可用。
+关键故障路径
+故障
+处理
+用户结果
+提交成功但 WS 回复丢失
+查询/重发同 ID 返回回执
+不重复消耗或公开
+提交后进程崩溃未推送
+outbox 重投、游标水位发现缺口
+恢复后看到已提交结果
+房间进程崩溃
+监督树重启并读取快照
+短暂同步；不丢已确认行动
+节点退出
+租约接管或单节点重启
+重连；计时按持久记录恢复
+AI 不可用
+固定提示，释放或结算 hint slot
+主线继续
+DB 不可用
+拒绝变更，保留本地阅读
+明确暂停操作，不伪造成功
+
+16 安全 成本与观测
+首版连接基准负载建议 100 个三人房、300 个 WSS 连接、全局 100 命令/秒、平均最多 3 条成员事件/命令；不是容量承诺。压测报告写明 CPU、内存、DB、网络和事件大小，同时测试单个房间突发、慢消费者与重连风暴。某房间不能因一个玩家发送过快而耗尽整个节点邮箱。
+以每条成员事件约 2KB 粗估，全局 100 命令/秒×3 接收者约 600KB/秒，不含协议、聊天与重投；视频流量另算且通常占主导。此值是压测场景的资源量级，不是日常平均消耗或供应商报价。
+日志与监控
+关联字段为 trace_id、room_id、phase_id、command_id、owner_epoch、job_id；用户和成员 ID 在外部观测平台可做映射或散列。记录命令提交延迟、广播延迟、outbox 最老事件、恢复耗时、序号缺口、房间邮箱长度、锁等待、AI 超时和媒体失败。日志不带完整私有 payload、票型、token 或签名资源 URL。
+埋点与数据保留
+Flutter 埋点异步批量：20 条或 10 秒发送，内存队列限 200 条、磁盘限 1 MiB；单批至多 50 条或 64 KiB，过载先丢高频诊断。关键行动和结局统计取服务端事实，不能因客户端丢埋点误判未完成。活动及挂起期完整保留视图事件，终态后再保留七天用于恢复，长期仅保留必要汇总和经授权的诊断；具体商业保留策略上线前审查。账号删除需清理或匿名化成员、文本和任务数据，不能仅软删除 users。
+权限与输入攻击面
+房间邀请码不可枚举，建议密码学随机 8 位以上代码并按账号/IP 限流；代码只能用于申请加入，不能作为长期授权。管理员接口独立 RBAC；生产多人模式无旁观管理员的隐式秘密访问。文字交流支持长度限制、基础过滤、举报和屏蔽显示；公开匹配或语音上线前另做治理。Python 不接受任意 URL 与任意命令，素材解码在受限工作进程，模型没有发布或资产删除权限。
+17 自动化验收与测试矩阵
+测试
+注入或操作
+必须断言
+产品映射
+T01 开局竞态
+两端同时 start
+只有一个 phase 实例和开局事件
+P01
+T02 信息隔离
+读取所有 WS/HTTP payload
+B 不含 A 私有线索，含错误与补发路径
+P02
+T03 重复命令
+同 ID 连发 10 次
+一次业务变化，同一回执
+P03/P04
+T04 并发道具
+两个接受或过期同时发生
+唯一 owner，一个终态 offer
+P04
+T05 截止竞态
+迟到投票和两个定时器
+按 DB 时间拒绝迟到，结算一次
+P04/P05
+T06 恢复竞态
+快照期间继续发生行动
+snapshot+后续 seq 无缺口、无重复效果
+P06
+T07 尾事件丢失
+仅丢最后一次广播
+水位检查触发补发
+P06
+T08 owner 失效
+暂停旧进程至租约过期
+新 owner 接管，旧 epoch 写入失败
+P06
+T09 AI 晚到
+超时模板后 AI 回调
+不覆盖、不重复消耗 hint slot
+P08
+T10 控制设备切换
+旧机持续发送和请求快照
+旧 generation 全部拒绝
+P02/P06
+T11 内容发布
+游戏中发布新版本
+老房版本不变，坏图发布失败
+P09
+T12 双端播放
+来电、后台、重连、弱网
+控制器释放，不自行推进全房
+P07
+
+样片 golden fixtures
+场景
+操作
+预期
+真相
+公开 C1、交付接受 C2、解锁公开 C3；两票公开
+E1，物品只转移一次
+错过
+不公开 C3；两票等待
+E2，公开选项不可用
+余音
+两票离开
+E3
+平票
+有 C3，三选项各一票
+E3，按 tie_priority
+全弃权
+无人投票直到截止
+E3，默认离开
+交付中暂停
+C2 offer 未接受即暂停
+offer cancelled，C2 仍归乘客
+掉线恢复
+成员断线 121 秒，暂停后返回全员继续
+剩余时间恢复，角色不变
+隐私复盘
+C3 被发现但未公开即结束
+其他玩家复盘仍看不到 C3
+
+测试层次：规则单元与性质测试、Ecto 真数据库事务测试、Channel 契约测试、三客户端端到端、真机媒体回归、故障注入与容量测试。幂等、隔离和截止语义必须使用人工预期 fixture，不能让模型同时生成实现与唯一断言来源。
+性质包括任意命令序列下 owner 唯一、所有拒绝无业务副作用、每成员 seq 连续、已提交事件可恢复、Projector 输出不含无权限字段。对权限校验删除、条件取反和重复结算进行定向变异测试，验证测试能失败。最低真机矩阵为两台 iPhone 和两台不同性能/厂商 Android；缺设备必须标注未验证。
+18 兼容 迁移与商业化扩展
+本项目当前只有设计文档，未假设已有线上单人数据库需要迁移。若按旧版已开始编码，先保留单人服务模块，新增 room/member/view_event schema，不把 session_id 直接重命名成 room_id。旧存档只能继续旧模式或明确转换为新的测试房，不自动复制成多个真实用户身份。
+HTTP /v1 与 WS protocol_version=1 表示传输契约；content schema_version=2 表示多人内容格式。两者版本独立。旧客户端不支持多人节点时拒绝开局并提示升级。数据库 expand-contract 先加字段再切流量，删除旧字段在后续发布；内容版本不可变。
+支付扩展
+商业化阶段房间权益按 order_id、room_id、locked_members 与有效期建模，核验平台交易后事务授予；交易号唯一、重复回调幂等、退款撤销本订单权益而不误删其他来源。iOS 真实支付在对应商店规则下实现，演示环境与生产交易隔离。权益核验发生于建房/开局和资源访问，不能由客户端 successful 标记赋权。
+真正自由裁定的后续版本
+当前 AI 仅产生提示与叙事，不执行自由行动。未来 TRPG 裁定引入 action_proposal → schema_validated → rules_checked → accepted/rejected，AI 只能选允许的效果集合，关键资源与阶段更改仍由 Elixir 校验事务提交。新增规则前不以“先让 AI 自由改 state”作为临时实现。语音用独立媒体服务，开放匹配需增加举报和安全设计。
+19 开发工作包与上线门槛
+工作包
+交付
+依赖与完成条件
+W01 契约
+内容 schema、WS schema、golden fixtures
+先于规则和客户端；正反例均可校验
+W02 持久状态
+RoomStore、命令回执、投影事件
+依赖 W01；T03/T04 通过
+W03 实时房间
+Channels、RoomServer、阶段计时
+依赖 W02；T01/T05 通过
+W04 客户端闭环
+三端大厅、线索、投票、恢复
+依赖 W03；T02/T06/T07 通过
+W05 媒体与平台
+播放锚、授权摘要、原生诊断
+依赖 W04；T12 和真机报告
+W06 编辑与发布
+三角色预览、验证与冻结
+依赖 W01/W02；T11 通过
+W07 Python 工作
+租约、AI 提示、转码
+依赖 W02/W06；T09 通过
+W08 发布验收
+监控、备份、故障演练、测试清单
+T08/T10 通过；单节点范围明确
+
+上线门槛：P01—P10 与 T01—T12 有证据；三条结局真实跑通；隐私字段审计通过；数据库备份恢复演练；没有待处理的重复扣减、秘密泄露或阶段卡死。起步恢复目标 RPO≤5 分钟、RTO≤60 分钟，需要实际备份方案和演练证明，不能由文档数字当作 SLA。
+开发 Agent 每个工作包产出实现、必要测试、异常说明和运行步骤。审查重点是授权、事务、计时、视图与生命周期；不以代码量或模型自评作为完成标准。演示必须说明真实完成和未实现部分。
+来源与设计性质
+技术事实参考于 2026 年 10 月 8 日核查；具体协议字段、房间规则、阈值与数据库模型均为本项目设计，不声称来自框架默认实现。
+[T1] Phoenix Channels https://phoenix.hexdocs.pm/channels.html 与 Phoenix.Channel https://phoenix.hexdocs.pm/Phoenix.Channel.html 。支持 Channel、topic、授权和 PubSub 边界。
+[T2] Elixir GenServer https://elixir.hexdocs.pm/GenServer.html 。用于房间进程组织；持久化由本方案单独设计。
+[T3] PostgreSQL Explicit Locking https://www.postgresql.org/docs/current/explicit-locking.html 。用于事务行锁与锁序设计。
+[T4] Oban Unique Jobs https://oban.hexdocs.pm/unique_jobs.html 。任务去重不是业务幂等替代。
+[T5] FastAPI Background Tasks https://fastapi.tiangolo.com/tutorial/background-tasks/ 。重任务可靠性由外部工作单与 worker 承担。
+[T6] Flutter 视频播放 https://docs.flutter.dev/cookbook/plugins/play-video 。播放器平台行为需实机验证。
+
+20 统一实现边界
+六文档的职责
+本轮统一基线为 C1：产品 2.0、技术 1.0、UI 1.1、数据 1.0、接口 1.0、测试 1.0 均带 C1 修订标记。玩法以产品为主，存储字段以数据为主，线上路径和消息以接口为主，视觉动效以 UI 为主，验收方法以测试为主。本文件的表是结构概览，不是另一套协议。
+生命周期与媒体
+rooms.deadline_at 是当前阶段唯一计时源。exploration.active 到期先取消交付和 pending 提示，再切 interlude、设置五分钟媒体等待截止，phase_id 不变，timer_generation 递增。全员确认中场后进入新 decision；中场到期挂起，恢复重给五分钟等待窗口，记录挂起原因。ending 的五分钟截止不受在线状态或暂停影响，自动 finished；blocked 仍禁止资源授权。
+大厅与授权展示
+换角通过请求、接受、拒绝、取消命令完成，state_json.progress.role_swap 保存单个待处理请求；规则及锁序见数据补充。投票只接受冻结 eligible 集合；展示集合允许安全的 disabled 文案，不能从客户端计算隐藏条件。邀请码 24 小时，但仅大厅可加入。暂停只能房主发起，30 秒协商期，全员确认才消耗本阶段一次机会。
+后台与游客身份
+后台仅接受 audience=admin 的受控会话及明确 editor/reviewer/publisher 角色；游客不能提升权限。一次性后台登录码由部署 CLI 签发，接口契约与数据字段见两份补充。游客恢复码恢复既有 user 身份并撤销旧会话；灾难恢复前生成的新身份若不在恢复点中，不承诺恢复。
+任务与协议持久化
+公开协议数值上限 2^53−1，内部 bigint 不得直接输出越界数。内容 schema_version=2，state_schema_version=1，protocol_version=1，三者独立。worker complete 的 result_json、result_hash 及 accepted/ignored 回执持久化；result_ref 仅是对象引用，不替代完整结果契约。
+暂停协商请求在房主变化或探索转中场时取消；ending 之外的 resume 还须检查内容未 blocked 与恢复期未过。媒体确认只在 running 生效。对外事件名及 replace 白名单统一以接口第9节为准，时钟回复仅走 phx_reply。

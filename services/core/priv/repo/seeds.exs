@@ -1,0 +1,1 @@
+Ruxi.Content.seed()

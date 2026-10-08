@@ -1,0 +1,952 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": 1
+    },
+    "recovery_epoch": {
+      "type": "string"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "enum": [
+        "member_changed",
+        "role_selected",
+        "ready_changed",
+        "room_started",
+        "phase_changed",
+        "lifecycle_changed",
+        "clue_discovered",
+        "clue_shared",
+        "transfer_offered",
+        "transfer_resolved",
+        "vote_recorded",
+        "vote_settled",
+        "hint_pending",
+        "hint_ready",
+        "hint_failed",
+        "chat_added",
+        "media_changed",
+        "collaboration_changed"
+      ]
+    },
+    "phase_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "replace": {
+          "type": "object",
+          "properties": {
+            "room": {
+              "type": "object",
+              "properties": {
+                "room_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "content_version_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lifecycle": {
+                  "enum": [
+                    "lobby",
+                    "running",
+                    "paused",
+                    "suspended",
+                    "finished",
+                    "abandoned"
+                  ]
+                },
+                "phase_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "phase_code": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "briefing",
+                        "exploration",
+                        "decision",
+                        "ending"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "exploration_step": {
+                  "enum": [
+                    "active",
+                    "interlude"
+                  ]
+                },
+                "deadline_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "remaining_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "timer_generation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "host_membership_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "ending_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "room_id",
+                "content_version_id",
+                "lifecycle",
+                "phase_id",
+                "phase_code",
+                "deadline_at",
+                "remaining_ms",
+                "timer_generation",
+                "host_membership_id"
+              ],
+              "additionalProperties": true
+            },
+            "self": {
+              "type": "object",
+              "properties": {
+                "membership_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "control_generation": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "role_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "membership_id",
+                "control_generation",
+                "role_code"
+              ],
+              "additionalProperties": true
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "membership_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "role_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "online": {
+                    "type": "boolean"
+                  },
+                  "briefing_ready": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "membership_id",
+                  "display_name",
+                  "role_code",
+                  "ready",
+                  "online",
+                  "briefing_ready"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 4
+            },
+            "public_scene": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "shared_clues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "clue_id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "shared": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "clue_id",
+                      "title",
+                      "text",
+                      "shared"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "maxItems": 100
+                }
+              },
+              "required": [
+                "title",
+                "description",
+                "shared_clues"
+              ],
+              "additionalProperties": true
+            },
+            "own_role": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "role_code": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role_code",
+                    "title",
+                    "description"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "own_clues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "clue_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "shared": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "clue_id",
+                  "title",
+                  "text",
+                  "shared"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 100
+            },
+            "visible_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "owner_membership_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "transferable": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "title",
+                  "owner_membership_id",
+                  "version",
+                  "transferable"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 100
+            },
+            "offers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "offer_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "item_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                  },
+                  "from_member": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "to_member": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "rejected",
+                      "cancelled",
+                      "expired"
+                    ]
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "offer_id",
+                  "item_id",
+                  "from_member",
+                  "to_member",
+                  "status",
+                  "expires_at"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 100
+            },
+            "available_actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "reason_code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                  }
+                },
+                "required": [
+                  "action_id",
+                  "label",
+                  "enabled"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 100
+            },
+            "own_vote": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "round_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "option_id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "round_id",
+                    "option_id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "vote_round": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "round_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "option_id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "option_id",
+                          "label"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "maxItems": 10
+                    },
+                    "display_options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "option_id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "eligible": {
+                            "type": "boolean"
+                          },
+                          "reason_code": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                          },
+                          "reason_text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "option_id",
+                          "label",
+                          "eligible"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "maxItems": 10
+                    },
+                    "status": {
+                      "enum": [
+                        "open",
+                        "settled"
+                      ]
+                    },
+                    "deadline_at": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "tally": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "winner": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "round_id",
+                    "options",
+                    "display_options",
+                    "status",
+                    "deadline_at"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "hints": {
+              "type": "object",
+              "properties": {
+                "remaining": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "pending_job_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "hint_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "text": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "source": {
+                        "enum": [
+                          "ai",
+                          "template"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "hint_id",
+                      "text",
+                      "source"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "maxItems": 2
+                }
+              },
+              "required": [
+                "remaining",
+                "pending_job_id",
+                "entries"
+              ],
+              "additionalProperties": true
+            },
+            "chat": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "sender_member": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "sent_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "message_id",
+                  "sender_member",
+                  "text",
+                  "sent_at"
+                ],
+                "additionalProperties": true
+              },
+              "maxItems": 50
+            },
+            "media": {
+              "type": "object",
+              "properties": {
+                "authorized": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "media_id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                      },
+                      "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "kind": {
+                        "enum": [
+                          "public",
+                          "own_role"
+                        ]
+                      },
+                      "media_epoch": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "media_id",
+                      "asset_id",
+                      "kind",
+                      "media_epoch"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "maxItems": 16
+                },
+                "public_anchor": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "media_id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                        },
+                        "media_epoch": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "start_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "position_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "rate": {
+                          "enum": [
+                            0,
+                            1
+                          ]
+                        }
+                      },
+                      "required": [
+                        "media_id",
+                        "media_epoch",
+                        "start_at",
+                        "position_ms",
+                        "rate"
+                      ],
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "authorized",
+                "public_anchor"
+              ],
+              "additionalProperties": true
+            },
+            "collaboration": {
+              "type": "object",
+              "properties": {
+                "media_acks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "media_id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "maxItems": 4
+                      }
+                    },
+                    "required": [
+                      "media_id",
+                      "members"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "maxItems": 16
+                },
+                "early_finish_acks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "maxItems": 4
+                },
+                "interlude_acks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "maxItems": 4
+                },
+                "resume_acks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "maxItems": 4
+                },
+                "manual_pause_used": {
+                  "type": "boolean"
+                },
+                "pause_request": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "confirmed_members": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "maxItems": 4
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "expires_at",
+                        "confirmed_members"
+                      ],
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "role_swap": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "from_member": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "to_member": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "from_role_code": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                        },
+                        "to_role_code": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_:-]{1,64}$"
+                        },
+                        "status": {
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "from_member",
+                        "to_member",
+                        "from_role_code",
+                        "to_role_code",
+                        "status",
+                        "expires_at"
+                      ],
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "media_acks",
+                "early_finish_acks",
+                "interlude_acks",
+                "resume_acks",
+                "manual_pause_used",
+                "pause_request",
+                "role_swap"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "replace"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocol_version",
+    "recovery_epoch",
+    "seq",
+    "event_id",
+    "type",
+    "phase_id",
+    "occurred_at",
+    "payload"
+  ],
+  "additionalProperties": false
+}

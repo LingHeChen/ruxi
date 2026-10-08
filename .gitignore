@@ -1,0 +1,17 @@
+**/deps/
+**/_build/
+**/.dart_tool/
+**/build/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/*.egg-info/
+**/.flutter-plugins-dependencies
+.env
+.env.*
+!.env.example
+**/node_modules/
+.DS_Store
+*.log
+
+.local/

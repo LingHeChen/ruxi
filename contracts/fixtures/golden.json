@@ -1,0 +1,56 @@
+[
+  {
+    "name": "truth",
+    "shared": [
+      "C1",
+      "C3"
+    ],
+    "votes": [
+      "publish",
+      "publish",
+      "leave"
+    ],
+    "ending": "E1"
+  },
+  {
+    "name": "missed",
+    "shared": [
+      "C1"
+    ],
+    "votes": [
+      "wait",
+      "wait",
+      "leave"
+    ],
+    "ending": "E2"
+  },
+  {
+    "name": "echo",
+    "shared": [],
+    "votes": [
+      "leave",
+      "leave",
+      "wait"
+    ],
+    "ending": "E3"
+  },
+  {
+    "name": "tie",
+    "shared": [
+      "C1",
+      "C3"
+    ],
+    "votes": [
+      "leave",
+      "wait",
+      "publish"
+    ],
+    "ending": "E3"
+  },
+  {
+    "name": "abstain",
+    "shared": [],
+    "votes": [],
+    "ending": "E3"
+  }
+]

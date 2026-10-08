@@ -1,0 +1,11 @@
+{
+  "protocol_version": 1,
+  "recovery_epoch": "local-C1",
+  "command_id": "22222222-2222-4222-8222-222222222222",
+  "phase_id": null,
+  "control_generation": 1,
+  "type": "select_role",
+  "payload": {
+    "role_code": "investigator"
+  }
+}

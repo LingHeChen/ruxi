@@ -1,0 +1,98 @@
+[
+  {
+    "media_id": "opening",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000001",
+    "file": "opening.mp4",
+    "subtitle_file": "opening.vtt",
+    "title": "末班车的第七位乘客",
+    "duration_ms": 50000,
+    "size_bytes": 273051,
+    "sha256": "e1e202945579cd2ccbe3189fa048765b4639a043ae24459d564168917fdd5f29",
+    "summary": "23:17。最后一班车，即将离站。\n车厢名单上，只有六个名字。\n一段来自未来的留言响起。\n「请检查车上的异常装置。」\n三个人，各自握着一段秘密。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "role_investigator",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000002",
+    "file": "role_investigator.mp4",
+    "subtitle_file": "role_investigator.vtt",
+    "title": "调查员 · 仅你可见",
+    "duration_ms": 45000,
+    "size_bytes": 246637,
+    "sha256": "241558305dc63df1c2a676f28654cbce0136c3c7f632b22ecd6687cf742fbb3b",
+    "summary": "你被派来核对末班车的记录。\n有人删去了自己的痕迹。\n监控和车厢名单，也许能回答你。\n调查后，由你决定是否公开发现。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "role_passenger",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000003",
+    "file": "role_passenger.mp4",
+    "subtitle_file": "role_passenger.vtt",
+    "title": "乘客 · 仅你可见",
+    "duration_ms": 45000,
+    "size_bytes": 244164,
+    "sha256": "d71c8cac1a066edc173fbd03d7d970f31b8abdd6366654946622e65b82962c19",
+    "summary": "手机里，存着一段奇怪的留言。\n留言提到一张旧车票。\n你还不知道它意味着什么。\n调查手机，再决定要信任谁。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "role_conductor",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000004",
+    "file": "role_conductor.mp4",
+    "subtitle_file": "role_conductor.vtt",
+    "title": "乘务员 · 仅你可见",
+    "duration_ms": 45000,
+    "size_bytes": 246388,
+    "sha256": "b6ca4dc6d27364e784bafb8ecdca1ee3e637d411c7a494a6a4023efc725d7d62",
+    "summary": "车门关闭前，你要确保一切正常。\n控制柜一直处于锁定状态。\n共享的记录和收到的道具，\n也许能帮你解开设备的谜团。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "interlude",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000005",
+    "file": "interlude.mp4",
+    "subtitle_file": "interlude.vtt",
+    "title": "最后一声警报",
+    "duration_ms": 45000,
+    "size_bytes": 243976,
+    "sha256": "7cbd62c739a4d4f37006399b287fbd7e52751afe43ace2bddc3ca8902f679f8c",
+    "summary": "警报响起。探索的时间已经结束。\n你们交换的信息，拼成了怎样的故事？\n车门即将关闭。\n离开、等待，还是公开异常？\n这一次，由你们共同决定。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "ending_E1",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000006",
+    "file": "ending_E1.mp4",
+    "subtitle_file": "ending_E1.vtt",
+    "title": "真相",
+    "duration_ms": 60000,
+    "size_bytes": 317819,
+    "sha256": "0f1b3558c12c60f1bdd258f04b9b19537fd73c65f7ad265635883876f1735448",
+    "summary": "你们公开了关键证据。\n异常装置留下的记录，终于被看见。\n那段未来留言，不再只是一个秘密。\n三个角色的发现，拼成了这一次的真相。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "ending_E2",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000007",
+    "file": "ending_E2.mp4",
+    "subtitle_file": "ending_E2.vtt",
+    "title": "错过",
+    "duration_ms": 60000,
+    "size_bytes": 314167,
+    "sha256": "924b56afb1920302725c30a525b85e7946c2d13765e5ed3fa95c2de60695fe47",
+    "summary": "你们留在车厢里，继续等待。\n第七位乘客，始终没有出现。\n时间从指间流过。\n也许那扇门，已经在别处关闭。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  },
+  {
+    "media_id": "ending_E3",
+    "asset_id": "aaaaaaaa-aaaa-4aaa-8aaa-000000000008",
+    "file": "ending_E3.mp4",
+    "subtitle_file": "ending_E3.vtt",
+    "title": "余音",
+    "duration_ms": 60000,
+    "size_bytes": 314857,
+    "sha256": "49d0b274b93fa1e5e56cf48db1743b29b8a043172ab5aa2f2c9300754a94d627",
+    "summary": "你们走下了末班车。\n车门合拢，远处的灯渐渐消失。\n谁也没有再提起那段留言。\n车厢里的声音，却还在。",
+    "source": "Original procedural graphics and original narrative authored for Ruxi; synthesized low-volume tone. Not final filmed footage."
+  }
+]

@@ -1,0 +1,53 @@
+入戏六文档统一性检查与修复记录 C1
+日期：2026-10-08
+
+结论
+六份文档已直接修订，封面和页脚标记 C1，保留原文件名与历史身份。此前测试文档 B01—B06 的文档差异已关闭；不是软件测试通过。UI 配套 HTML、嵌入图稿和压缩包同步更新。
+
+主规范与阅读顺序
+产品负责玩法与范围；技术负责服务边界和并发实现；数据负责持久化字段和约束；接口负责线上模型、路径和错误；UI负责呈现与交互；测试负责证据与发布门槛。发生变更先改相应主规范，再同步相关文档及用例，不能仅以最后更新时间决定正确性。
+六篇仍为产品2.0、技术1.0、UI1.1、数据1.0、接口1.0、测试1.0，统一修订C1。
+
+已修复及关联章节
+01 邀请期限 B01：产品/数据24h与接口30min冲突，统一为24h；开局、大厅关闭或轮换旧码即失效。产品4，数据6，接口3，QA31。
+02 暂停权限 B02：仅房主发起，30s协商，全员确认；每阶段一次成功主动暂停。房主转移或探索转中场取消请求。产品4，接口7/18，数据20，UI17，QA14。
+03 候选展示 B03：options仅含可投项；display_options提供冻结的安全禁用展示。eligible集合严格对应options，不暴露隐藏条件。产品13，数据19，接口9/17，UI14/17，QA32。
+04 恢复目标 B04：统一RPO≤5min、RTO≤60min；修复测量起点。技术19，数据17，QA24；均待实际演练。
+05 换角 B05：request/accept/reject/cancel四个命令；30s请求，一房一个pending；双方同意后原子交换并取消准备，禁止先释放再抢占。产品4，数据19，接口17，UI17，QA31。
+06 后台登录 B06：部署CLI签发5min一次性登录码，admin独立会话和角色校验；access≤15min，refresh绝对期限8h。数据20，接口18，UI17，QA33。
+07 命令幂等：摘要排除control_generation与传输ref，包含recovery_epoch；当前身份和代次必须先校验，新控制设备可确认或重试原意图。技术5/6，数据10，接口6，QA07。
+08 消息模型：回执仅phx_reply.response；时钟回复仅phx_reply；状态事件用payload.replace原子替换授权顶层字段。更新技术示例，避免客户端实现两套协议。技术6，接口5/9。
+09 UI提交与成功：本地按压、提交回执、视图已应用分开；回执不能直接改变道具、线索或票型。产品8，技术5，UI15/17，QA25。
+10 阶段时钟：rooms.deadline_at是唯一当前阶段时钟，vote_round deadline仅为读模型。技术9/10，数据4，接口15。
+11 中场流程：exploration.active结束进入interlude子状态，关闭探索动作；全员确认中场后才开始45s决策。中场五分钟未齐则挂起，恢复重给媒体等待窗口。产品5/13，技术20，数据19，接口17，UI17，QA32。
+12 结局窗口：已结算ending不再因掉线、全离线或退出挂起；全员确认或五分钟到期finished。blocked仍禁止新媒体授权。产品13，技术3/20，数据17/19，接口17，QA14/24/32。
+13 提示范围：仅探索active与decision可请求，角色每阶段两次成功提示；中场、暂停或阶段切换取消pending并释放预留。产品5，技术11，接口8，数据19。
+14 媒体标识：media_id=usage_code，asset_id=UUID；私人片段也提供media_epoch；他人准备状态仅安全布尔摘要。接口11/17，数据20。
+15 Worker结果：complete使用tagged union result；持久化result_json及accepted/ignored回执；相同已完成hash可重放回执，过期无回执才STALE_LEASE。技术11/14，数据19，接口12，QA17。
+16 后台POST幂等：validate、approve、upload-intent补command_id；八种operation进入account_commands；PUT保持revision条件更新并GET查证。数据6/20，接口13/18，QA33。
+17 游客恢复：新增首次恢复码、单次轮换和恢复端点，防止撤销会话后无原席位恢复入口；明确丢码和RPO丢失身份的边界。产品13，技术20，数据20，接口18，UI17，QA34。
+18 数据与命名：role_code统一；member_id/membership_id同一身份；内容schema=2、状态schema=1、传输protocol=1独立；公开整数≤2^53−1；客户端设备与请求ID生成范围补齐。
+19 埋点：10s或20条批发，单批≤50条/64KiB，内存200条，磁盘1MiB；技术旧1000条/2MB口径已移除。技术16，接口13，QA29。
+20 测试口径：持续压测补建终态房，100活跃房不能退化为空服务；声明实际请求混合；延迟统一“提交到事件应用可见”；增加30min客户端资源趋势。QA28/29及测试17。
+21 UI图稿与HTML：原六位邀请码改为八位；禁用文案不再暴露C3；同步嵌入图、HTML和配套包，保留Apple式简洁、动效与自适应设计。
+22 交付状态与版式：B01—B06关闭指文档修复；QA01—QA34仍未执行；清理空白页和零散尾页，保留原章节与图稿。新增条目以章节定位，不依赖会变动的页码。
+
+本轮验证
+完成：六文档正文、表格、示例、字段与验收映射检查；六份DOCX渲染及页面检查；HTML内嵌JavaScript语法检查；压缩包文件完整性与DOCX内容哈希核对。
+未执行：真实Flutter、Phoenix、PostgreSQL、Python服务测试；真机动画和播放器；浏览器交互/读屏；并发与负载；灾难恢复。
+尚待开发交付：OpenAPI/JSON Schema、数据库迁移、可执行fixtures；换角、身份恢复与中场的Flutter页面。现有HTML是有限范围视觉与行为演示，750ms不是业务等待要求。
+正式上线前仍需确认真实部署资源、支持设备和数据保留说明。以上不阻塞本轮设计评审，但不能据此声称可上线。
+
+交付清单及SHA-256
+Ruxi_Product_Design_v2.docx
+6a14825af0e037ddad2f6b20388f309f0e1988219b7b0514ce8ca09dbe45b74b
+Ruxi_Technical_Design_v1.docx
+19bacfe628e3d16b33135f82901c5766f514c24dbbbfffd3cf57f11b989dfe96
+Ruxi_Interaction_UI_Design_v1_1.docx
+91e09a1cd2df86220505a97a7404bf91801699851a3af1694705973cd40f3a88
+Ruxi_Data_Design_v1.docx
+9acf9e635035b56a2457142c62caf083ca40fdb9fa4a2a8ccd7ee50334b36935
+Ruxi_API_Communication_Design_v1.docx
+960ab63c289ce8d7657a8a052eab7bc760d711862cfd5c3ebbdec195a964afdd
+Ruxi_Test_Acceptance_Design_v1.docx
+84a77a527ee06d7b985a7113c9d744dbcfb89004bbbee03d023a648cd74811fe
