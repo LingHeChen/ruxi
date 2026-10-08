@@ -61,6 +61,7 @@ class _CreatorState extends State<Creator> {
   bool useCode = false, restoring = true;
   Map<String, dynamic>? adminProfile;
   Future<dynamic>? overview, assetData, userData;
+  int dashboardGeneration = 0;
   @override
   void initState() {
     super.initState();
@@ -88,6 +89,7 @@ class _CreatorState extends State<Creator> {
   }
 
   Future<void> loadWorkspace() async {
+    dashboardGeneration++;
     if (roles.contains('editor')) {
       stories = (await api('GET', '/v1/admin/stories'))['items'];
       if (stories.isNotEmpty) {
@@ -115,7 +117,14 @@ class _CreatorState extends State<Creator> {
   }
 
   Future<void> signOut() async {
-    await api('POST', '/v1/admin/auth/logout', {});
+    try {
+      await api('POST', '/v1/admin/auth/logout', {});
+    } finally {
+      clearLocalSession();
+    }
+  }
+
+  void clearLocalSession() {
     store.clear();
     token = refreshToken = '';
     version = preview = adminProfile = null;
@@ -827,6 +836,7 @@ class _CreatorState extends State<Creator> {
         const SizedBox(height: 24),
         box(
           OperationsPanel(
+            key: ValueKey(dashboardGeneration),
             load: () => overview ??= api('GET', '/v1/admin/operations'),
           ),
         ),
@@ -1234,8 +1244,13 @@ class _CreatorState extends State<Creator> {
           'roles': selected.toList(),
           'command_id': const Uuid().v4(),
         });
-        userData = api('GET', '/v1/admin/users');
-        status = '后台权限已更新。';
+        if (user['user_id'] == adminProfile?['user_id']) {
+          clearLocalSession();
+          status = '权限已更新，请重新登录。';
+        } else {
+          userData = api('GET', '/v1/admin/users');
+          status = '后台权限已更新。';
+        }
       });
     }
   }

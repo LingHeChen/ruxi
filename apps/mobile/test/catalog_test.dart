@@ -6,6 +6,7 @@ import 'package:ruxi/main.dart';
 class CatalogClient extends RoomClient {
   String? createdStory;
   String? lastSearch;
+  List<dynamic>? nextPage;
   CatalogClient() {
     stories = [
       {
@@ -41,6 +42,9 @@ class CatalogClient extends RoomClient {
   ]) async {
     lastSearch = path;
     final q = Uri.parse(path).queryParameters;
+    if (q['offset'] == '1' && nextPage != null) {
+      return {'items': nextPage, 'total': 2, 'next_cursor': null};
+    }
     final filtered = stories
         .where(
           (s) =>
@@ -49,6 +53,23 @@ class CatalogClient extends RoomClient {
         )
         .toList();
     return {'items': filtered, 'total': filtered.length, 'next_cursor': null};
+  }
+}
+
+class ExpiredLogoutClient extends RoomClient {
+  bool cleared = false;
+  @override
+  Future<dynamic> request(
+    String method,
+    String path, [
+    Json? body,
+    bool private = false,
+    bool retried = false,
+  ]) async => throw ApiError('UNAUTHORIZED');
+  @override
+  Future<void> clearIdentity() async {
+    cleared = true;
+    token = '';
   }
 }
 
@@ -143,5 +164,37 @@ void main() {
     expect(find.text('另一段原创故事'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
+    'first catalog page retains server total and loads the next cursor',
+    (tester) async {
+      final client = CatalogClient();
+      client.nextPage = [client.stories.last];
+      client.stories = [client.stories.first];
+      client.storiesTotal = 2;
+      client.storiesNext = '1';
+      await tester.pumpWidget(
+        MaterialApp(home: Home(autoInitialize: false, client: client)),
+      );
+      await tester.tap(find.text('发现'));
+      await tester.pumpAndSettle();
+      expect(find.text('共 2 个故事'), findsOneWidget);
+      await tester.ensureVisible(find.text('加载更多'));
+      await tester.tap(find.text('加载更多'));
+      await tester.pumpAndSettle();
+      expect(client.lastSearch, contains('offset=1'));
+      expect(find.text('末班车的第七位乘客'), findsOneWidget);
+      expect(find.text('另一段原创故事'), findsOneWidget);
+      expect(find.text('加载更多'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  test('expired logout still removes local credentials', () async {
+    final client = ExpiredLogoutClient()..token = 'expired-session';
+    await client.logout();
+    expect(client.cleared, isTrue);
+    expect(client.signedIn, isFalse);
+    client.dispose();
   });
 }

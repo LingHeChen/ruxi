@@ -119,6 +119,8 @@ class RoomClient extends ChangeNotifier {
   Json? get view => reducer.view;
   List<dynamic> stories = [], rooms = [], favorites = [];
   Json? profile;
+  int storiesTotal = 0;
+  String? storiesNext;
   bool get signedIn => token.isNotEmpty;
   bool get registered => profile != null && profile!['is_guest'] == false;
   String _connection = 'disconnected', status = '';
@@ -481,8 +483,11 @@ class RoomClient extends ChangeNotifier {
   });
 
   Future<void> logout() => run(() async {
-    if (signedIn) await request('POST', '/v1/auth/logout');
-    await clearIdentity();
+    try {
+      if (signedIn) await request('POST', '/v1/auth/logout');
+    } finally {
+      await clearIdentity();
+    }
     await catalog();
     status = '已退出登录。';
   });
@@ -557,7 +562,10 @@ class RoomClient extends ChangeNotifier {
   });
 
   Future<void> catalog() async {
-    stories = (await request('GET', '/v1/stories'))['items'];
+    final directory = await request('GET', '/v1/stories');
+    stories = directory['items'];
+    storiesTotal = directory['total'] ?? stories.length;
+    storiesNext = directory['next_cursor'];
     if (signedIn) {
       profile = await request('GET', '/v1/me');
       rooms = (await request('GET', '/v1/rooms'))['items'];

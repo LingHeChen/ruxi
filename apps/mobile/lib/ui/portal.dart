@@ -62,13 +62,14 @@ class _PortalState extends State<Portal> {
           'category': category,
           'seats': seats,
           'sort': sort,
-          if (more && next != null) 'offset': next!,
+          if (more && (next ?? client.storiesNext) != null)
+            'offset': (next ?? client.storiesNext)!,
         },
       ).query;
       final data = await client.request('GET', '/v1/stories?$query');
       if (!mounted || generation != requestGeneration) return;
       setState(() {
-        results = [if (more) ...?results, ...data['items']];
+        results = [if (more) ...(results ?? client.stories), ...data['items']];
         next = data['next_cursor'];
         total = data['total'];
       });
@@ -568,12 +569,12 @@ class _PortalState extends State<Portal> {
           ),
         ),
       Text(
-        '共 ${results == null ? client.stories.length : total} 个故事',
+        '共 ${results == null ? (client.storiesTotal == 0 ? client.stories.length : client.storiesTotal) : total} 个故事',
         style: const TextStyle(color: _muted),
       ),
       const SizedBox(height: 16),
       grid(results ?? client.stories),
-      if (next != null)
+      if ((next ?? (results == null ? client.storiesNext : null)) != null)
         Padding(
           padding: const EdgeInsets.only(top: 24),
           child: OutlinedButton(
