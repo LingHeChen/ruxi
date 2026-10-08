@@ -339,6 +339,7 @@ class RoomClient extends ChangeNotifier {
         return;
       }
       roomId = saved['room_id'];
+      invite = saved['invite_code'] as String?;
       reducer.snapshot(saved);
       generation = view!['self']['control_generation'];
       memberId = view!['self']['membership_id'];
@@ -599,8 +600,9 @@ class RoomClient extends ChangeNotifier {
       'story_id': story,
       'command_id': uuid.v4(),
     });
-    invite = r['invite_code'];
     await enter(r['room_id']);
+    invite = r['invite_code'];
+    await persist();
   });
   Future<void> join(String code) async => run(() async {
     if (!RegExp(r'^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$')
@@ -612,11 +614,13 @@ class RoomClient extends ChangeNotifier {
       'invite_code': code.trim().toUpperCase(),
       'command_id': uuid.v4(),
     });
-    invite = code.trim().toUpperCase();
     await enter(r['room_id']);
+    invite = code.trim().toUpperCase();
+    await persist();
   });
   Future<void> enter(String id, {bool takeover = false}) async {
     close();
+    if (roomId != id) invite = null;
     roomId = id;
     reducer.view = null;
     reducer.seq = 0;
@@ -685,6 +689,14 @@ class RoomClient extends ChangeNotifier {
         connection = e.code == 'UNAUTHORIZED'
             ? 'auth_expired'
             : 'control_replaced';
+      } else if (e is ApiError &&
+          [
+            'RESOURCE_NOT_FOUND',
+            'NOT_ALLOWED',
+            'CONTENT_BLOCKED',
+            'INVALID_ARGUMENT',
+          ].contains(e.code)) {
+        connection = 'room_unavailable';
       } else {
         _schedule();
       }
@@ -710,7 +722,14 @@ class RoomClient extends ChangeNotifier {
     _calls[ref] = completer;
     _send(event, payload, ref: ref, topic: topic);
     try {
-      return await completer.future.timeout(const Duration(seconds: 8));
+      final response = await completer.future.timeout(
+        const Duration(seconds: 8),
+      );
+      // Command rejection is an authoritative receipt, consumed by _submit.
+      if (event != 'command' && response['error'] != null) {
+        throw ApiError(response['error']['code']);
+      }
+      return response;
     } finally {
       _calls.remove(ref);
     }
@@ -718,10 +737,7 @@ class RoomClient extends ChangeNotifier {
 
   Future<void> calibrateClock() async {
     final sent = DateTime.now().toUtc();
-    final clock = await _call('clock_ping', {
-      'nonce': uuid.v4(),
-      'client_sent_at': sent.toIso8601String(),
-    });
+    final clock = await _call('clock_ping', {'nonce': uuid.v4()});
     mediaClock.sample(
       sent,
       DateTime.now().toUtc(),
@@ -997,6 +1013,7 @@ class RoomClient extends ChangeNotifier {
     if (accountId.isEmpty || roomId == null || view == null) return;
     await cache.write(accountId, {
       'room_id': roomId,
+      'invite_code': invite,
       'snapshot': view,
       'base_seq': reducer.seq,
       'recovery_epoch': reducer.epoch,
@@ -1044,6 +1061,8 @@ class RoomClient extends ChangeNotifier {
           'RECOVERY_CHANGED': '服务器已恢复备份，正在重新同步',
           'UPGRADE_REQUIRED': '协议已更新，请升级应用',
           'SERVICE_UNAVAILABLE': '服务暂时不可用，请稍后重试',
+          'INVALID_ARGUMENT': '请求参数不符合接口要求，请刷新应用后重试',
+          'RESOURCE_NOT_FOUND': '房间或内容不存在，或当前账号没有访问权限',
           'RATE_LIMITED': '操作过于频繁，请稍后重试',
           'CHAT_REJECTED': '消息包含不支持的内容，请修改后发送',
         }[code] ??

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../data/room_client.dart';
@@ -25,11 +26,19 @@ class Portal extends StatefulWidget {
     required this.section,
     required this.onSection,
     required this.onRecovery,
+    this.storyId,
+    this.onStory,
+    this.query,
+    this.onFilter,
   });
   final RoomClient client;
   final int section;
   final ValueChanged<int> onSection;
   final VoidCallback onRecovery;
+  final String? storyId;
+  final ValueChanged<String>? onStory;
+  final Map<String, String>? query;
+  final ValueChanged<Map<String, String>>? onFilter;
   @override
   State<Portal> createState() => _PortalState();
 }
@@ -44,12 +53,44 @@ class _PortalState extends State<Portal> {
   bool searching = false;
   String? error;
   @override
+  void initState() {
+    super.initState();
+    restoreFilters();
+  }
+
+  @override
+  void didUpdateWidget(Portal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!mapEquals(oldWidget.query, widget.query)) restoreFilters();
+  }
+
+  void restoreFilters() {
+    final q = widget.query;
+    if (q == null) return;
+    search.text = (q['q'] ?? '').characters.take(80).toString();
+    category = categories.containsKey(q['category']) ? q['category']! : '';
+    seats = ['2', '3', '4'].contains(q['seats']) ? q['seats']! : '';
+    sort = q['sort'] == 'title' ? 'title' : 'latest';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) filter(updateUrl: false);
+    });
+  }
+
+  @override
   void dispose() {
     search.dispose();
     super.dispose();
   }
 
-  Future<void> filter({bool more = false}) async {
+  Future<void> filter({bool more = false, bool updateUrl = true}) async {
+    if (!more && updateUrl) {
+      widget.onFilter?.call({
+        if (search.text.trim().isNotEmpty) 'q': search.text.trim(),
+        if (category.isNotEmpty) 'category': category,
+        if (seats.isNotEmpty) 'seats': seats,
+        if (sort != 'latest') 'sort': sort,
+      });
+    }
     final generation = ++requestGeneration;
     setState(() {
       searching = true;
@@ -128,12 +169,14 @@ class _PortalState extends State<Portal> {
     ),
   );
   @override
-  Widget build(BuildContext context) => switch (widget.section) {
-    1 => catalog(),
-    2 => roomList(),
-    3 => personal(),
-    _ => home(),
-  };
+  Widget build(BuildContext context) => widget.storyId != null
+      ? storyPage()
+      : switch (widget.section) {
+          1 => catalog(),
+          2 => roomList(),
+          3 => personal(),
+          _ => home(),
+        };
   Widget home() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -860,99 +903,148 @@ class _PortalState extends State<Portal> {
       ],
     ),
   );
+  Future<Json>? detailFuture;
+  String? loadedStory;
+  Widget storyPage() {
+    if (loadedStory != widget.storyId) {
+      loadedStory = widget.storyId;
+      detailFuture = client
+          .request('GET', '/v1/stories/${widget.storyId}')
+          .then((v) => Map<String, dynamic>.from(v));
+    }
+    return FutureBuilder<Json>(
+      future: detailFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return empty(
+            RoomClient.explain(snapshot.error!),
+            Icons.error_outline,
+            action: TextButton(
+              onPressed: () => setState(() {
+                loadedStory = null;
+              }),
+              child: const Text('重试'),
+            ),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextButton(
+              onPressed: () => widget.onSection(1),
+              child: const Text('返回剧目列表'),
+            ),
+            detailContent(snapshot.data!, context),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget detailContent(Json story, BuildContext c, {VoidCallback? refresh}) {
+    final saved = client.favorites.any(
+      (f) => f['story_id'] == story['story_id'],
+    );
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${categories[story['category']] ?? '悬疑推理'} / ${difficulties[story['difficulty']] ?? '新手友好'}',
+                style: const TextStyle(color: _gold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                story['title'],
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${story['seat_count']} 名角色 · 私人房间 · 10–15 分钟',
+                style: const TextStyle(color: _muted),
+              ),
+              const Divider(height: 40),
+              const Text('故事简介', style: TextStyle(fontSize: 20)),
+              const SizedBox(height: 12),
+              Text(
+                story['summary'].toString(),
+                style: const TextStyle(height: 1.9),
+              ),
+              const SizedBox(height: 24),
+              const Text('如何开始', style: TextStyle(fontSize: 20)),
+              const SizedBox(height: 10),
+              Text(
+                '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。',
+                style: const TextStyle(color: _muted, height: 1.8),
+              ),
+              const SizedBox(height: 28),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  FilledButton.icon(
+                    onPressed: client.busy
+                        ? null
+                        : () {
+                            if (widget.onStory == null) Navigator.pop(c);
+                            client.create(story['story_id']);
+                          },
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('创建房间'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: client.busy
+                        ? null
+                        : () async {
+                            if (!client.signedIn) {
+                              if (widget.onStory == null) Navigator.pop(c);
+                              await auth();
+                              return;
+                            }
+                            await client.favorite(story['story_id'], !saved);
+                            if (c.mounted) {
+                              if (refresh != null) {
+                                refresh();
+                              } else {
+                                setState(() {});
+                              }
+                            }
+                          },
+                    icon: Icon(saved ? Icons.bookmark : Icons.bookmark_outline),
+                    label: Text(saved ? '取消收藏' : '收藏故事'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> details(Json story) async {
+    if (widget.onStory != null) {
+      widget.onStory!(story['story_id']);
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (c) => StatefulBuilder(
-        builder: (c, refresh) {
-          final saved = client.favorites.any(
-            (f) => f['story_id'] == story['story_id'],
-          );
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${categories[story['category']] ?? '悬疑推理'} / ${difficulties[story['difficulty']] ?? '新手友好'}',
-                      style: const TextStyle(color: _gold),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      story['title'],
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${story['seat_count']} 名角色 · 私人房间 · 10–15 分钟',
-                      style: const TextStyle(color: _muted),
-                    ),
-                    const Divider(height: 40),
-                    const Text('故事简介', style: TextStyle(fontSize: 20)),
-                    const SizedBox(height: 12),
-                    Text(
-                      story['summary'].toString(),
-                      style: const TextStyle(height: 1.9),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text('如何开始', style: TextStyle(fontSize: 20)),
-                    const SizedBox(height: 10),
-                    Text(
-                      '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。',
-                      style: const TextStyle(color: _muted, height: 1.8),
-                    ),
-                    const SizedBox(height: 28),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        FilledButton.icon(
-                          onPressed: client.busy
-                              ? null
-                              : () {
-                                  Navigator.pop(c);
-                                  client.create(story['story_id']);
-                                },
-                          icon: const Icon(Icons.play_arrow),
-                          label: const Text('创建房间'),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: client.busy
-                              ? null
-                              : () async {
-                                  if (!client.signedIn) {
-                                    Navigator.pop(c);
-                                    await auth();
-                                    return;
-                                  }
-                                  await client.favorite(
-                                    story['story_id'],
-                                    !saved,
-                                  );
-                                  if (c.mounted) refresh(() {});
-                                },
-                          icon: Icon(
-                            saved ? Icons.bookmark : Icons.bookmark_outline,
-                          ),
-                          label: Text(saved ? '取消收藏' : '收藏故事'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+        builder: (c, refresh) =>
+            detailContent(story, c, refresh: () => refresh(() {})),
       ),
     );
   }

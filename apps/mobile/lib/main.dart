@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
 
 import 'data/room_client.dart';
 import 'ui/media_sheet.dart';
@@ -48,24 +50,84 @@ ThemeData playerTheme() => ThemeData(
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
   runApp(const RuxiApp());
 }
 
-class RuxiApp extends StatelessWidget {
+GoRouter playerRouter({
+  RoomClient? client,
+  bool autoInitialize = true,
+  String? initialLocation,
+}) => GoRouter(
+  initialLocation: initialLocation,
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) => Home(
+        key: const ValueKey('player-shell'),
+        client: client,
+        autoInitialize: autoInitialize,
+        route: state.uri,
+      ),
+      routes: [
+        for (final path in [
+          '/',
+          '/discover',
+          '/rooms',
+          '/me',
+          '/stories/:storyId',
+          '/rooms/:roomId',
+        ])
+          GoRoute(
+            path: path,
+            builder: (context, state) => const SizedBox.shrink(),
+          ),
+      ],
+    ),
+  ],
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('页面不存在'),
+          TextButton(
+            onPressed: () => context.go('/'),
+            child: const Text('返回首页'),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
+class RuxiApp extends StatefulWidget {
   const RuxiApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  State<RuxiApp> createState() => _RuxiAppState();
+}
+
+class _RuxiAppState extends State<RuxiApp> {
+  late final router = playerRouter();
+  @override
+  void dispose() {
+    router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp.router(
     title: '入戏 · 原创互动故事',
     debugShowCheckedModeBanner: false,
     theme: playerTheme(),
-    home: const Home(),
+    routerConfig: router,
   );
 }
 
 class Home extends StatefulWidget {
-  const Home({super.key, this.autoInitialize = true, this.client});
+  const Home({super.key, this.autoInitialize = true, this.client, this.route});
   final bool autoInitialize;
   final RoomClient? client;
+  final Uri? route;
   @override
   State<Home> createState() => _HomeState();
 }
@@ -81,14 +143,70 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     client.addListener(changed);
-    if (widget.autoInitialize) client.initialize();
+    unawaited(_initialize());
     ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
   }
 
+  bool initialized = false, applyingRoute = false;
+  static const sectionPaths = ['/', '/discover', '/rooms', '/me'];
+  Future<void> _initialize() async {
+    if (widget.autoInitialize) await client.initialize();
+    initialized = true;
+    if (mounted) await applyRoute();
+  }
+
+  @override
+  void didUpdateWidget(Home oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (initialized && oldWidget.route != widget.route) unawaited(applyRoute());
+  }
+
+  Future<void> applyRoute() async {
+    final route = widget.route;
+    if (route == null || !mounted) return;
+    final parts = route.pathSegments;
+    applyingRoute = true;
+    try {
+      if (parts.length == 2 && parts.first == 'rooms') {
+        if (client.roomId != parts[1]) {
+          if (!client.signedIn) {
+            portalSection = 3;
+            client.status = '请先登录或恢复原游客身份，再进入此房间。';
+          } else {
+            await client.run(() => client.enter(parts[1]));
+          }
+        }
+      } else {
+        if (client.roomId != null) await client.backToCatalog();
+        portalSection = sectionPaths.indexOf(route.path);
+        if (portalSection < 0) portalSection = 1;
+      }
+    } finally {
+      applyingRoute = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  void navigateSection(int value) {
+    if (widget.route != null) {
+      context.go(sectionPaths[value]);
+    } else {
+      setState(() => portalSection = value);
+    }
+  }
+
   void changed() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    if (initialized &&
+        !applyingRoute &&
+        widget.route != null &&
+        client.roomId != null) {
+      final target = '/rooms/${client.roomId}';
+      if (widget.route!.path != target) context.go(target);
+    }
   }
 
   @override
@@ -225,7 +343,7 @@ class _HomeState extends State<Home> {
           if (!inRoom && wide) ...[
             for (final entry in {0: '首页', 1: '发现', 2: '房间', 3: '我的'}.entries)
               TextButton(
-                onPressed: () => setState(() => portalSection = entry.key),
+                onPressed: () => navigateSection(entry.key),
                 child: Text(
                   entry.value,
                   style: TextStyle(
@@ -237,14 +355,20 @@ class _HomeState extends State<Home> {
           ],
           if (inRoom)
             TextButton(
-              onPressed: () => client.backToCatalog(),
+              onPressed: () {
+                if (widget.route != null) {
+                  context.go('/discover');
+                } else {
+                  client.backToCatalog();
+                }
+              },
               child: const Text('回到剧目'),
             ),
           IconButton(
             tooltip: '个人空间',
             onPressed: () {
-              if (inRoom) client.backToCatalog();
-              setState(() => portalSection = 3);
+              if (widget.route == null && inRoom) client.backToCatalog();
+              navigateSection(3);
             },
             icon: const Icon(Icons.person_outline),
           ),
@@ -255,8 +379,7 @@ class _HomeState extends State<Home> {
           ? null
           : NavigationBar(
               selectedIndex: portalSection,
-              onDestinationSelected: (value) =>
-                  setState(() => portalSection = value),
+              onDestinationSelected: navigateSection,
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined),
@@ -339,14 +462,37 @@ class _HomeState extends State<Home> {
   Widget discover() => Portal(
     client: client,
     section: portalSection,
-    onSection: (value) => setState(() => portalSection = value),
+    onSection: navigateSection,
+    storyId: widget.route?.pathSegments.firstOrNull == 'stories'
+        ? widget.route!.pathSegments.last
+        : null,
+    onStory: widget.route == null ? null : (id) => context.go('/stories/$id'),
+    query: widget.route?.path == '/discover'
+        ? widget.route!.queryParameters
+        : null,
+    onFilter: widget.route == null
+        ? null
+        : (query) => context.go(
+            Uri(
+              path: '/discover',
+              queryParameters: query.isEmpty ? null : query,
+            ).toString(),
+          ),
     onRecovery: account,
   );
 
   Widget connecting() => card(
     Column(
       children: [
-        const CircularProgressIndicator(),
+        if ([
+          'connecting',
+          'joining',
+          'syncing',
+          'reconnecting',
+        ].contains(client.connection))
+          const CircularProgressIndicator()
+        else
+          const Icon(Icons.info_outline, color: amber, size: 36),
         const SizedBox(height: 24),
         Text(connectionName()),
         const SizedBox(height: 16),
@@ -368,6 +514,7 @@ class _HomeState extends State<Home> {
         'control_replaced': '设备控制权已变化',
         'auth_expired': '需要恢复身份',
         'disconnected': '已断开',
+        'room_unavailable': '无法进入此房间，请检查房间地址和账号权限',
       }[client.connection] ??
       client.connection;
   Widget lobby() {

@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -30,19 +32,88 @@ ThemeData creatorTheme() => ThemeData(
   cardTheme: const CardThemeData(color: Colors.white, elevation: 0),
 );
 
-void main() => runApp(
-  MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: '入戏 · 制作台',
-    theme: creatorTheme(),
-    home: const Creator(),
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
+  runApp(const CreatorApp());
+}
+
+GoRouter creatorRouter({
+  http.Client? httpClient,
+  SessionStore? sessionStore,
+  String? initialLocation,
+}) => GoRouter(
+  initialLocation: initialLocation,
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) => Creator(
+        key: const ValueKey('creator-shell'),
+        httpClient: httpClient,
+        sessionStore: sessionStore,
+        route: state.uri,
+      ),
+      routes: [
+        for (final path in [
+          '/',
+          '/dashboard',
+          '/stories',
+          '/editor',
+          '/editor/:versionId',
+          '/assets',
+          '/reports',
+          '/users',
+        ])
+          GoRoute(
+            path: path,
+            builder: (context, state) => const SizedBox.shrink(),
+          ),
+      ],
+    ),
+  ],
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('页面不存在'),
+          TextButton(
+            onPressed: () => context.go('/dashboard'),
+            child: const Text('返回工作台'),
+          ),
+        ],
+      ),
+    ),
   ),
 );
 
+class CreatorApp extends StatefulWidget {
+  const CreatorApp({super.key});
+  @override
+  State<CreatorApp> createState() => _CreatorAppState();
+}
+
+class _CreatorAppState extends State<CreatorApp> {
+  late final router = creatorRouter();
+  @override
+  void dispose() {
+    router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp.router(
+    debugShowCheckedModeBanner: false,
+    title: '入戏 · 制作台',
+    theme: creatorTheme(),
+    routerConfig: router,
+  );
+}
+
 class Creator extends StatefulWidget {
-  const Creator({super.key, this.httpClient, this.sessionStore});
+  const Creator({super.key, this.httpClient, this.sessionStore, this.route});
   final http.Client? httpClient;
   final SessionStore? sessionStore;
+  final Uri? route;
   @override
   State<Creator> createState() => _CreatorState();
 }
@@ -69,6 +140,7 @@ class _CreatorState extends State<Creator> {
     store.write('device', device);
     token = store.read('access') ?? '';
     refreshToken = store.read('refresh') ?? '';
+    readRoute();
     restoreSession();
   }
 
@@ -78,6 +150,7 @@ class _CreatorState extends State<Creator> {
         adminProfile = await api('GET', '/v1/admin/me');
         roles = adminProfile!['roles'];
         await loadWorkspace();
+        await applyRoute();
       }
     } catch (_) {
       token = refreshToken = '';
@@ -86,6 +159,66 @@ class _CreatorState extends State<Creator> {
     } finally {
       if (mounted) setState(() => restoring = false);
     }
+  }
+
+  bool applyingRoute = false;
+  void readRoute() {
+    if (widget.route == null) return;
+    page = widget.route!.pathSegments.firstOrNull ?? 'dashboard';
+    workspace = widget.route!.queryParameters['workspace'] ?? 'content';
+    if (!['content', 'preview', 'advanced'].contains(workspace)) {
+      workspace = 'content';
+    }
+  }
+
+  @override
+  void didUpdateWidget(Creator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.route != widget.route) {
+      readRoute();
+      if (!restoring && token.isNotEmpty) run(applyRoute);
+    }
+  }
+
+  Future<void> applyRoute() async {
+    if (widget.route == null) return;
+    applyingRoute = true;
+    try {
+      readRoute();
+      final parts = widget.route!.pathSegments;
+      if (parts.length == 2 &&
+          parts.first == 'editor' &&
+          roles.contains('editor') &&
+          (version == null || version!['version_id'] != parts[1])) {
+        id.text = parts[1];
+        version = preview = null;
+        await load();
+        versions = (await api(
+          'GET',
+          '/v1/admin/stories/$storyId/versions',
+        ))['items'];
+      }
+    } finally {
+      applyingRoute = false;
+    }
+  }
+
+  void navigatePage(String value) {
+    setState(() => page = value);
+    syncRoute();
+  }
+
+  void syncRoute() {
+    if (widget.route == null || applyingRoute || restoring || !mounted) return;
+    final target = page == 'editor' && id.text.isNotEmpty
+        ? Uri(
+            path: '/editor/${id.text}',
+            queryParameters: workspace == 'content'
+                ? null
+                : {'workspace': workspace},
+          ).toString()
+        : '/$page';
+    if (widget.route.toString() != target) context.go(target);
   }
 
   Future<void> loadWorkspace() async {
@@ -160,6 +293,7 @@ class _CreatorState extends State<Creator> {
     login.clear();
     adminProfile = await api('GET', '/v1/admin/me');
     await loadWorkspace();
+    await applyRoute();
     status = '';
   }
 
@@ -248,7 +382,10 @@ class _CreatorState extends State<Creator> {
     } catch (e) {
       status = '$e';
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+        syncRoute();
+      }
     }
   }
 
@@ -463,7 +600,7 @@ class _CreatorState extends State<Creator> {
                     ),
                   ),
                   onTap: () {
-                    setState(() => page = e.key);
+                    navigatePage(e.key);
                     if (drawer) Navigator.pop(context);
                   },
                 ),
@@ -804,19 +941,19 @@ class _CreatorState extends State<Creator> {
               children: [
                 if (roles.contains('editor')) ...[
                   FilledButton.icon(
-                    onPressed: () => setState(() => page = 'stories'),
+                    onPressed: () => navigatePage('stories'),
                     icon: const Icon(Icons.auto_stories_outlined),
                     label: const Text('管理剧目'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => setState(() => page = 'assets'),
+                    onPressed: () => navigatePage('assets'),
                     icon: const Icon(Icons.perm_media_outlined),
                     label: const Text('查看素材'),
                   ),
                 ],
                 if (roles.contains('reviewer'))
                   OutlinedButton.icon(
-                    onPressed: () => setState(() => page = 'reports'),
+                    onPressed: () => navigatePage('reports'),
                     icon: const Icon(Icons.fact_check_outlined),
                     label: const Text('处理举报'),
                   ),
@@ -1172,7 +1309,7 @@ class _CreatorState extends State<Creator> {
       ),
       const SizedBox(height: 20),
       FilledButton(
-        onPressed: () => setState(() => page = 'editor'),
+        onPressed: () => navigatePage('editor'),
         child: const Text('进入内容工作室'),
       ),
     ],
@@ -1541,8 +1678,10 @@ class _CreatorState extends State<Creator> {
                       ),
                     ],
                     selected: {workspace},
-                    onSelectionChanged: (s) =>
-                        setState(() => workspace = s.first),
+                    onSelectionChanged: (s) {
+                      setState(() => workspace = s.first);
+                      syncRoute();
+                    },
                   ),
                   const SizedBox(height: 24),
                   if (workspace == 'content')
