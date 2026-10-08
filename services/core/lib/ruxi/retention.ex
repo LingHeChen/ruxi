@@ -82,6 +82,22 @@ defmodule Ruxi.Retention do
       end
 
       DB.query("DELETE FROM audit_log WHERE occurred_at<=$1", [now - 180 * @day])
+
+      DB.query(
+        "UPDATE chat_reports SET message_text=NULL WHERE id IN (SELECT id FROM chat_reports WHERE created_at <= $1 AND message_text IS NOT NULL ORDER BY created_at LIMIT 1000)",
+        [DateTime.from_unix!(now - 30 * @day, :millisecond)]
+      )
+
+      DB.query(
+        "DELETE FROM chat_reports WHERE id IN (SELECT id FROM chat_reports WHERE created_at <= $1 ORDER BY created_at LIMIT 1000)",
+        [DateTime.from_unix!(now - 180 * @day, :millisecond)]
+      )
+
+      DB.query(
+        "DELETE FROM telemetry_events WHERE event_id IN (SELECT event_id FROM telemetry_events WHERE received_at <= $1 ORDER BY received_at LIMIT 1000)",
+        [DateTime.from_unix!(now - 7 * @day, :millisecond)]
+      )
+
       %{"rooms_processed" => length(rows), "sessions_removed" => length(expired)}
     end)
   end

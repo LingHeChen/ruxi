@@ -12,6 +12,7 @@ defmodule RuxiWeb.Router do
     try do
       Ruxi.Media.stream(conn, capability)
     catch
+      {:error, "RATE_LIMITED", wait} -> error(conn, "RATE_LIMITED", wait)
       {:error, code} -> error(conn, code)
     end
   end
@@ -48,6 +49,7 @@ defmodule RuxiWeb.Router do
       _e in [ArgumentError, Ecto.CastError] -> error(conn, "INVALID_ARGUMENT")
       _ -> error(conn, "SERVICE_UNAVAILABLE")
     catch
+      {:error, "RATE_LIMITED", wait} -> error(conn, "RATE_LIMITED", wait)
       {:error, code} -> error(conn, code)
     end
   end
@@ -98,7 +100,14 @@ defmodule RuxiWeb.Router do
         Auth.guest(json!(p, ~w(device_id command_id)))
 
       {"POST", ["v1", "auth", "recover"]} ->
-        Auth.recover(json!(p, ~w(recovery_code device_id recovery_request_id)))
+        Ruxi.AuthGuard.run(
+          "recover",
+          :inet.ntoa(conn.remote_ip) |> to_string(),
+          p["recovery_code"],
+          fn ->
+            Auth.recover(json!(p, ~w(recovery_code device_id recovery_request_id)))
+          end
+        )
 
       {"POST", ["v1", "auth", "refresh"]} ->
         Auth.refresh(json!(p, ~w(refresh_token device_id refresh_request_id)), "player")
@@ -113,6 +122,18 @@ defmodule RuxiWeb.Router do
 
       {"POST", ["v1", "me", "erase"]} ->
         Ruxi.Privacy.erase(ctx(conn), p)
+
+      {"POST", ["v1", "analytics", "batches"]} ->
+        Ruxi.Telemetry.receive_batch(ctx(conn), p)
+
+      {"POST", ["v1", "rooms", rid, "chat", "reports"]} ->
+        Ruxi.Chat.report(private(conn, rid), p)
+
+      {"GET", ["v1", "admin", "chat", "reports"]} ->
+        Ruxi.Chat.queue(ctx(conn, "admin"))
+
+      {"POST", ["v1", "admin", "chat", "reports", id]} ->
+        Ruxi.Chat.review(ctx(conn, "admin"), id, p)
 
       {"GET", ["v1", "stories"]} ->
         %{
@@ -137,7 +158,11 @@ defmodule RuxiWeb.Router do
         Auth.create_room(ctx(conn), json!(p, ~w(story_id command_id))) |> created()
 
       {"POST", ["v1", "rooms", "join"]} ->
-        Auth.join_room(ctx(conn), json!(p, ~w(invite_code command_id)))
+        c = ctx(conn)
+
+        Ruxi.AuthGuard.run("invite", :inet.ntoa(conn.remote_ip) |> to_string(), c.user, fn ->
+          Auth.join_room(c, json!(p, ~w(invite_code command_id)))
+        end)
 
       {"GET", ["v1", "rooms"]} ->
         c = ctx(conn)
@@ -219,7 +244,14 @@ defmodule RuxiWeb.Router do
         Ruxi.Media.access(ctx(conn), p, origin)
 
       {"POST", ["v1", "admin", "auth", "exchange"]} ->
-        Auth.admin_exchange(json!(p, ~w(login_code device_id login_request_id)))
+        Ruxi.AuthGuard.run(
+          "admin.exchange",
+          :inet.ntoa(conn.remote_ip) |> to_string(),
+          p["login_code"],
+          fn ->
+            Auth.admin_exchange(json!(p, ~w(login_code device_id login_request_id)))
+          end
+        )
 
       {"POST", ["v1", "admin", "auth", "refresh"]} ->
         Auth.refresh(json!(p, ~w(refresh_token device_id refresh_request_id)), "admin")
@@ -262,7 +294,7 @@ defmodule RuxiWeb.Router do
   defp created({:ok, v}), do: {:created, v}
   defp created(v), do: v
 
-  defp error(conn, code) do
+  defp error(conn, code, wait \\ nil) do
     status =
       cond do
         code in ~w(UNAUTHORIZED AUTH_EXPIRED) -> 401
@@ -270,10 +302,17 @@ defmodule RuxiWeb.Router do
         code in ~w(NOT_ALLOWED NOT_MEMBER CONTROL_REPLACED) -> 403
         code == "SERVICE_UNAVAILABLE" -> 503
         code == "INVALID_ARGUMENT" -> 400
+        code == "RATE_LIMITED" -> 429
         true -> 409
       end
 
     e = Util.error(code, status == 503)
+    e = if is_integer(wait), do: Map.put(e, "retry_after_ms", wait), else: e
+
+    conn =
+      if is_integer(wait),
+        do: put_resp_header(conn, "retry-after", to_string(ceil(wait / 1000))),
+        else: conn
 
     conn
     |> put_resp_header("x-request-id", e["trace_id"])

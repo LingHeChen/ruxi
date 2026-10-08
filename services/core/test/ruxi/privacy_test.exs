@@ -69,11 +69,39 @@ defmodule Ruxi.PrivacyTest do
   } do
     {rid, _, peer} = fixture(ctx, "finished")
 
+    sender =
+      DB.one("SELECT id FROM room_members WHERE room_id=$1 AND user_id=$2", [
+        DB.uuid(rid),
+        DB.uuid(ctx.user)
+      ])["id"]
+
+    report = DB.uuid(Util.id())
+
+    DB.query(
+      "INSERT INTO chat_reports(id,room_id,reporter_user_id,sender_member_id,message_id,message_text,reason) VALUES($1,$2,$3,$4,$5,'private-canary','privacy')",
+      [report, DB.uuid(rid), DB.uuid(ctx.user), sender, DB.uuid(Util.id())]
+    )
+
+    DB.query(
+      "INSERT INTO telemetry_events(event_id,user_id,session_id,event_name,schema_version,app_version,occurred_at,properties) VALUES($1,$2,$3,'screen_view',1,'0.1.0',clock_timestamp(),'{\"screen\":\"entry\"}')",
+      [DB.uuid(Util.id()), DB.uuid(ctx.user), DB.uuid(Util.id())]
+    )
+
     assert {:ok, %{"erased" => true}} =
              Privacy.erase(ctx, %{"command_id" => Util.id(), "confirmation" => "ERASE_ACCOUNT"})
 
     row = Store.load!(rid)
     assert row["state_json"]["ending"] == "E1"
+
+    assert DB.one(
+             "SELECT message_text,reporter_user_id,sender_member_id FROM chat_reports WHERE id=$1",
+             [report]
+           ) == %{"message_text" => nil, "reporter_user_id" => nil, "sender_member_id" => nil}
+
+    assert DB.one("SELECT count(*) AS n FROM telemetry_events WHERE user_id=$1", [
+             DB.uuid(ctx.user)
+           ])["n"] == 0
+
     assert length(row["state_json"]["members"]) == 2
     assert Rules.member(row["state_json"], peer)["name"] == "玩家 2"
     refute Jason.encode!(row["state_json"]) =~ "private-canary"

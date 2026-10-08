@@ -8,6 +8,46 @@ defmodule Ruxi.RetentionTest do
     %{now: DB.time()}
   end
 
+  test "diagnostics expire at seven days while reported message bodies expire at thirty", %{
+    now: now
+  } do
+    room = fixture(now, 0, "running")
+    member = DB.one("SELECT id,user_id FROM room_members WHERE room_id=$1", [DB.uuid(room)])
+    old = DateTime.from_unix!(now - 8 * @day, :millisecond)
+
+    for received <- [old, DateTime.from_unix!(now, :millisecond)] do
+      DB.query(
+        "INSERT INTO telemetry_events(event_id,user_id,session_id,event_name,schema_version,app_version,occurred_at,received_at,properties) VALUES($1,$2,$3,'screen_view',1,'0.1.0',$4,$4,'{\"screen\":\"play\"}')",
+        [DB.uuid(Util.id()), member["user_id"], DB.uuid(Util.id()), received]
+      )
+    end
+
+    report = DB.uuid(Util.id())
+
+    DB.query(
+      "INSERT INTO chat_reports(id,room_id,reporter_user_id,sender_member_id,message_id,message_text,reason,created_at) VALUES($1,$2,$3,$4,$5,'canary-report','privacy',$6)",
+      [
+        report,
+        DB.uuid(room),
+        member["user_id"],
+        member["id"],
+        DB.uuid(Util.id()),
+        DateTime.from_unix!(now - 31 * @day, :millisecond)
+      ]
+    )
+
+    assert {:ok, _} = Retention.run(now)
+
+    assert DB.one("SELECT count(*) AS n FROM telemetry_events WHERE user_id=$1", [
+             member["user_id"]
+           ])["n"] == 1
+
+    assert DB.one("SELECT message_text,status FROM chat_reports WHERE id=$1", [report]) == %{
+             "message_text" => nil,
+             "status" => "open"
+           }
+  end
+
   def fixture(now, age, lifecycle) do
     room = Util.id()
     member = Util.id()

@@ -9,17 +9,27 @@ defmodule Ruxi.Limiter do
 
   def handle_call({key, rate, burst}, _, s) do
     now = System.monotonic_time(:millisecond)
-    {tokens, last} = Map.get(s, key, {burst, now})
-    available = min(burst, tokens + (now - last) * rate / 1000)
-    ok = available >= 1
-    s = Map.put(s, key, {if(ok, do: available - 1, else: available), now})
 
     s =
-      if map_size(s) > 10_000,
+      if map_size(s) >= 10_000,
         do: Map.new(Enum.filter(s, fn {_, {_, at}} -> now - at < 60_000 end)),
         else: s
 
-    {:reply, ok, s}
+    if map_size(s) >= 10_000 and not Map.has_key?(s, key) do
+      {:reply, false, s}
+    else
+      {tokens, last} = Map.get(s, key, {burst, now})
+      available = min(burst, tokens + (now - last) * rate / 1000)
+      ok = available >= 1
+      s = Map.put(s, key, {if(ok, do: available - 1, else: available), now})
+
+      s =
+        if map_size(s) > 10_000,
+          do: Map.new(Enum.filter(s, fn {_, {_, at}} -> now - at < 60_000 end)),
+          else: s
+
+      {:reply, ok, s}
+    end
   end
 end
 

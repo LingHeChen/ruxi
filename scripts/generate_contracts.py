@@ -83,7 +83,7 @@ write('contracts/fixtures/golden.json',[
 
 paths={}
 def endpoint(path,method,props=None,security=True,summary='',code='200',required=None):
-    spec={'summary':summary or path,'responses':{code:{'description':'C1 JSON envelope'},'400':{'description':'Invalid request'},'401':{'description':'Unauthenticated'},'403':{'description':'Not authorized'},'409':{'description':'Business conflict'}}}
+    spec={'summary':summary or path,'responses':{code:{'description':'C1 JSON envelope'},'400':{'description':'Invalid request'},'401':{'description':'Unauthenticated'},'403':{'description':'Not authorized'},'409':{'description':'Business conflict'},'429':{'description':'Rate limited; authentication returns retry_after_ms and Retry-After'}}}
     if security:spec['security']=[{'bearer':[]}]
     if props is not None:spec['requestBody']={'required':True,'content':{'application/json':{'schema':obj(props,required)}}}
     parameters=[{'name':part[1:-1],'in':'path','required':True,'schema':UUID} for part in path.split('/') if part.startswith('{')]
@@ -99,8 +99,16 @@ for prefix in ['/v1/auth','/v1/admin/auth']:
 endpoint('/v1/admin/auth/exchange','post',{'login_code':{'type':'string'},'device_id':UUID,'login_request_id':UUID},False)
 for p in ['/v1/me','/v1/stories','/v1/stories/{story_id}','/v1/rooms']:endpoint(p,'get',security=p not in ['/v1/stories','/v1/stories/{story_id}'])
 endpoint('/v1/me/erase','post',{'command_id':UUID,'confirmation':{'const':'ERASE_ACCOUNT'}},summary='Irreversible authenticated erasure; revokes identity, preserves deidentified joint results and records an independent restore ledger')
+diagnostic_variants=[]
+for name, field, values in [('screen_view','screen',['entry','discover','lobby','play','ending','account']),('connection_state','state',['online','offline','reconnecting']),('media_summary','reason',['timeout','buffering','user']),('command_attempt','kind',['select_role','ready','start','media_complete','investigate','share_clue','offer_item','accept_offer','reject_offer','cancel_offer','vote','request_hint','chat_send','request_pause','confirm_pause','cancel_pause','resume','leave_room'])]:
+ diagnostic_variants.append(obj({'event_id':UUID,'event_name':{'const':name},'schema_version':{'const':1},'occurred_at':{'type':'string','format':'date-time'},'app_version':{'type':'string','pattern':'^[0-9][A-Za-z0-9.+-]{0,31}$'},'session_id':UUID,'properties':obj({field:{'enum':values}})}))
+endpoint('/v1/analytics/batches','post',{'batch_id':UUID,'events':{'type':'array','minItems':1,'maxItems':50,'items':{'oneOf':diagnostic_variants}}},summary='Optional bounded diagnostics; at most 64 KiB; accepted_ids and rejected event IDs; not business success metrics')
 endpoint('/v1/rooms','post',{'story_id':UUID,'command_id':UUID},code='201')
 endpoint('/v1/rooms/join','post',{'invite_code':{'type':'string','pattern':'^[2-9A-HJ-NP-Z]{8}$'},'command_id':UUID})
+endpoint('/v1/rooms/{room_id}/chat/reports','post',{'command_id':UUID,'message_id':UUID,'reason':{'enum':['harassment','privacy','spam','other']}},summary='Reports only an authorized retained public message; server retrieves its text')
+paths['/v1/rooms/{room_id}/chat/reports']['post']['parameters'] += [{'name':'X-Device-ID','in':'header','required':True,'schema':UUID},{'name':'X-Control-Generation','in':'header','required':True,'schema':INT}]
+endpoint('/v1/admin/chat/reports','get',summary='Reviewer-only queue of explicitly reported public messages')
+endpoint('/v1/admin/chat/reports/{report_id}','post',{'command_id':UUID,'status':{'enum':['resolved','dismissed']}},summary='Reviewer-only auditable report disposition')
 endpoint('/v1/rooms/{room_id}/socket-ticket','post',{'device_id':UUID,'takeover':BOOL,'command_id':UUID},required=['device_id','takeover'])
 endpoint('/v1/rooms/{room_id}/invites','post',{'command_id':UUID})
 for suffix in ['snapshot','events','commands/{command_id}','watermark']:endpoint('/v1/rooms/{room_id}/'+suffix,'get')

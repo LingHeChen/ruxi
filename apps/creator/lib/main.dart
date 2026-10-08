@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'content_panel.dart';
 import 'preview_panel.dart';
+import 'report_panel.dart';
 
 const amber = Color(0xfff3ad47);
 void main() => runApp(
@@ -233,6 +234,30 @@ class _CreatorState extends State<Creator> {
     appBar: AppBar(
       title: const Text('入戏  /  制作台', style: TextStyle(letterSpacing: 3)),
       actions: [
+        if (token.isNotEmpty && roles.contains('reviewer'))
+          TextButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (c) => AlertDialog(
+                title: const Text('聊天举报审核'),
+                content: ReportPanel(
+                  load: () => api('GET', '/v1/admin/chat/reports'),
+                  review: (id, outcome) => api(
+                    'POST',
+                    '/v1/admin/chat/reports/$id',
+                    {'command_id': const Uuid().v4(), 'status': outcome},
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(c),
+                    child: const Text('关闭'),
+                  ),
+                ],
+              ),
+            ),
+            child: const Text('举报审核'),
+          ),
         if (token.isNotEmpty)
           TextButton(
             onPressed: () => run(() async {

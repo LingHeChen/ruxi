@@ -4,6 +4,7 @@ import 'cache.dart';
 import 'credentials.dart';
 import 'cache_policy.dart';
 import 'media_clock.dart';
+import 'telemetry.dart';
 
 import 'dart:convert';
 import 'dart:math';
@@ -117,7 +118,111 @@ class RoomClient extends ChangeNotifier {
   final reducer = ViewReducer();
   Json? get view => reducer.view;
   List<dynamic> stories = [], rooms = [];
-  String connection = 'disconnected', status = '';
+  String _connection = 'disconnected', status = '';
+  String get connection => _connection;
+  set connection(String value) {
+    if (_connection == value) return;
+    _connection = value;
+    _telemetry?.record('connection_state', {
+      'state': value == 'live'
+          ? 'online'
+          : value == 'reconnecting'
+          ? 'reconnecting'
+          : 'offline',
+    });
+  }
+
+  TelemetryQueue? _telemetry;
+  String _telemetryAccount = '';
+  final blockedMembers = <String>{};
+
+  void toggleBlock(String member) {
+    if (!blockedMembers.remove(member)) blockedMembers.add(member);
+    while (blockedMembers.length > 500) {
+      blockedMembers.remove(blockedMembers.first);
+    }
+    final owner = accountId;
+    unawaited(
+      cache
+          .write('$owner.moderation', {'blocked': blockedMembers.toList()})
+          .catchError((_) {}),
+    );
+    notifyListeners();
+  }
+
+  Future<void> reportMessage(String message, String reason) => run(() async {
+    await request('POST', '/v1/rooms/$roomId/chat/reports', {
+      'command_id': uuid.v4(),
+      'message_id': message,
+      'reason': reason,
+    }, true);
+    status = '举报已提交，仅发送所选消息供审核。';
+  });
+
+  void _bindTelemetry() {
+    if (accountId.isEmpty || accountId == _telemetryAccount) return;
+    _stopTelemetry();
+    final owner = accountId;
+    _telemetryAccount = owner;
+    blockedMembers.clear();
+    unawaited(
+      cache
+          .read('$owner.moderation')
+          .then((value) {
+            if (owner != accountId || disposed) return;
+            final ids = value?['blocked'];
+            if (ids is List) {
+              blockedMembers.addAll(ids.whereType<String>().take(500));
+              notifyListeners();
+            }
+          })
+          .catchError((_) {}),
+    );
+    late final TelemetryQueue queue;
+    queue = TelemetryQueue(
+      read: () => cache.read('$owner.telemetry'),
+      write: (value) => cache.write('$owner.telemetry', value),
+      send: (events) async {
+        if (owner != accountId || disposed) return Delivery.invalid;
+        try {
+          final reply = await request('POST', '/v1/analytics/batches', {
+            'batch_id': queue.batchId,
+            'events': events,
+          });
+          final acknowledged = <dynamic>{
+            ...reply['accepted_ids'],
+            ...(reply['rejected'] as List).map((e) => e['event_id']),
+          };
+          if (!events.every((e) => acknowledged.contains(e['event_id']))) {
+            return Delivery.retry;
+          }
+          return Delivery.accepted;
+        } on ApiError catch (e) {
+          return e.code == 'INVALID_ARGUMENT'
+              ? Delivery.invalid
+              : Delivery.retry;
+        }
+      },
+    );
+    _telemetry = queue;
+    unawaited(queue.start());
+  }
+
+  void _stopTelemetry() {
+    final queue = _telemetry;
+    final owner = _telemetryAccount;
+    _telemetry = null;
+    _telemetryAccount = '';
+    if (queue != null) {
+      unawaited(
+        queue
+            .shutdown()
+            .then((_) => cache.clear('$owner.telemetry'))
+            .catchError((_) {}),
+      );
+    }
+  }
+
   bool busy = false,
       disposed = false,
       _manualClose = false,
@@ -201,6 +306,8 @@ class RoomClient extends ChangeNotifier {
       }
       accountId = (await request('GET', '/v1/me'))['user_id'];
       await storage.write(key: 'account', value: accountId);
+      _bindTelemetry();
+      _telemetry?.record('screen_view', {'screen': 'discover'});
       await catalog();
       if (view == null) await restoreCache();
       if (roomId != null) {
@@ -260,6 +367,7 @@ class RoomClient extends ChangeNotifier {
     await storage.write(key: 'access', value: token);
     await storage.write(key: 'refresh', value: refreshToken);
     await storage.write(key: 'recovery', value: recoveryCode);
+    _bindTelemetry();
   }
 
   Future<void> refresh() async => _saveAuth(
@@ -276,6 +384,9 @@ class RoomClient extends ChangeNotifier {
       'confirmation': 'ERASE_ACCOUNT',
     });
     close();
+    _stopTelemetry();
+    blockedMembers.clear();
+    await cache.clear('$accountId.moderation');
     if (accountId.isNotEmpty) await cache.clear(accountId);
     for (final key in ['access', 'refresh', 'recovery', 'account', 'device']) {
       await storage.delete(key: key);
@@ -588,6 +699,7 @@ class RoomClient extends ChangeNotifier {
     int? targetVersion,
   ]) async {
     if (!canAct) return;
+    _telemetry?.record('command_attempt', {'kind': type});
     final intent = {
       'protocol_version': 1,
       'command_id': uuid.v4(),
@@ -747,6 +859,9 @@ class RoomClient extends ChangeNotifier {
   void dispose() {
     disposed = true;
     close();
+    final queue = _telemetry;
+    _telemetry = null;
+    if (queue != null) unawaited(queue.shutdown());
     super.dispose();
   }
 
@@ -767,6 +882,8 @@ class RoomClient extends ChangeNotifier {
           'RECOVERY_CHANGED': '服务器已恢复备份，正在重新同步',
           'UPGRADE_REQUIRED': '协议已更新，请升级应用',
           'SERVICE_UNAVAILABLE': '服务暂时不可用，请稍后重试',
+          'RATE_LIMITED': '操作过于频繁，请稍后重试',
+          'CHAT_REJECTED': '消息包含不支持的内容，请修改后发送',
         }[code] ??
         '连接或操作失败，请重试${code.isEmpty ? '' : ' · $code'}';
   }

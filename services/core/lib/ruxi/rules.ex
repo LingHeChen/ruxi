@@ -707,7 +707,7 @@ defmodule Ruxi.Rules do
         msg = %{
           "message_id" => U.id(),
           "sender_member" => id,
-          "text" => String.trim(p["text"]),
+          "text" => Ruxi.Chat.text!(p["text"]),
           "sent_at" => U.iso(now)
         }
 

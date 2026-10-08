@@ -1220,25 +1220,82 @@ class _HomeState extends State<Home> {
           style: TextStyle(color: muted, fontSize: 12),
         ),
         const SizedBox(height: 18),
-        ...(v['chat'] as List).map(
-          (m) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  m['sender_member'] == self
-                      ? '你'
-                      : (v['members'] as List).firstWhere(
-                          (a) => a['membership_id'] == m['sender_member'],
-                        )['display_name'],
-                  style: const TextStyle(color: amber, fontSize: 12),
+        Wrap(
+          spacing: 8,
+          children: (v['members'] as List)
+              .where((m) => client.blockedMembers.contains(m['membership_id']))
+              .map(
+                (m) => ActionChip(
+                  label: Text('取消屏蔽 ${m['display_name']}'),
+                  onPressed: () => client.toggleBlock(m['membership_id']),
                 ),
-                Text(m['text']),
-              ],
-            ),
-          ),
+              )
+              .toList(),
         ),
+        ...(v['chat'] as List)
+            .where((m) => !client.blockedMembers.contains(m['sender_member']))
+            .map(
+              (m) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m['sender_member'] == self
+                          ? '你'
+                          : (v['members'] as List).firstWhere(
+                              (a) => a['membership_id'] == m['sender_member'],
+                            )['display_name'],
+                      style: const TextStyle(color: amber, fontSize: 12),
+                    ),
+                    Text(m['text']),
+                    if (m['sender_member'] != self)
+                      PopupMenuButton<String>(
+                        tooltip: '消息操作',
+                        icon: const Icon(Icons.more_horiz, size: 20),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'block',
+                            child: Text('屏蔽此成员的消息'),
+                          ),
+                          PopupMenuItem(value: 'report', child: Text('举报此消息')),
+                        ],
+                        onSelected: (value) async {
+                          if (value == 'block') {
+                            client.toggleBlock(m['sender_member']);
+                          } else {
+                            final reason = await showDialog<String>(
+                              context: context,
+                              builder: (c) => SimpleDialog(
+                                title: const Text('举报将提交这条消息供审核'),
+                                children: [
+                                  for (final option in {
+                                    'harassment': '辱骂或骚扰',
+                                    'privacy': '泄露隐私',
+                                    'spam': '垃圾信息',
+                                    'other': '其他问题',
+                                  }.entries)
+                                    SimpleDialogOption(
+                                      onPressed: () =>
+                                          Navigator.pop(c, option.key),
+                                      child: Text(option.value),
+                                    ),
+                                ],
+                              ),
+                            );
+                            if (reason != null) {
+                              await client.reportMessage(
+                                m['message_id'],
+                                reason,
+                              );
+                            }
+                          }
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
         TextField(
           controller: chat,
           maxLength: 500,

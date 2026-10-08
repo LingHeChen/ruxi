@@ -221,7 +221,7 @@ defmodule Ruxi.Auth do
         DB.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [DB.uuid(ctx.user)])
         valid!(ctx)
 
-        if operation == "invite.rotate",
+        if operation in ["invite.rotate", "chat.report"],
           do: Store.auth!(Store.load!(p["room_id"], true)["state_json"], ctx)
 
         r =

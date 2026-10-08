@@ -8,6 +8,7 @@ defmodule Ruxi.Application do
           Ruxi.Repo,
           Ruxi.Privacy,
           Ruxi.Limiter,
+          Ruxi.AuthGuard,
           Ruxi.Connections,
           {Phoenix.PubSub, name: Ruxi.PubSub},
           {Registry, keys: :unique, name: Ruxi.RoomRegistry},

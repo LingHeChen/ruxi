@@ -6,23 +6,25 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| Elixir `mix test` | 36 项通过 |
+| Elixir `mix test` | 47 项通过 |
 | Elixir `mix compile --warnings-as-errors` | 通过 |
 | Python `uv run pytest` | 22 项通过 |
-| 玩家 Flutter analyze / test | 无分析问题，7 项通过 |
-| 制作台 Flutter analyze / test | 无分析问题，3 项通过 |
+| 玩家 Flutter analyze / test | 无分析问题，11 项通过 |
+| 制作台 Flutter analyze / test | 无分析问题，4 项通过 |
 | 玩家与制作台 Flutter Web 构建 | 通过 |
 | Android debug APK 构建 | 媒体校时版本通过；注销 UI 尚未重建 |
 | iOS Simulator 构建 | 媒体校时版本通过；注销 UI 尚未重建 |
 | Docker Compose 配置校验 | 通过；未运行容器 |
 
-合计 68 项测试。新增覆盖账号注销及独立台账恢复、AST 可达性和错误图、隔离预览、保留清理、Worker 身份与失败释放、模型适配器异常回退、缓存到期、公共时间锚和低 RTT 校时。这些测试不能代替复合验收项全部通过。
+合计 84 项测试。新增覆盖认证失败预算与 429、埋点边界/去重/隐私/定时与退避、聊天举报去重/权限/审计、诊断与举报正文清理，以及账号注销及独立台账恢复。这些测试不能代替复合验收项全部通过。
 
 ## 真实协议联调
 
 `node scripts/smoke.mjs` 已通过：三个独立游客经真实 Phoenix V2 WebSocket 建房、入房、同步、心跳及断线重连；跨角色媒体和错误私有 topic 被拒绝；线索、道具交付、重复命令、提示、中场和私有投票完成闭环。等待真实 45 秒决策截止后得到 E1，全员确认结局后读取持久化快照。
 
 `node scripts/smoke_creator.mjs` 已通过：受控 CLI 登录、剧目和版本读取、草稿创建、AST 验证、隔离多角色预览、私有调查、道具交付、提示、E1、预览幂等及修改版本后旧预览失效。预览不创建真实游戏房间，也不发布内容。
+
+`node scripts/smoke_operations.mjs` 已通过真实 HTTP：analytics/batches 接受及拒绝回执、重复事件、隐私字段拒绝、注销后访问/刷新凭据失效，以及失败预算触发的 429 / Retry-After。修改后再次运行三人玩法联调，真实截止 E1 结算通过。
 
 签名视频 Range 请求返回 206 和正确字节段，字幕可读取，伪造媒体地址被拒绝。视频为本项目生成的八段原创开发动效，来源和哈希记录在媒体 manifest 中。
 

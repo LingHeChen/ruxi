@@ -122,6 +122,13 @@ defmodule Ruxi.Privacy do
     )
 
     DB.query("DELETE FROM account_commands WHERE user_id=$1", [uid])
+    DB.query("DELETE FROM telemetry_events WHERE user_id=$1", [uid])
+
+    DB.query(
+      "UPDATE chat_reports SET reporter_user_id=NULL,sender_member_id=NULL,message_text=NULL WHERE reporter_user_id=$1 OR sender_member_id IN (SELECT id FROM room_members WHERE user_id=$1)",
+      [uid]
+    )
+
     DB.query("DELETE FROM admin_roles WHERE user_id=$1", [uid])
     DB.query("DELETE FROM admin_login_codes WHERE user_id=$1", [uid])
 
