@@ -71,7 +71,7 @@ class ConditionEditor extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(top: 8),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: Color(0xffe2e8f0)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -136,7 +136,7 @@ class ConditionEditor extends StatelessWidget {
             if (op == 'all' && (value[op] as List).isEmpty)
               const Text(
                 '没有前置条件，该动作可直接执行。',
-                style: TextStyle(color: Colors.white60),
+                style: TextStyle(color: Color(0xff64748b)),
               ),
           ] else if (op == 'not')
             ConditionEditor(

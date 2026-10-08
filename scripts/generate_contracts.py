@@ -92,6 +92,20 @@ def endpoint(path,method,props=None,security=True,summary='',code='200',required
     paths.setdefault(path,{})[method]=spec
 endpoint('/health','get',security=False)
 endpoint('/v1/auth/guest','post',{'device_id':UUID,'command_id':UUID},False)
+ACCOUNT={'type':'string','minLength':3,'maxLength':64,'pattern':'^[a-zA-Z0-9][a-zA-Z0-9_.@-]{2,63}$'}
+PASSWORD={'type':'string','minLength':1,'maxLength':128,'description':'10–128 UTF-8 bytes; never returned or logged'}
+endpoint('/v1/auth/register','post',{'username':ACCOUNT,'password':PASSWORD,'display_name':{'type':'string','minLength':1,'maxLength':24},'device_id':UUID,'command_id':UUID},False)
+for prefix in ['/v1/auth','/v1/admin/auth']:
+ endpoint(prefix+'/login','post',{'username':ACCOUNT,'password':PASSWORD,'device_id':UUID,'login_request_id':UUID},False)
+endpoint('/v1/auth/password-reset','post',{'recovery_code':{'type':'string','minLength':20,'maxLength':128},'new_password':PASSWORD,'device_id':UUID,'recovery_request_id':UUID},False)
+endpoint('/v1/me','put',{'display_name':{'type':'string','minLength':1,'maxLength':24},'bio':{'type':'string','maxLength':160},'command_id':UUID})
+endpoint('/v1/me/password','post',{'current_password':PASSWORD,'new_password':PASSWORD,'command_id':UUID})
+endpoint('/v1/me/favorites','get')
+endpoint('/v1/stories/{story_id}/favorite','post',{'saved':BOOL,'command_id':UUID})
+endpoint('/v1/admin/me','get')
+endpoint('/v1/admin/users','get')
+endpoint('/v1/admin/users/{user_id}/roles','post',{'roles':{'type':'array','maxItems':3,'uniqueItems':True,'items':{'enum':['editor','reviewer','publisher']}},'command_id':UUID})
+endpoint('/v1/admin/stories/{story_id}/metadata','put',{'category':{'enum':['mystery','emotion','scifi','adventure']},'difficulty':{'enum':['beginner','intermediate','advanced']},'summary':{'type':'string','maxLength':1000},'command_id':UUID})
 endpoint('/v1/auth/recover','post',{'recovery_code':{'type':'string'},'device_id':UUID,'recovery_request_id':UUID},False)
 for prefix in ['/v1/auth','/v1/admin/auth']:
  endpoint(prefix+'/refresh','post',{'refresh_token':{'type':'string'},'device_id':UUID,'refresh_request_id':UUID},False)
@@ -103,6 +117,7 @@ diagnostic_variants=[]
 for name, field, values in [('screen_view','screen',['entry','discover','lobby','play','ending','account']),('connection_state','state',['online','offline','reconnecting']),('media_summary','reason',['timeout','buffering','user']),('command_attempt','kind',['select_role','ready','start','media_complete','investigate','share_clue','offer_item','accept_offer','reject_offer','cancel_offer','vote','request_hint','chat_send','request_pause','confirm_pause','cancel_pause','resume','leave_room'])]:
  diagnostic_variants.append(obj({'event_id':UUID,'event_name':{'const':name},'schema_version':{'const':1},'occurred_at':{'type':'string','format':'date-time'},'app_version':{'type':'string','pattern':'^[0-9][A-Za-z0-9.+-]{0,31}$'},'session_id':UUID,'properties':obj({field:{'enum':values}})}))
 endpoint('/v1/analytics/batches','post',{'batch_id':UUID,'events':{'type':'array','minItems':1,'maxItems':50,'items':{'oneOf':diagnostic_variants}}},summary='Optional bounded diagnostics; at most 64 KiB; accepted_ids and rejected event IDs; not business success metrics')
+paths['/v1/stories']['get']['parameters']=[{'name':key,'in':'query','required':False,'schema':schema} for key,schema in {'q':{'type':'string','maxLength':80},'category':{'enum':['mystery','emotion','scifi','adventure']},'seats':{'enum':['2','3','4']},'sort':{'enum':['latest','title']},'offset':{'type':'string','pattern':'^[0-9]{1,5}$'}}.items()]
 endpoint('/v1/rooms','post',{'story_id':UUID,'command_id':UUID},code='201')
 endpoint('/v1/rooms/join','post',{'invite_code':{'type':'string','pattern':'^[2-9A-HJ-NP-Z]{8}$'},'command_id':UUID})
 endpoint('/v1/rooms/{room_id}/chat/reports','post',{'command_id':UUID,'message_id':UUID,'reason':{'enum':['harassment','privacy','spam','other']}},summary='Reports only an authorized retained public message; server retrieves its text')

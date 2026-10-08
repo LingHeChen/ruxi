@@ -9,7 +9,21 @@ if Process.whereis(Ruxi.Supervisor),
 {:ok, _} = Application.ensure_all_started(:ecto_sql)
 {:ok, _} = Application.ensure_all_started(:postgrex)
 {:ok, _} = Ruxi.Repo.start_link()
-[user_id | roles] = System.argv()
+[account | roles] = System.argv()
+
+user_id =
+  if Ruxi.Contract.uuid?(account) do
+    account
+  else
+    row =
+      DB.one("SELECT user_id FROM player_accounts WHERE username=$1", [
+        String.downcase(String.trim(account))
+      ])
+
+    Util.require!(row != nil, "RESOURCE_NOT_FOUND")
+    DB.str(row["user_id"])
+  end
+
 roles = if roles == [], do: ~w(editor reviewer publisher), else: roles
 Util.require!(Enum.all?(roles, &(&1 in ~w(editor reviewer publisher))), "INVALID_ARGUMENT")
 

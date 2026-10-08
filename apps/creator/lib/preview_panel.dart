@@ -54,7 +54,7 @@ class PreviewPanel extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           '同时查看每个角色实际能收到的信息。操作共享同一场预览，时间推进仅影响这场试玩。',
-          style: TextStyle(color: Colors.white60, height: 1.6),
+          style: TextStyle(color: Color(0xff64748b), height: 1.6),
         ),
         if (views == null) ...[
           const SizedBox(height: 24),
@@ -116,7 +116,10 @@ class PreviewPanel extends StatelessWidget {
                           return '${_labels[r] ?? r}：${fields.isEmpty ? '无可见变化' : fields.join('、')}';
                         })
                         .join('  /  '),
-                    style: const TextStyle(fontSize: 12, color: Colors.white60),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xff64748b),
+                    ),
                   ),
                 ],
               ),
@@ -144,7 +147,7 @@ class PreviewPanel extends StatelessWidget {
           children: [
             Text(
               _labels[role] ?? view['own_role']?['title'] ?? role,
-              style: const TextStyle(fontSize: 22, color: Color(0xfff3ad47)),
+              style: const TextStyle(fontSize: 22, color: Color(0xffa16a20)),
             ),
             const SizedBox(height: 8),
             Text('${room['phase_code']} · ${room['lifecycle']}'),
@@ -163,7 +166,7 @@ class PreviewPanel extends StatelessWidget {
                     Text(
                       '${clue['text']}',
                       style: const TextStyle(
-                        color: Colors.white60,
+                        color: Color(0xff64748b),
                         height: 1.6,
                       ),
                     ),
@@ -177,7 +180,10 @@ class PreviewPanel extends StatelessWidget {
                 ),
               ),
             if ((view['own_clues'] as List).isEmpty)
-              const Text('还没有发现线索。', style: TextStyle(color: Colors.white60)),
+              const Text(
+                '还没有发现线索。',
+                style: TextStyle(color: Color(0xff64748b)),
+              ),
             const SizedBox(height: 16),
             const Text('公共线索'),
             for (final clue

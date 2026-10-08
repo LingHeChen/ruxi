@@ -5,10 +5,47 @@ import 'package:flutter/services.dart';
 
 import 'data/room_client.dart';
 import 'ui/media_sheet.dart';
+import 'ui/portal.dart';
 
 const amber = Color(0xfff3ad47);
 const surface = Color(0xff1b2125);
 const muted = Color(0xffb0b7bd);
+ThemeData playerTheme() => ThemeData(
+  useMaterial3: true,
+  brightness: Brightness.dark,
+  scaffoldBackgroundColor: const Color(0xff101416),
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: amber,
+    brightness: Brightness.dark,
+    surface: surface,
+    primary: amber,
+  ),
+  fontFamily: 'PingFang SC',
+  textTheme: const TextTheme(
+    headlineLarge: TextStyle(
+      fontSize: 38,
+      fontWeight: FontWeight.w500,
+      letterSpacing: -1.5,
+    ),
+    headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
+    bodyLarge: TextStyle(fontSize: 16, height: 1.7),
+    bodyMedium: TextStyle(fontSize: 14, height: 1.6),
+  ),
+  filledButtonTheme: FilledButtonThemeData(
+    style: FilledButton.styleFrom(
+      minimumSize: const Size(48, 52),
+      foregroundColor: const Color(0xff101416),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      minimumSize: const Size(48, 52),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+  ),
+);
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const RuxiApp());
@@ -18,47 +55,9 @@ class RuxiApp extends StatelessWidget {
   const RuxiApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: '入戏 · 末班车',
+    title: '入戏 · 原创互动故事',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xff101416),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: amber,
-        brightness: Brightness.dark,
-        surface: surface,
-        primary: amber,
-      ),
-      fontFamily: 'PingFang SC',
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 38,
-          fontWeight: FontWeight.w500,
-          letterSpacing: -1.5,
-        ),
-        headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.7),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.6),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          foregroundColor: const Color(0xff101416),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-    ),
+    theme: playerTheme(),
     home: const Home(),
   );
 }
@@ -76,6 +75,7 @@ class _HomeState extends State<Home> {
   String? selectedStoryId;
   final code = TextEditingController(), chat = TextEditingController();
   int tab = 0;
+  int portalSection = 0;
   Timer? ticker;
   @override
   void initState() {
@@ -202,6 +202,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final inRoom = client.roomId != null;
+    final wide = MediaQuery.sizeOf(context).width >= 900;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff101416),
@@ -221,19 +222,64 @@ class _HomeState extends State<Home> {
           ],
         ),
         actions: [
+          if (!inRoom && wide) ...[
+            for (final entry in {0: '首页', 1: '发现', 2: '房间', 3: '我的'}.entries)
+              TextButton(
+                onPressed: () => setState(() => portalSection = entry.key),
+                child: Text(
+                  entry.value,
+                  style: TextStyle(
+                    color: portalSection == entry.key ? amber : muted,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 20),
+          ],
           if (inRoom)
             TextButton(
               onPressed: () => client.backToCatalog(),
               child: const Text('回到剧目'),
             ),
           IconButton(
-            tooltip: '身份与恢复码',
-            onPressed: account,
+            tooltip: '个人空间',
+            onPressed: () {
+              if (inRoom) client.backToCatalog();
+              setState(() => portalSection = 3);
+            },
             icon: const Icon(Icons.person_outline),
           ),
           const SizedBox(width: 12),
         ],
       ),
+      bottomNavigationBar: inRoom || wide
+          ? null
+          : NavigationBar(
+              selectedIndex: portalSection,
+              onDestinationSelected: (value) =>
+                  setState(() => portalSection = value),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: '首页',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.explore_outlined),
+                  selectedIcon: Icon(Icons.explore),
+                  label: '发现',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.meeting_room_outlined),
+                  selectedIcon: Icon(Icons.meeting_room),
+                  label: '房间',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: '我的',
+                ),
+              ],
+            ),
       body: SafeArea(
         child: Column(
           children: [
@@ -290,158 +336,12 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget discover() {
-    final selected = client.stories.isEmpty
-        ? null
-        : client.stories.firstWhere(
-            (story) => story['story_id'] == selectedStoryId,
-            orElse: () => client.stories.first,
-          );
-    final isDemo =
-        selected == null ||
-        (selected['story_id'] == '11111111-1111-4111-8111-111111111111' &&
-            selected['title'] == '末班车的第七位乘客');
-    final seats = selected?['seat_count'] ?? 3;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        heading(
-          'PRIVATE SCREENING / 01',
-          '每个人，都有一段秘密。',
-          '和${{2: '一', 3: '两', 4: '三'}[seats] ?? seats - 1}位朋友一起进入故事。调查、交换线索，然后共同决定结局。',
-        ),
-        if (client.stories.length > 1) ...[
-          DropdownButtonFormField<String>(
-            initialValue: selected['story_id'],
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: '选择剧目',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final story in client.stories)
-                DropdownMenuItem(
-                  value: story['story_id'],
-                  child: Text(
-                    story['title'],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged: client.busy
-                ? null
-                : (id) => setState(() => selectedStoryId = id),
-          ),
-          const SizedBox(height: 24),
-        ],
-        LayoutBuilder(
-          builder: (c, b) {
-            final wide = b.maxWidth > 760;
-            final cover = scene(
-              title: isDemo ? '末班车的\n第七位乘客' : selected['title'],
-              caption: isDemo ? '原创悬疑 · 三人协作 · 10–15 分钟' : '$seats 人协作 · 私人房间',
-              height: wide ? 460 : 360,
-            );
-            final detail = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                pill(isDemo ? '首部免费样片' : '互动故事', color: amber),
-                const SizedBox(height: 24),
-                Text(
-                  isDemo ? '23:17，最后一班车。' : selected['title'],
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  selected?['summary'] ?? '车厢里只有六个名字。\n一段来自未来的留言，\n却指向了第七位乘客。',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    height: 1.9,
-                    color: muted,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  isDemo ? '三名角色 · 三条结局 · 私人房间' : '$seats 名角色 · 私人房间',
-                  style: const TextStyle(color: muted),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: client.busy || client.stories.isEmpty
-                        ? null
-                        : () => client.create(selected['story_id']),
-                    child: Text(client.busy ? '正在进入…' : '创建房间'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: code,
-                  maxLength: 8,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    labelText: '八位邀请码',
-                    hintText: '例如 7KQ8HM2N',
-                    border: OutlineInputBorder(),
-                    counterText: '',
-                  ),
-                  onSubmitted: (_) => client.join(code.text),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: client.busy
-                        ? null
-                        : () => client.join(code.text),
-                    child: const Text('加入朋友的房间'),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  '原创互动故事 · 支持授权视频与图文摘要。',
-                  style: TextStyle(fontSize: 12, color: muted),
-                ),
-              ],
-            );
-            return wide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 6, child: cover),
-                      const SizedBox(width: 48),
-                      Expanded(flex: 4, child: detail),
-                    ],
-                  )
-                : Column(children: [cover, const SizedBox(height: 28), detail]);
-          },
-        ),
-        const SizedBox(height: 36),
-        if (client.rooms.isNotEmpty) ...[
-          const Text('继续你的故事', style: TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
-          ...client.rooms.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: card(
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(r['title']),
-                  subtitle: Text(lifecycle(r['lifecycle'])),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () => client.run(() => client.enter(r['room_id'])),
-                ),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 24),
-        const Text('不是旁观者。你的发现，会改变这一次的故事。', style: TextStyle(color: muted)),
-      ],
-    );
-  }
+  Widget discover() => Portal(
+    client: client,
+    section: portalSection,
+    onSection: (value) => setState(() => portalSection = value),
+    onRecovery: account,
+  );
 
   Widget connecting() => card(
     Column(

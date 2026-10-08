@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-08T15:47:13.864Z",
+  "passed": true,
+  "checks": [
+    "public_search_filters",
+    "guest_upgrade_preserves_room",
+    "registration_retry",
+    "profile_edit",
+    "private_idempotent_favorites",
+    "invalid_password_rejected",
+    "player_admin_boundary",
+    "admin_account_login",
+    "role_assignment",
+    "reviewer_editor_boundary",
+    "unpublished_story_hidden",
+    "password_change_revokes_sessions",
+    "recovery_reset_rotates_code",
+    "reset_retry",
+    "old_recovery_rejected",
+    "account_erasure"
+  ],
+  "credentials_logged": false
+}

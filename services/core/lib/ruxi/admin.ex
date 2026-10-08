@@ -7,7 +7,7 @@ defmodule Ruxi.Admin do
     %{
       "items" =>
         DB.rows(
-          "SELECT id,title,summary,seat_count,current_version_id FROM stories ORDER BY title LIMIT 100"
+          "SELECT id,title,summary,seat_count,current_version_id,category,difficulty FROM stories ORDER BY title LIMIT 100"
         )
         |> Enum.map(fn row ->
           Map.merge(row, %{

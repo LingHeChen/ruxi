@@ -117,7 +117,10 @@ class RoomClient extends ChangeNotifier {
   int generation = 1;
   final reducer = ViewReducer();
   Json? get view => reducer.view;
-  List<dynamic> stories = [], rooms = [];
+  List<dynamic> stories = [], rooms = [], favorites = [];
+  Json? profile;
+  bool get signedIn => token.isNotEmpty;
+  bool get registered => profile != null && profile!['is_guest'] == false;
   String _connection = 'disconnected', status = '';
   String get connection => _connection;
   set connection(String value) {
@@ -245,6 +248,7 @@ class RoomClient extends ChangeNotifier {
     String path, [
     Json? body,
     bool private = false,
+    bool retried = false,
   ]) async {
     final headers = {
       'Content-Type': 'application/json',
@@ -268,6 +272,14 @@ class RoomClient extends ChangeNotifier {
                   ))
             .timeout(const Duration(seconds: 10));
     final data = jsonDecode(response.body) as Json;
+    if (response.statusCode == 401 &&
+        !retried &&
+        refreshToken.isNotEmpty &&
+        !path.startsWith('/v1/auth/') &&
+        path != '/v1/me/password') {
+      await refresh();
+      return request(method, path, body, private, true);
+    }
     if (response.statusCode >= 400) throw ApiError(data['error']['code']);
     if (data['meta']?['server_time'] != null) {
       serverTime = DateTime.parse(data['meta']['server_time']);
@@ -289,31 +301,20 @@ class RoomClient extends ChangeNotifier {
       refreshToken = await storage.read(key: 'refresh') ?? '';
       recoveryCode = await storage.read(key: 'recovery') ?? '';
       accountId = await storage.read(key: 'account') ?? '';
-      await restoreCache();
-      if (token.isEmpty) {
-        await _saveAuth(
-          await request('POST', '/v1/auth/guest', {
-            'device_id': device,
-            'command_id': uuid.v4(),
-          }),
-        );
-      } else {
+      if (token.isNotEmpty) {
         try {
-          await request('GET', '/v1/me');
-        } catch (_) {
-          await refresh();
+          profile = await request('GET', '/v1/me');
+        } on ApiError catch (e) {
+          if (e.code != 'UNAUTHORIZED' && e.code != 'AUTH_EXPIRED') rethrow;
+          await clearIdentity();
+          status = '登录已过期，请重新登录。';
+        }
+        if (profile != null) {
+          accountId = profile!['user_id'];
+          _bindTelemetry();
         }
       }
-      accountId = (await request('GET', '/v1/me'))['user_id'];
-      await storage.write(key: 'account', value: accountId);
-      _bindTelemetry();
-      _telemetry?.record('screen_view', {'screen': 'discover'});
       await catalog();
-      if (view == null) await restoreCache();
-      if (roomId != null) {
-        _manualClose = false;
-        await connect();
-      }
     } catch (e) {
       status = explain(e);
     } finally {
@@ -322,11 +323,14 @@ class RoomClient extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> restoreCache() async {
+  Future<void> restoreCache({String? expectedRoom}) async {
     if (accountId.isEmpty) return;
     try {
       final raw = await cache.read(accountId);
-      if (raw == null) return;
+      if (raw == null ||
+          (expectedRoom != null && raw['room_id'] != expectedRoom)) {
+        return;
+      }
       final saved = retainedCache(raw, DateTime.now().toUtc());
       if (saved == null) {
         await cache.clear(accountId);
@@ -352,6 +356,9 @@ class RoomClient extends ChangeNotifier {
 
   Future<void> _saveAuth(Json a) async {
     final nextAccount = a['user_id'] as String;
+    if (accountId != nextAccount) {
+      recoveryCode = '';
+    }
     if (accountId.isNotEmpty && accountId != nextAccount) {
       await cache.clear(accountId);
       pending.clear();
@@ -370,13 +377,18 @@ class RoomClient extends ChangeNotifier {
     _bindTelemetry();
   }
 
-  Future<void> refresh() async => _saveAuth(
-    await request('POST', '/v1/auth/refresh', {
-      'device_id': device,
-      'refresh_token': refreshToken,
-      'refresh_request_id': uuid.v4(),
-    }),
-  );
+  Future<void>? _refreshing;
+  Future<void> refresh() =>
+      _refreshing ??= _performRefresh().whenComplete(() => _refreshing = null);
+  Future<void> _performRefresh() async {
+    await _saveAuth(
+      await request('POST', '/v1/auth/refresh', {
+        'device_id': device,
+        'refresh_token': refreshToken,
+        'refresh_request_id': uuid.v4(),
+      }),
+    );
+  }
 
   Future<void> eraseAccount() => run(() async {
     await request('POST', '/v1/me/erase', {
@@ -400,7 +412,7 @@ class RoomClient extends ChangeNotifier {
     _receipts.clear();
     _retryIntent = null;
     await initialize();
-    status = token.isEmpty ? '原身份已注销，新身份暂时无法建立。' : '原身份已注销，已建立新的游客身份。';
+    status = token.isEmpty ? '原身份已注销，新身份暂时无法建立。' : '原身份已注销。';
   });
   Future<void> recover(String code) async {
     await run(() async {
@@ -420,9 +432,141 @@ class RoomClient extends ChangeNotifier {
     });
   }
 
+  Future<void> ensureGuest() async {
+    if (signedIn) return;
+    if (device.isEmpty) {
+      device = uuid.v4();
+      await storage.write(key: 'device', value: device);
+    }
+    await _saveAuth(
+      await request('POST', '/v1/auth/guest', {
+        'device_id': device,
+        'command_id': uuid.v4(),
+      }),
+    );
+    profile = await request('GET', '/v1/me');
+  }
+
+  Future<void> authenticateAccount(
+    String username,
+    String password, {
+    String? displayName,
+  }) => run(() async {
+    close();
+    if (device.isEmpty) {
+      device = uuid.v4();
+      await storage.write(key: 'device', value: device);
+    }
+    final registering = displayName != null;
+    final auth = await request(
+      'POST',
+      registering ? '/v1/auth/register' : '/v1/auth/login',
+      {
+        'username': username.trim(),
+        'password': password,
+        'device_id': device,
+        if (registering) 'display_name': displayName,
+        if (registering)
+          'command_id': uuid.v4()
+        else
+          'login_request_id': uuid.v4(),
+      },
+    );
+    await _saveAuth(auth);
+    roomId = memberId = null;
+    reducer.view = null;
+    pending.clear();
+    await catalog();
+    status = registering ? '注册成功，欢迎入戏。' : '欢迎回来。';
+  });
+
+  Future<void> logout() => run(() async {
+    if (signedIn) await request('POST', '/v1/auth/logout');
+    await clearIdentity();
+    await catalog();
+    status = '已退出登录。';
+  });
+
+  Future<void> clearIdentity() async {
+    close();
+    _stopTelemetry();
+    if (accountId.isNotEmpty) {
+      await cache.clear(accountId);
+      await cache.clear('$accountId.moderation');
+    }
+    for (final key in ['access', 'refresh', 'recovery', 'account']) {
+      await storage.delete(key: key);
+    }
+    token = refreshToken = recoveryCode = accountId = '';
+    profile = null;
+    rooms = [];
+    favorites = [];
+    blockedMembers.clear();
+    roomId = memberId = null;
+    reducer.view = null;
+    reducer.buffer.clear();
+    pending.clear();
+    _receipts.clear();
+    _retryIntent = null;
+  }
+
+  Future<void> saveProfile(String name, String bio) => run(() async {
+    profile = await request('PUT', '/v1/me', {
+      'display_name': name.trim(),
+      'bio': bio.trim(),
+      'command_id': uuid.v4(),
+    });
+    status = '个人资料已保存。';
+  });
+
+  Future<void> changePassword(String old, String next) => run(() async {
+    await request('POST', '/v1/me/password', {
+      'current_password': old,
+      'new_password': next,
+      'command_id': uuid.v4(),
+    });
+    await clearIdentity();
+    status = '密码已修改，请重新登录。';
+  });
+
+  Future<void> favorite(String id, bool saved) => run(() async {
+    if (!signedIn) throw ApiError('LOGIN_REQUIRED');
+    await request('POST', '/v1/stories/$id/favorite', {
+      'saved': saved,
+      'command_id': uuid.v4(),
+    });
+    favorites = (await request('GET', '/v1/me/favorites'))['items'];
+  });
+
+  Future<void> resetPassword(String code, String password) => run(() async {
+    close();
+    if (device.isEmpty) {
+      device = uuid.v4();
+      await storage.write(key: 'device', value: device);
+    }
+    await _saveAuth(
+      await request('POST', '/v1/auth/password-reset', {
+        'recovery_code': code.trim(),
+        'new_password': password,
+        'device_id': device,
+        'recovery_request_id': uuid.v4(),
+      }),
+    );
+    await catalog();
+    status = '密码已重置，旧会话已退出。请保存新的恢复码。';
+  });
+
   Future<void> catalog() async {
     stories = (await request('GET', '/v1/stories'))['items'];
-    rooms = (await request('GET', '/v1/rooms'))['items'];
+    if (signedIn) {
+      profile = await request('GET', '/v1/me');
+      rooms = (await request('GET', '/v1/rooms'))['items'];
+      favorites = (await request('GET', '/v1/me/favorites'))['items'];
+    } else {
+      rooms = [];
+      favorites = [];
+      profile = null;
+    }
     notifyListeners();
   }
 
@@ -442,6 +586,7 @@ class RoomClient extends ChangeNotifier {
   }
 
   Future<void> create(String story) async => run(() async {
+    await ensureGuest();
     final r = await request('POST', '/v1/rooms', {
       'story_id': story,
       'command_id': uuid.v4(),
@@ -450,6 +595,11 @@ class RoomClient extends ChangeNotifier {
     await enter(r['room_id']);
   });
   Future<void> join(String code) async => run(() async {
+    if (!RegExp(r'^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$')
+        .hasMatch(code.trim().toUpperCase())) {
+      throw ApiError('INVALID_ARGUMENT');
+    }
+    await ensureGuest();
     final r = await request('POST', '/v1/rooms/join', {
       'invite_code': code.trim().toUpperCase(),
       'command_id': uuid.v4(),
@@ -465,6 +615,7 @@ class RoomClient extends ChangeNotifier {
     pending.clear();
     _receipts.clear();
     _retryIntent = null;
+    if (!takeover) await restoreCache(expectedRoom: id);
     _manualClose = false;
     await connect(takeover: takeover);
   }
@@ -875,7 +1026,10 @@ class RoomClient extends ChangeNotifier {
           'TARGET_CHANGED': '目标状态已变化',
           'CONTROL_CONFIRMATION_REQUIRED': '此房间正在另一台设备使用，请确认接管',
           'CONTROL_REPLACED': '房间已由另一台设备接管',
-          'UNAUTHORIZED': '凭证失效，请使用保存的恢复码找回身份',
+          'UNAUTHORIZED': '账号或密码不正确，或登录已过期。请重新登录；游客可使用恢复码。',
+          'USERNAME_TAKEN': '这个账号已被注册，请换一个账号。',
+          'ALREADY_REGISTERED': '当前身份已经注册，请直接登录。',
+          'LOGIN_REQUIRED': '请先登录账号。',
           'AUTH_EXPIRED': '登录已过期，请恢复身份',
           'INVITE_UNAVAILABLE': '邀请码不可用、房间已满或已经开局',
           'CONTENT_BLOCKED': '剧目暂时不可用',

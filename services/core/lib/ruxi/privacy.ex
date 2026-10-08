@@ -121,6 +121,8 @@ defmodule Ruxi.Privacy do
       [uid]
     )
 
+    DB.query("DELETE FROM player_accounts WHERE user_id=$1", [uid])
+    DB.query("DELETE FROM story_favorites WHERE user_id=$1", [uid])
     DB.query("DELETE FROM account_commands WHERE user_id=$1", [uid])
     DB.query("DELETE FROM telemetry_events WHERE user_id=$1", [uid])
 

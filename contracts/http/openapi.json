@@ -86,6 +86,732 @@
         }
       }
     },
+    "/v1/auth/register": {
+      "post": {
+        "summary": "/v1/auth/register",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.@-]{2,63}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 24
+                  },
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password",
+                  "display_name",
+                  "device_id",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "summary": "/v1/auth/login",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.@-]{2,63}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "login_request_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password",
+                  "device_id",
+                  "login_request_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/login": {
+      "post": {
+        "summary": "/v1/admin/auth/login",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.@-]{2,63}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "login_request_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password",
+                  "device_id",
+                  "login_request_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password-reset": {
+      "post": {
+        "summary": "/v1/auth/password-reset",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recovery_code": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 128
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "recovery_request_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "recovery_code",
+                  "new_password",
+                  "device_id",
+                  "recovery_request_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "put": {
+        "summary": "/v1/me",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 24
+                  },
+                  "bio": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "display_name",
+                  "bio",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "/v1/me",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/password": {
+      "post": {
+        "summary": "/v1/me/password",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current_password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "10–128 UTF-8 bytes; never returned or logged"
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/favorites": {
+      "get": {
+        "summary": "/v1/me/favorites",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/stories/{story_id}/favorite": {
+      "post": {
+        "summary": "/v1/stories/{story_id}/favorite",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "saved": {
+                    "type": "boolean"
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "saved",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "story_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/admin/me": {
+      "get": {
+        "summary": "/v1/admin/me",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "summary": "/v1/admin/users",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/roles": {
+      "post": {
+        "summary": "/v1/admin/users/{user_id}/roles",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roles": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "editor",
+                        "reviewer",
+                        "publisher"
+                      ]
+                    }
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "roles",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/admin/stories/{story_id}/metadata": {
+      "put": {
+        "summary": "/v1/admin/stories/{story_id}/metadata",
+        "responses": {
+          "200": {
+            "description": "C1 JSON envelope"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "409": {
+            "description": "Business conflict"
+          },
+          "429": {
+            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "enum": [
+                      "mystery",
+                      "emotion",
+                      "scifi",
+                      "adventure"
+                    ]
+                  },
+                  "difficulty": {
+                    "enum": [
+                      "beginner",
+                      "intermediate",
+                      "advanced"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "command_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "category",
+                  "difficulty",
+                  "summary",
+                  "command_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "story_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/v1/auth/recover": {
       "post": {
         "summary": "/v1/auth/recover",
@@ -388,36 +1114,6 @@
         }
       }
     },
-    "/v1/me": {
-      "get": {
-        "summary": "/v1/me",
-        "responses": {
-          "200": {
-            "description": "C1 JSON envelope"
-          },
-          "400": {
-            "description": "Invalid request"
-          },
-          "401": {
-            "description": "Unauthenticated"
-          },
-          "403": {
-            "description": "Not authorized"
-          },
-          "409": {
-            "description": "Business conflict"
-          },
-          "429": {
-            "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/v1/stories": {
       "get": {
         "summary": "/v1/stories",
@@ -440,7 +1136,63 @@
           "429": {
             "description": "Rate limited; authentication returns retry_after_ms and Retry-After"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "mystery",
+                "emotion",
+                "scifi",
+                "adventure"
+              ]
+            }
+          },
+          {
+            "name": "seats",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "2",
+                "3",
+                "4"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "latest",
+                "title"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,5}$"
+            }
+          }
+        ]
       }
     },
     "/v1/stories/{story_id}": {

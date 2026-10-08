@@ -1,26 +1,32 @@
 # C1 工程验收记录
 
-日期：2026-10-08。范围为原设计中的玩家、制作、模型、素材和运营功能。记录本地实际检查；设备和云端检查不以构建成功代替。
+日期：2026-10-08。范围为原设计中的玩家、制作、模型、素材和运营功能，以及用户补充的软件入口、账号和后台界面要求。记录本地实际检查；设备和云端检查不以构建成功代替。
 
 ## 自动化
 
 |检查|结果|
 |---|---|
-|Core 编译与 PostgreSQL 测试|warnings-as-errors 通过；61 项通过|
+|Core 编译与 PostgreSQL 测试|warnings-as-errors 通过；70 项通过|
 |Python Worker|29 项通过|
-|玩家端 Flutter|分析无问题；15 项通过|
-|制作台 Flutter|分析无问题；7 项通过|
+|玩家端 Flutter|分析无问题；20 项通过|
+|制作台 Flutter|分析无问题；11 项通过|
 |Node 协议归并|3 项通过|
 |两端 Web|构建通过|
 |Android debug APK / iOS Simulator|构建通过，已实际启动 iOS 首页|
 |生产 OTP release|构建及 /health 200 通过|
 |Docker Compose|配置通过；daemon 不可用，未实际构建运行容器|
 
-合计 115 项（以最后运行结果为准）。覆盖三结局、权限、回执、投影、冻结选民、租约、不可变素材、字幕、人工编辑建议、公开复盘、离线房间释放、有界诊断、聊天治理及擦除。
+合计 133 项（以最后运行结果为准）。覆盖三结局、权限、回执、投影、冻结选民、租约、不可变素材、字幕、人工编辑建议、公开复盘、离线房间释放、有界诊断、聊天治理及擦除。
 
 ## GitHub 独立环境验证
 
 2026-10-08，[GitHub Actions 验证](https://github.com/LingHeChen/ruxi/actions/runs/37797937142)对源码提交 `689fc8d` 全部通过：Core 数据库迁移、严格编译与测试，Worker 哈希锁定安装、测试与协议生成一致性，两套 Flutter 静态分析、测试与 Web 构建，Node 协议测试，以及 Core/Worker 生产 Docker 镜像构建。源码已以 MIT 许可证公开于 [LingHeChen/ruxi](https://github.com/LingHeChen/ruxi)。镜像构建成功不代表容器运行、CloudBase 部署或正式运营验收完成。
+
+## 软件入口与后台补做
+
+用户指出上一版直接开房、缺少登录注册/个人空间/搜索分类，以及制作台没有正式后台形态；此前“全部功能完成”的结论撤回。本次加入四个玩家入口与账号闭环，以及后台导航、工作概览、剧目表、展示设置、素材库、用户目录和角色分配。
+
+390×844、1280×1000 玩家界面及 390×844、1440×1100 后台界面通过 Flutter Widget 导航与布局检查，实际渲染图在 `docs/screenshots/*-widget.png`。这些图片使用合成测试数据；不属于浏览器截图，也不代替用户视觉验收。新增账号测试覆盖盐化密码摘要、重复注册回执、游客升级、资料和收藏隔离、普通玩家/管理员权限、密码修改/恢复码重置和注销清理。`smoke_accounts.mjs` 实际 HTTP 的 16 项账号与目录检查通过，凭证没有写入报告。
 
 ## 实际 HTTP / WebSocket / Worker
 
@@ -50,6 +56,6 @@
 
 玩家 `http://localhost:8080`，制作台 `http://localhost:8081`；APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`，模拟器应用位于 `apps/mobile/build/ios/iphonesimulator/Runner.app`。
 
-iOS 27 iPhone 18 Pro 模拟器实际首页已启动并留图 `docs/screenshots/ios-home.png`。未安装实体手机测试；应用内浏览器实例不可用，未完成真实浏览器视觉与交互验收。G0/G1 未测子项仍按 [QA_TRACE.md](QA_TRACE.md) 记录。
+补做后的 iOS 27 iPhone 18 Pro 模拟器实际首页已启动并留图 `docs/screenshots/ios-portal-home.png`；`ios-home.png` 保留为之前版本的历史证据。未安装实体手机测试；应用内浏览器实例不可用，未完成真实浏览器视觉与交互验收。G0/G1 未测子项仍按 [QA_TRACE.md](QA_TRACE.md) 记录。
 
-CloudBase 独立 ruxi schema 初始 25 表已验证；本地迁移推进至 012，增量尚未应用云端，容器、持久卷、TLS/WSS、连接权限和告警待部署验收。按用户要求先开发后部署。
+CloudBase 独立 ruxi schema 初始 25 表已验证；本地迁移推进至 013，增量尚未应用云端，容器、持久卷、TLS/WSS、连接权限和告警待部署验收。按用户要求先开发后部署。

@@ -4,10 +4,16 @@ import 'package:ruxi_creator/main.dart';
 import 'package:ruxi_creator/content_panel.dart';
 
 void main() {
-  testWidgets('creator requires one-time admin code', (tester) async {
+  testWidgets('creator supports account and controlled code login', (
+    tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: Creator()));
-    expect(find.text('登录制作台'), findsOneWidget);
-    expect(find.text('后台登录码'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('登录创作与运营中心'), findsOneWidget);
+    expect(find.text('管理员账号'), findsOneWidget);
+    await tester.tap(find.text('使用一次性登录码'));
+    await tester.pumpAndSettle();
+    expect(find.text('一次性登录码'), findsOneWidget);
   });
   testWidgets(
     'incomplete draft stays editable without crashing structured view',

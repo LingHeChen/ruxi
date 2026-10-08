@@ -6,9 +6,16 @@
 
 核心设计与取舍见 [架构说明](docs/ARCHITECTURE.md)，制作和恢复流程见 [运行手册](docs/OPERATIONS.md)。
 
-<details><summary>iOS 模拟器实际首页</summary>
+首页以发现故事为入口，提供搜索、题材与人数筛选、故事详情、收藏、个人空间及房间记录。账号支持注册、登录、资料编辑、修改密码与恢复码找回；游客在进入房间时建立身份，升级注册保留原记录。制作台包含工作概览、剧目管理、内容工作室、素材库、举报审核及用户权限管理。
 
-<img src="docs/screenshots/ios-home.png" width="280" alt="入戏 iOS 首页：原创三人互动故事">
+<details><summary>玩家首页与制作后台（Flutter Widget 渲染，合成测试数据）</summary>
+
+<img src="docs/screenshots/player-home-1280-widget.png" width="720" alt="玩家首页：故事推荐、搜索及分类">
+<img src="docs/screenshots/admin-stories-1440-widget.png" width="720" alt="制作后台：侧边导航与剧目管理表格">
+
+截图用于检查实际 Flutter 组件布局，不能代替真实浏览器或真机验收。最新首页也已在 iOS 模拟器启动并留图：
+
+<img src="docs/screenshots/ios-portal-home.png" width="280" alt="本次补做后的 iOS 模拟器实际首页">
 
 </details>
 
@@ -37,7 +44,7 @@ ulimit -n 4096
 PHX_SERVER=true mix run --no-halt
 ```
 
-亦可在项目根目录 `docker compose -f infra/compose.yaml up --build` 启动数据库、core 和 worker。Compose 为开发配置；本次环境 Docker daemon 未运行，因此未实测容器构建。
+亦可在项目根目录 `docker compose -f infra/compose.yaml up --build` 启动数据库、core 和 worker。Compose 为开发配置；本机 Docker daemon 未运行；GitHub CI 已独立构建生产镜像，容器运行仍待部署验证。
 
 本次已运行的本机 PostgreSQL 使用 `/tmp/ruxi-pg`、55432 端口和当前系统用户，默认 `DATABASE_URL=postgres://localhost:55432/ruxi_dev`。此临时数据库仅供开发。
 
@@ -60,7 +67,7 @@ python3 scripts/serve_web.py --port 8080
 
 手机连接时将 API_BASE 设为设备能访问的 HTTPS 地址。Android 模拟器访问宿主机使用 `10.0.2.2`；真机使用局域网地址。发布版需要 TLS，不会全局放开 iOS ATS 或 Android 明文流量。
 
-Web 试玩身份按标签页保存：在地址栏分别打开三个新标签页即可作为三个玩家，刷新保留该标签页的身份。不要使用浏览器「复制标签页」，它可能复制 sessionStorage 身份；请新建标签页后输入网址。手机端仍使用设备安全存储。房主建房后复制八位邀请码；全员选角、准备，然后由房主开局。更新前已创建的房间需要使用原游客恢复码恢复，或直接在新版本重新建房。
+Web 账号和游客会话按标签页保存，首次打开可匿名浏览首页，创建或加入房间时才建立游客身份；也可在「我的」注册账号。恢复码在注册或恢复后显示，请自行保存，用于忘记密码时找回账号。Web 试玩身份按标签页保存：在地址栏分别打开三个新标签页即可作为三个玩家，刷新保留该标签页的身份。不要使用浏览器「复制标签页」，它可能复制 sessionStorage 身份；请新建标签页后输入网址。手机端仍使用设备安全存储。房主建房后复制八位邀请码；全员选角、准备，然后由房主开局。更新前已创建的房间需要使用原游客恢复码恢复，或直接在新版本重新建房。
 
 完整路线：全员确认公共开场 → 各自确认角色片段 → 调查员调查并公开 C1 → 乘客调查得到 C2 并交付 → 乘务员接受 C2、解锁控制柜并公开 C3 → 全员结束探索 → 确认中场 → 两票「公开异常」 → 45 秒截止进入 E1。未公开 C3 时，两票等待得 E2；离开、平票或全弃权得 E3。
 
@@ -75,7 +82,9 @@ cd ../../apps/creator
 flutter run -d chrome --web-port 8081
 ```
 
-输入 CLI 返回的登录码。先基于样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。可上传自有授权视频，自动转码并预览首帧，附加字幕后绑定草稿；AI 建议需人工确认。样片媒体已就绪，创建草稿后可验证、审核并发布；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
+在制作台选择「使用一次性登录码」，输入 CLI 返回的登录码。也可先在玩家端注册账号，然后把上述命令的 UUID 换成该账号名，为其分配角色；以后直接用账号密码登录后台。普通注册账号不会自动获得后台权限。
+
+先基于样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。可上传自有授权视频，自动转码并预览首帧，附加字幕后绑定草稿；AI 建议需人工确认。样片媒体已就绪，创建草稿后可验证、审核并发布；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
 
 可选运行 Python Worker：
 

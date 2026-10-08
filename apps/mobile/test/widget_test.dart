@@ -20,7 +20,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('每个人，都有一段秘密。'), findsOneWidget);
+    expect(find.text('把今晚，交给一个好故事。'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

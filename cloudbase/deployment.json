@@ -5,7 +5,7 @@
     "engine": "postgresql",
     "schema": "ruxi",
     "migration": "20261008120500_ruxi_initial",
-    "localMigrationHead": "20261008001200"
+    "localMigrationHead": "20261008001300"
   },
   "core": {
     "serverName": "ruxi-core",

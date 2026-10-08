@@ -141,9 +141,60 @@ defmodule RuxiWeb.Router do
         json!(p, [])
         Auth.logout(ctx(conn))
 
+      {"POST", ["v1", "auth", "register"]} ->
+        Ruxi.AuthGuard.run(
+          "account.register",
+          to_string(:inet.ntoa(conn.remote_ip)),
+          p["username"],
+          fn ->
+            c = if get_req_header(conn, "authorization") != [], do: ctx(conn), else: nil
+            Ruxi.Accounts.register(p, c)
+          end
+        )
+
+      {"POST", ["v1", "auth", "password-reset"]} ->
+        Ruxi.AuthGuard.run(
+          "password.reset",
+          to_string(:inet.ntoa(conn.remote_ip)),
+          p["recovery_code"],
+          fn -> Ruxi.Accounts.reset_password(p) end
+        )
+
+      {"POST", ["v1", "auth", "login"]} ->
+        Ruxi.AuthGuard.run(
+          "account.login",
+          to_string(:inet.ntoa(conn.remote_ip)),
+          p["username"],
+          fn -> Ruxi.Accounts.login(p) end
+        )
+
+      {"POST", ["v1", "admin", "auth", "login"]} ->
+        Ruxi.AuthGuard.run(
+          "admin.login",
+          to_string(:inet.ntoa(conn.remote_ip)),
+          p["username"],
+          fn -> Ruxi.Accounts.login(p, "admin") end
+        )
+
       {"GET", ["v1", "me"]} ->
-        c = ctx(conn)
-        %{"user_id" => c.user, "display_name" => "游客", "is_guest" => true}
+        Ruxi.Accounts.profile(ctx(conn))
+
+      {"PUT", ["v1", "me"]} ->
+        Ruxi.Accounts.update(ctx(conn), p)
+
+      {"POST", ["v1", "me", "password"]} ->
+        Ruxi.AuthGuard.run("password.change", to_string(:inet.ntoa(conn.remote_ip)), nil, fn ->
+          Ruxi.Accounts.change_password(ctx(conn), p)
+        end)
+
+      {"GET", ["v1", "me", "favorites"]} ->
+        Ruxi.Catalog.favorites(ctx(conn))
+
+      {"POST", ["v1", "stories", id, "favorite"]} ->
+        Ruxi.Catalog.favorite(ctx(conn), id, p)
+
+      {"PUT", ["v1", "admin", "stories", id, "metadata"]} ->
+        Ruxi.Catalog.metadata(ctx(conn, "admin"), id, p)
 
       {"POST", ["v1", "me", "erase"]} ->
         Ruxi.Privacy.erase(ctx(conn), p)
@@ -161,23 +212,10 @@ defmodule RuxiWeb.Router do
         Ruxi.Chat.review(ctx(conn, "admin"), id, p)
 
       {"GET", ["v1", "stories"]} ->
-        %{
-          "items" =>
-            DB.rows(
-              "SELECT s.id,s.title,s.summary,s.seat_count FROM stories s JOIN content_versions v ON v.id=s.current_version_id WHERE v.availability='available'"
-            )
-            |> Enum.map(&story/1),
-          "next_cursor" => nil
-        }
+        Ruxi.Catalog.list(fetch_query_params(conn).query_params)
 
       {"GET", ["v1", "stories", id]} ->
-        r = DB.one("SELECT * FROM stories WHERE id=$1", [DB.uuid(id)])
-        Util.require!(r != nil, "RESOURCE_NOT_FOUND")
-
-        Map.merge(story(r), %{
-          "current_version_id" => DB.str(r["current_version_id"]),
-          "duration_range_ms" => [600_000, 900_000]
-        })
+        Ruxi.Catalog.detail(id)
 
       {"POST", ["v1", "rooms"]} ->
         Auth.create_room(ctx(conn), json!(p, ~w(story_id command_id))) |> created()
@@ -190,28 +228,7 @@ defmodule RuxiWeb.Router do
         end)
 
       {"GET", ["v1", "rooms"]} ->
-        c = ctx(conn)
-
-        rs =
-          DB.rows(
-            "SELECT r.id,r.lifecycle,r.updated_at FROM rooms r JOIN room_members m ON m.room_id=r.id WHERE m.user_id=$1 ORDER BY r.updated_at DESC LIMIT 100",
-            [DB.uuid(c.user)]
-          )
-
-        %{
-          "items" =>
-            Enum.map(
-              rs,
-              &%{
-                "room_id" => DB.str(&1["id"]),
-                "title" => "末班车的第七位乘客",
-                "lifecycle" => &1["lifecycle"],
-                "can_resume" => &1["lifecycle"] in ["paused", "suspended"],
-                "updated_at" => Util.iso(&1["updated_at"])
-              }
-            ),
-          "next_cursor" => nil
-        }
+        Ruxi.Catalog.rooms(ctx(conn))
 
       {"POST", ["v1", "rooms", rid, "socket-ticket"]} ->
         Auth.ticket(ctx(conn), rid, json!(p, ~w(device_id takeover), ~w(command_id)))
@@ -284,6 +301,16 @@ defmodule RuxiWeb.Router do
       {"POST", ["v1", "admin", "auth", "logout"]} ->
         Auth.logout(ctx(conn, "admin"))
 
+      {"GET", ["v1", "admin", "me"]} ->
+        c = ctx(conn, "admin")
+        Map.put(Ruxi.Accounts.profile(c), "roles", Auth.roles(c.user))
+
+      {"GET", ["v1", "admin", "users"]} ->
+        Ruxi.Accounts.directory(ctx(conn, "admin"))
+
+      {"POST", ["v1", "admin", "users", id, "roles"]} ->
+        Ruxi.Accounts.assign_roles(ctx(conn, "admin"), id, p)
+
       {"GET", ["v1", "admin", "operations"]} ->
         Ruxi.Operations.report(ctx(conn, "admin"))
 
@@ -335,16 +362,6 @@ defmodule RuxiWeb.Router do
         Util.fail("RESOURCE_NOT_FOUND")
     end
   end
-
-  defp story(r),
-    do: %{
-      "story_id" => DB.str(r["id"]),
-      "title" => r["title"],
-      "summary" => r["summary"],
-      "seat_count" => r["seat_count"],
-      "availability" => "available",
-      "cover_url" => nil
-    }
 
   defp origin(conn),
     do: System.get_env("PUBLIC_API_URL", "#{conn.scheme}://#{conn.host}:#{conn.port}")

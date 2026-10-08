@@ -50,7 +50,7 @@ class _OperationsPanelState extends State<OperationsPanel> {
                 for (final row in data[section])
                   ListTile(
                     title: Text(
-                      '${row['kind'] ?? row['ending_code'] ?? row['lifecycle'] ?? '—'} ${row['status'] ?? ''}',
+                      '${const {'lobby': '等待开场', 'running': '进行中', 'paused': '已暂停', 'suspended': '等待重连', 'finished': '已完成', 'abandoned': '已结束', 'player_hint': '玩家提示', 'editor_proposal': '制作建议', 'media_transcode': '素材转码', 'E1': '真相公布', 'E2': '错过的答案', 'E3': '回声'}[row['kind'] ?? row['ending_code'] ?? row['lifecycle']] ?? row['kind'] ?? row['ending_code'] ?? row['lifecycle'] ?? '—'} ${const {'queued': '排队中', 'leased': '处理中', 'completed': '已完成', 'failed': '已失败'}[row['status']] ?? ''}',
                     ),
                     trailing: Text('${row['count']}'),
                   ),
