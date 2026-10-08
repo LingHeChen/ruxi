@@ -242,11 +242,12 @@ class _CreatorState extends State<Creator> {
                 title: const Text('聊天举报审核'),
                 content: ReportPanel(
                   load: () => api('GET', '/v1/admin/chat/reports'),
-                  review: (id, outcome) => api(
-                    'POST',
-                    '/v1/admin/chat/reports/$id',
-                    {'command_id': const Uuid().v4(), 'status': outcome},
-                  ),
+                  review: (id, outcome) =>
+                      api('POST', '/v1/admin/chat/reports/$id', {
+                        'command_id': const Uuid().v4(),
+                        'status': outcome == 'remove' ? 'resolved' : outcome,
+                        'remove_message': outcome == 'remove',
+                      }),
                 ),
                 actions: [
                   TextButton(

@@ -93,6 +93,15 @@ class _ReportPanelState extends State<ReportPanel> {
                                         ? null
                                         : () => review(
                                             report['report_id'],
+                                            'remove',
+                                          ),
+                                    child: const Text('移除消息并处理'),
+                                  ),
+                                  TextButton(
+                                    onPressed: busy
+                                        ? null
+                                        : () => review(
+                                            report['report_id'],
                                             'resolved',
                                           ),
                                     child: const Text('标记已处理'),

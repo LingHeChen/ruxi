@@ -108,7 +108,7 @@ endpoint('/v1/rooms/join','post',{'invite_code':{'type':'string','pattern':'^[2-
 endpoint('/v1/rooms/{room_id}/chat/reports','post',{'command_id':UUID,'message_id':UUID,'reason':{'enum':['harassment','privacy','spam','other']}},summary='Reports only an authorized retained public message; server retrieves its text')
 paths['/v1/rooms/{room_id}/chat/reports']['post']['parameters'] += [{'name':'X-Device-ID','in':'header','required':True,'schema':UUID},{'name':'X-Control-Generation','in':'header','required':True,'schema':INT}]
 endpoint('/v1/admin/chat/reports','get',summary='Reviewer-only queue of explicitly reported public messages')
-endpoint('/v1/admin/chat/reports/{report_id}','post',{'command_id':UUID,'status':{'enum':['resolved','dismissed']}},summary='Reviewer-only auditable report disposition')
+endpoint('/v1/admin/chat/reports/{report_id}','post',{'command_id':UUID,'status':{'enum':['resolved','dismissed']},'remove_message':BOOL},required=['command_id','status'],summary='Reviewer-only auditable disposition; optional removal forces clean snapshots and invalidates historical chat projections')
 endpoint('/v1/rooms/{room_id}/socket-ticket','post',{'device_id':UUID,'takeover':BOOL,'command_id':UUID},required=['device_id','takeover'])
 endpoint('/v1/rooms/{room_id}/invites','post',{'command_id':UUID})
 for suffix in ['snapshot','events','commands/{command_id}','watermark']:endpoint('/v1/rooms/{room_id}/'+suffix,'get')

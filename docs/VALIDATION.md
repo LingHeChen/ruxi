@@ -6,17 +6,17 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| Elixir `mix test` | 47 项通过 |
+| Elixir `mix test` | 48 项通过 |
 | Elixir `mix compile --warnings-as-errors` | 通过 |
 | Python `uv run pytest` | 22 项通过 |
 | 玩家 Flutter analyze / test | 无分析问题，11 项通过 |
 | 制作台 Flutter analyze / test | 无分析问题，4 项通过 |
 | 玩家与制作台 Flutter Web 构建 | 通过 |
-| Android debug APK 构建 | 媒体校时版本通过；注销 UI 尚未重建 |
-| iOS Simulator 构建 | 媒体校时版本通过；注销 UI 尚未重建 |
+| Android debug APK 构建 | 当前注销、诊断与聊天界面版本通过 |
+| iOS Simulator 构建 | 当前注销、诊断与聊天界面版本通过 |
 | Docker Compose 配置校验 | 通过；未运行容器 |
 
-合计 84 项测试。新增覆盖认证失败预算与 429、埋点边界/去重/隐私/定时与退避、聊天举报去重/权限/审计、诊断与举报正文清理，以及账号注销及独立台账恢复。这些测试不能代替复合验收项全部通过。
+合计 85 项测试。新增覆盖认证失败预算与 429、埋点边界/去重/隐私/定时与退避、聊天举报去重/权限/审计、审核移除后的历史清理与水位更新、诊断与举报正文清理，以及账号注销及独立台账恢复。这些测试不能代替复合验收项全部通过。
 
 ## 真实协议联调
 

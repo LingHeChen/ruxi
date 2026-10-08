@@ -124,11 +124,6 @@ defmodule Ruxi.Privacy do
     DB.query("DELETE FROM account_commands WHERE user_id=$1", [uid])
     DB.query("DELETE FROM telemetry_events WHERE user_id=$1", [uid])
 
-    DB.query(
-      "UPDATE chat_reports SET reporter_user_id=NULL,sender_member_id=NULL,message_text=NULL WHERE reporter_user_id=$1 OR sender_member_id IN (SELECT id FROM room_members WHERE user_id=$1)",
-      [uid]
-    )
-
     DB.query("DELETE FROM admin_roles WHERE user_id=$1", [uid])
     DB.query("DELETE FROM admin_login_codes WHERE user_id=$1", [uid])
 
@@ -212,6 +207,12 @@ defmodule Ruxi.Privacy do
         [room["room_id"]]
       )
     end
+
+    # Match moderation's room -> report lock order after affected rooms are locked.
+    DB.query(
+      "UPDATE chat_reports SET reporter_user_id=NULL,sender_member_id=NULL,message_text=NULL WHERE reporter_user_id=$1 OR sender_member_id IN (SELECT id FROM room_members WHERE user_id=$1)",
+      [uid]
+    )
 
     DB.query(
       "INSERT INTO audit_log(id,user_id,operation,target_id,occurred_at) VALUES($1,$2,'account.erase',$2,$3)",

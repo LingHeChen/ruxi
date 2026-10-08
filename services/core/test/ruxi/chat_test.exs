@@ -32,6 +32,42 @@ defmodule Ruxi.ChatTest do
     %{ctx: ctx, message: message}
   end
 
+  test "moderated removal clears replay copies and advances the snapshot floor", %{
+    ctx: ctx,
+    message: message
+  } do
+    {:ok, report} =
+      Chat.report(ctx, %{
+        "message_id" => message["message_id"],
+        "reason" => "privacy",
+        "command_id" => Util.id()
+      })
+
+    DB.query("INSERT INTO admin_roles(user_id,role) VALUES($1,'reviewer')", [DB.uuid(ctx.user)])
+    auth = Auth.session(ctx.user, Util.id(), "admin")
+    admin = Auth.authenticate(auth["access_token"], "admin")
+
+    assert {:ok, _} =
+             Chat.review(admin, report["report_id"], %{
+               "command_id" => Util.id(),
+               "status" => "resolved",
+               "remove_message" => true
+             })
+
+    assert Store.load!(ctx.room)["state_json"]["chat"] == []
+
+    assert DB.one("SELECT count(*) AS n FROM member_view_events WHERE room_id=$1", [
+             DB.uuid(ctx.room)
+           ])["n"] == 0
+
+    cursor =
+      DB.one("SELECT view_seq,replay_floor_seq FROM room_members WHERE id=$1", [
+        DB.uuid(ctx.member)
+      ])
+
+    assert cursor["view_seq"] == cursor["replay_floor_seq"]
+  end
+
   test "text policy preserves ordinary discussion and rejects control and disguised abuse" do
     assert Chat.text!("  第一条线索\n继续调查  ") == "第一条线索\n继续调查"
     assert catch_throw(Chat.text!("不支持\x00字符")) == {:error, "CHAT_REJECTED"}

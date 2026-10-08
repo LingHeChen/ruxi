@@ -67,11 +67,21 @@ defmodule Ruxi.Chat do
   end
 
   def review(ctx, id, p) do
-    RuxiWeb.Router.json!(p, ~w(command_id status))
+    RuxiWeb.Router.json!(p, ~w(command_id status), ~w(remove_message))
     Auth.role!(ctx, "reviewer")
     Util.require!(p["status"] in ~w(resolved dismissed), "INVALID_ARGUMENT")
+    remove = Map.get(p, "remove_message", false)
+
+    Util.require!(
+      is_boolean(remove) and (not remove or p["status"] == "resolved"),
+      "INVALID_ARGUMENT"
+    )
 
     Auth.account(ctx, "chat.report.review", Map.put(p, "report_id", id), fn ->
+      report = DB.one("SELECT room_id,message_id FROM chat_reports WHERE id=$1", [DB.uuid(id)])
+      Util.require!(report != nil, "RESOURCE_NOT_FOUND")
+      state = if remove, do: Store.load!(DB.str(report["room_id"]), true)["state_json"], else: nil
+
       row =
         DB.one(
           "UPDATE chat_reports SET status=$2,reviewed_at=clock_timestamp() WHERE id=$1 AND status='open' RETURNING id",
@@ -79,6 +89,16 @@ defmodule Ruxi.Chat do
         )
 
       Util.require!(row != nil, "RESOURCE_NOT_FOUND")
+
+      if remove do
+        updated =
+          Map.update!(state, "chat", fn messages ->
+            Enum.reject(messages, &(&1["message_id"] == DB.str(report["message_id"])))
+          end)
+
+        Store.save(state, updated, "chat_added", DB.time())
+        Ruxi.Retention.discard_history(report["room_id"])
+      end
 
       DB.query(
         "INSERT INTO audit_log(id,user_id,operation,target_id,occurred_at) VALUES($1,$2,'chat.report.review',$3,$4)",

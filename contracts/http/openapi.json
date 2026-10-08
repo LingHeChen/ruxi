@@ -1087,7 +1087,7 @@
     },
     "/v1/admin/chat/reports/{report_id}": {
       "post": {
-        "summary": "Reviewer-only auditable report disposition",
+        "summary": "Reviewer-only auditable disposition; optional removal forces clean snapshots and invalidates historical chat projections",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1129,6 +1129,9 @@
                       "resolved",
                       "dismissed"
                     ]
+                  },
+                  "remove_message": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
