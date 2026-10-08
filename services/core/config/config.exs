@@ -20,10 +20,21 @@ config :ruxi, RuxiWeb.Endpoint,
   pubsub_server: Ruxi.PubSub,
   check_origin: ["//localhost:8080", "//127.0.0.1:8080", "//localhost:8081"]
 
+config :ruxi, Oban,
+  repo: Ruxi.Repo,
+  prefix: "ruxi",
+  queues: [maintenance: 1],
+  plugins: [
+    {Oban.Plugins.Cron, crontab: [{"* * * * *", Ruxi.Maintenance}]},
+    {Oban.Plugins.Pruner, max_age: 86_400}
+  ]
+
 config :phoenix, :json_library, Jason
 config :logger, level: :warning
 
 if config_env() == :test do
+  config :ruxi, Oban, testing: :manual, queues: false, plugins: false
+
   config :ruxi, Ruxi.Repo,
     url: System.get_env("TEST_DATABASE_URL", "postgres://localhost:55432/ruxi_test"),
     pool: Ecto.Adapters.SQL.Sandbox

@@ -54,7 +54,19 @@ class ConditionEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (value.isEmpty) return const Text('条件结构不完整，请在高级配置中修复。');
     final op = value.containsKey('var') ? 'var' : value.keys.first;
+    if (!ops.contains(op) ||
+        depth > 8 ||
+        (op == 'var' && !variables.containsKey(value['var'])) ||
+        (['all', 'any'].contains(op) &&
+            (value[op] is! List ||
+                !(value[op] as List).every((v) => v is Map))) ||
+        (op == 'not' && value['not'] is! Map) ||
+        (['public_clue', 'owns_item', 'knows_clue'].contains(op) &&
+            !clues.contains(value[op]))) {
+      return const Text('条件引用或结构不正确，请在高级配置中修复。');
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(top: 8),
@@ -231,14 +243,92 @@ class ActionEditor extends StatelessWidget {
       ),
       for (var i = 0; i < (action['effects'] as List).length; i++)
         effectEditor(i),
+      if ((action['effects'] as List).length < 20)
+        Wrap(
+          spacing: 12,
+          children: [
+            if (clues.isNotEmpty)
+              TextButton(
+                onPressed: () => onChanged({
+                  ...action,
+                  'effects': [
+                    ...action['effects'],
+                    {'grant_clue': clues.first, 'visibility': 'actor'},
+                  ],
+                }),
+                child: const Text('添加获得线索效果'),
+              ),
+            if (variables.isNotEmpty)
+              TextButton(
+                onPressed: () => onChanged({
+                  ...action,
+                  'effects': [
+                    ...action['effects'],
+                    {
+                      'set_variable': variables.keys.first,
+                      'value': variables.values.first['initial'],
+                    },
+                  ],
+                }),
+                child: const Text('添加设置变量效果'),
+              ),
+          ],
+        ),
     ],
   );
 
   Widget effectEditor(int i) {
     final effect = Json.from(action['effects'][i]);
     if (effect.containsKey('set_variable')) {
-      return ListTile(
-        title: Text('设置变量 ${effect['set_variable']} = ${effect['value']}'),
+      void changeVariable(Json e) {
+        final effects = List<dynamic>.from(action['effects']);
+        effects[i] = e;
+        onChanged({...action, 'effects': effects});
+      }
+
+      final name = effect['set_variable'];
+      return Column(
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: name,
+            items: [
+              for (final v in variables.keys)
+                DropdownMenuItem(value: v, child: Text('设置变量 $v')),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                changeVariable({
+                  'set_variable': v,
+                  'value': variables[v]['initial'],
+                });
+              }
+            },
+          ),
+          if (variables[name]?['type'] == 'bool')
+            SwitchListTile(
+              title: const Text('设为真'),
+              value: effect['value'] == true,
+              onChanged: (v) => changeVariable({...effect, 'value': v}),
+            )
+          else
+            TextFormField(
+              initialValue: '${effect['value']}',
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '变量值'),
+              onChanged: (v) {
+                final n = int.tryParse(v);
+                if (n != null) changeVariable({...effect, 'value': n});
+              },
+            ),
+          TextButton(
+            onPressed: () {
+              final effects = List<dynamic>.from(action['effects'])
+                ..removeAt(i);
+              onChanged({...action, 'effects': effects});
+            },
+            child: const Text('移除此效果'),
+          ),
+        ],
       );
     }
     final op = effect.containsKey('grant_item') ? 'grant_item' : 'grant_clue';
@@ -276,6 +366,14 @@ class ActionEditor extends StatelessWidget {
                 change({op: c, 'visibility': effect['visibility']});
               }
             },
+          ),
+          TextButton(
+            onPressed: () {
+              final effects = List<dynamic>.from(action['effects'])
+                ..removeAt(i);
+              onChanged({...action, 'effects': effects});
+            },
+            child: const Text('移除此效果'),
           ),
           DropdownButtonFormField<String>(
             initialValue: effect['visibility'],

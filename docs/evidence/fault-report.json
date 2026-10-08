@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-08T14:18:35.410Z",
+  "checks": [
+    "SIGKILL during command response",
+    "restart and durable replay of three role views",
+    "same-command retry and exact receipt",
+    "one committed command row",
+    "private clue remains isolated"
+  ],
+  "passed": true
+}

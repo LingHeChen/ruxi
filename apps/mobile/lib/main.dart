@@ -64,14 +64,16 @@ class RuxiApp extends StatelessWidget {
 }
 
 class Home extends StatefulWidget {
-  const Home({super.key, this.autoInitialize = true});
+  const Home({super.key, this.autoInitialize = true, this.client});
   final bool autoInitialize;
+  final RoomClient? client;
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
-  final client = RoomClient();
+  late final client = widget.client ?? RoomClient();
+  String? selectedStoryId;
   final code = TextEditingController(), chat = TextEditingController();
   int tab = 0;
   Timer? ticker;
@@ -288,108 +290,159 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget discover() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      heading(
-        'PRIVATE SCREENING / 01',
-        '每个人，都有一段秘密。',
-        '和两位朋友一起进入故事。调查、交换线索，然后共同决定结局。',
-      ),
-      LayoutBuilder(
-        builder: (c, b) {
-          final wide = b.maxWidth > 760;
-          final cover = scene(
-            title: '末班车的\n第七位乘客',
-            caption: '原创悬疑 · 三人协作 · 10–15 分钟',
-            height: wide ? 460 : 360,
+  Widget discover() {
+    final selected = client.stories.isEmpty
+        ? null
+        : client.stories.firstWhere(
+            (story) => story['story_id'] == selectedStoryId,
+            orElse: () => client.stories.first,
           );
-          final detail = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              pill('首部免费样片', color: amber),
-              const SizedBox(height: 24),
-              const Text('23:17，最后一班车。', style: TextStyle(fontSize: 24)),
-              const SizedBox(height: 16),
-              const Text(
-                '车厢里只有六个名字。\n一段来自未来的留言，\n却指向了第七位乘客。',
-                style: TextStyle(fontSize: 18, height: 1.9, color: muted),
-              ),
-              const SizedBox(height: 28),
-              const Text('三名角色 · 三条结局 · 私人房间', style: TextStyle(color: muted)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: client.busy || client.stories.isEmpty
-                      ? null
-                      : () => client.create(client.stories.first['story_id']),
-                  child: Text(client.busy ? '正在进入…' : '创建房间'),
+    final isDemo =
+        selected == null ||
+        (selected['story_id'] == '11111111-1111-4111-8111-111111111111' &&
+            selected['title'] == '末班车的第七位乘客');
+    final seats = selected?['seat_count'] ?? 3;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        heading(
+          'PRIVATE SCREENING / 01',
+          '每个人，都有一段秘密。',
+          '和${{2: '一', 3: '两', 4: '三'}[seats] ?? seats - 1}位朋友一起进入故事。调查、交换线索，然后共同决定结局。',
+        ),
+        if (client.stories.length > 1) ...[
+          DropdownButtonFormField<String>(
+            initialValue: selected['story_id'],
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: '选择剧目',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final story in client.stories)
+                DropdownMenuItem(
+                  value: story['story_id'],
+                  child: Text(
+                    story['title'],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: code,
-                maxLength: 8,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: '八位邀请码',
-                  hintText: '例如 7KQ8HM2N',
-                  border: OutlineInputBorder(),
-                  counterText: '',
-                ),
-                onSubmitted: (_) => client.join(code.text),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: client.busy ? null : () => client.join(code.text),
-                  child: const Text('加入朋友的房间'),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                '原创动效开发样片 · 支持授权视频与图文摘要。',
-                style: TextStyle(fontSize: 12, color: muted),
-              ),
             ],
-          );
-          return wide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 6, child: cover),
-                    const SizedBox(width: 48),
-                    Expanded(flex: 4, child: detail),
-                  ],
-                )
-              : Column(children: [cover, const SizedBox(height: 28), detail]);
-        },
-      ),
-      const SizedBox(height: 36),
-      if (client.rooms.isNotEmpty) ...[
-        const Text('继续你的故事', style: TextStyle(fontSize: 20)),
-        const SizedBox(height: 16),
-        ...client.rooms.map(
-          (r) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: card(
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(r['title']),
-                subtitle: Text(lifecycle(r['lifecycle'])),
-                trailing: const Icon(Icons.arrow_forward),
-                onTap: () => client.run(() => client.enter(r['room_id'])),
+            onChanged: client.busy
+                ? null
+                : (id) => setState(() => selectedStoryId = id),
+          ),
+          const SizedBox(height: 24),
+        ],
+        LayoutBuilder(
+          builder: (c, b) {
+            final wide = b.maxWidth > 760;
+            final cover = scene(
+              title: isDemo ? '末班车的\n第七位乘客' : selected['title'],
+              caption: isDemo ? '原创悬疑 · 三人协作 · 10–15 分钟' : '$seats 人协作 · 私人房间',
+              height: wide ? 460 : 360,
+            );
+            final detail = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                pill(isDemo ? '首部免费样片' : '互动故事', color: amber),
+                const SizedBox(height: 24),
+                Text(
+                  isDemo ? '23:17，最后一班车。' : selected['title'],
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  selected?['summary'] ?? '车厢里只有六个名字。\n一段来自未来的留言，\n却指向了第七位乘客。',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    height: 1.9,
+                    color: muted,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  isDemo ? '三名角色 · 三条结局 · 私人房间' : '$seats 名角色 · 私人房间',
+                  style: const TextStyle(color: muted),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: client.busy || client.stories.isEmpty
+                        ? null
+                        : () => client.create(selected['story_id']),
+                    child: Text(client.busy ? '正在进入…' : '创建房间'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: code,
+                  maxLength: 8,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: '八位邀请码',
+                    hintText: '例如 7KQ8HM2N',
+                    border: OutlineInputBorder(),
+                    counterText: '',
+                  ),
+                  onSubmitted: (_) => client.join(code.text),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: client.busy
+                        ? null
+                        : () => client.join(code.text),
+                    child: const Text('加入朋友的房间'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  '原创互动故事 · 支持授权视频与图文摘要。',
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
+              ],
+            );
+            return wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 6, child: cover),
+                      const SizedBox(width: 48),
+                      Expanded(flex: 4, child: detail),
+                    ],
+                  )
+                : Column(children: [cover, const SizedBox(height: 28), detail]);
+          },
+        ),
+        const SizedBox(height: 36),
+        if (client.rooms.isNotEmpty) ...[
+          const Text('继续你的故事', style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 16),
+          ...client.rooms.map(
+            (r) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: card(
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(r['title']),
+                  subtitle: Text(lifecycle(r['lifecycle'])),
+                  trailing: const Icon(Icons.arrow_forward),
+                  onTap: () => client.run(() => client.enter(r['room_id'])),
+                ),
               ),
             ),
           ),
-        ),
+        ],
+        const SizedBox(height: 24),
+        const Text('不是旁观者。你的发现，会改变这一次的故事。', style: TextStyle(color: muted)),
       ],
-      const SizedBox(height: 24),
-      const Text('不是旁观者。你的发现，会改变这一次的故事。', style: TextStyle(color: muted)),
-    ],
-  );
+    );
+  }
+
   Widget connecting() => card(
     Column(
       children: [
@@ -807,6 +860,19 @@ class _HomeState extends State<Home> {
                       children: [
                         const Text('这一局的公开记录', style: TextStyle(fontSize: 20)),
                         const SizedBox(height: 16),
+                        ...((v['public_scene']['timeline'] as List?) ?? []).map(
+                          (e) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.history, size: 20),
+                            title: Text(e['label']),
+                            subtitle: Text(
+                              DateTime.parse(e['occurred_at'])
+                                  .toLocal()
+                                  .toString()
+                                  .substring(0, 19),
+                            ),
+                          ),
+                        ),
                         ...(v['public_scene']['shared_clues'] as List).map(
                           (c) => ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -821,9 +887,9 @@ class _HomeState extends State<Home> {
                         ),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: () => client.create(
-                            '11111111-1111-4111-8111-111111111111',
-                          ),
+                          onPressed: room['story_id'] == null
+                              ? null
+                              : () => client.create(room['story_id']),
                           child: const Text('再开一局'),
                         ),
                       ],
@@ -1442,6 +1508,8 @@ class _HomeState extends State<Home> {
               children: [
                 Text(
                   title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Songti SC',
                     fontSize: height > 350 ? 40 : 30,

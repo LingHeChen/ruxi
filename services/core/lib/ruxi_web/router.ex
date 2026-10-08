@@ -8,11 +8,36 @@ defmodule RuxiWeb.Router do
     send_json(conn, 200, %{"status" => "ok", "baseline" => "C1"})
   end
 
+  get "/asset-preview/:capability" do
+    try do
+      Ruxi.Assets.poster(conn, capability)
+    catch
+      {:error, code} -> error(conn, code)
+    end
+  end
+
   get "/media/:capability" do
     try do
       Ruxi.Media.stream(conn, capability)
     catch
       {:error, "RATE_LIMITED", wait} -> error(conn, "RATE_LIMITED", wait)
+      {:error, code} -> error(conn, code)
+    end
+  end
+
+  get "/internal/work/:id/source" do
+    try do
+      attempt = List.first(get_req_header(conn, "x-work-attempt")) || ""
+
+      p = %{
+        "attempt" => String.to_integer(attempt),
+        "lease_token" => List.first(get_req_header(conn, "x-lease-token"))
+      }
+
+      Ruxi.ProductionJobs.source(conn, id, p, worker(conn))
+    rescue
+      _ in ArgumentError -> error(conn, "INVALID_ARGUMENT")
+    catch
       {:error, code} -> error(conn, code)
     end
   end
@@ -259,6 +284,36 @@ defmodule RuxiWeb.Router do
       {"POST", ["v1", "admin", "auth", "logout"]} ->
         Auth.logout(ctx(conn, "admin"))
 
+      {"GET", ["v1", "admin", "operations"]} ->
+        Ruxi.Operations.report(ctx(conn, "admin"))
+
+      {"GET", ["v1", "admin", "assets"]} ->
+        Ruxi.Assets.list(ctx(conn, "admin"))
+
+      {"POST", ["v1", "admin", "assets", "upload-intents"]} ->
+        Ruxi.Assets.intent(ctx(conn, "admin"), p, origin(conn))
+
+      {"POST", ["v1", "admin", "assets", id, "captions"]} ->
+        Ruxi.Assets.captions(ctx(conn, "admin"), id, p)
+
+      {"GET", ["v1", "admin", "assets", id, "preview"]} ->
+        Ruxi.Assets.preview(ctx(conn, "admin"), id, origin(conn))
+
+      {"POST", ["v1", "admin", "assets", id, "complete"]} ->
+        Ruxi.Assets.complete(ctx(conn, "admin"), id, p)
+
+      {"POST", ["v1", "admin", "versions", id, "ai"]} ->
+        Ruxi.EditorAI.create(ctx(conn, "admin"), id, p)
+
+      {"GET", ["v1", "admin", "ai", "jobs", id]} ->
+        Ruxi.EditorAI.get(ctx(conn, "admin"), id)
+
+      {"POST", ["v1", "admin", "ai", "jobs", id, "apply"]} ->
+        Ruxi.EditorAI.apply(ctx(conn, "admin"), id, p)
+
+      {"POST", ["internal", "work", id, "output-intents"]} ->
+        Ruxi.ProductionJobs.output_intents(id, p, worker(conn), origin(conn))
+
       {_, ["v1", "admin" | rest]} ->
         Ruxi.Admin.dispatch(method, rest, p, ctx(conn, "admin"))
 
@@ -290,6 +345,21 @@ defmodule RuxiWeb.Router do
       "availability" => "available",
       "cover_url" => nil
     }
+
+  defp origin(conn),
+    do: System.get_env("PUBLIC_API_URL", "#{conn.scheme}://#{conn.host}:#{conn.port}")
+
+  defp worker(conn) do
+    Util.require!(get_req_header(conn, "x-work-protocol") == ["1"], "UNAUTHORIZED")
+
+    token =
+      case get_req_header(conn, "authorization") do
+        ["Bearer " <> token] -> token
+        _ -> nil
+      end
+
+    Ruxi.WorkerAuth.authenticate(token)
+  end
 
   defp created({:ok, v}), do: {:created, v}
   defp created(v), do: v

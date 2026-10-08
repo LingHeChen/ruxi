@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
 const base = process.env.API_BASE ?? 'http://localhost:4000';
-const codeOutput = execFileSync('mix', ['run', 'priv/repo/admin_code.exs', randomUUID(), 'editor', 'reviewer', 'publisher'], {
+const codeOutput = execFileSync('mix', ['run', '--no-start', 'priv/repo/admin_code.exs', randomUUID(), 'editor', 'reviewer', 'publisher'], {
   cwd: new URL('../services/core/', import.meta.url), encoding: 'utf8', env: {...process.env, PHX_SERVER: 'false'},
 });
 const loginCode = codeOutput.match(/minutes\):\s*(\S+)/)?.[1];

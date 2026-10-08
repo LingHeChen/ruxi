@@ -1,6 +1,6 @@
 defmodule Ruxi.DB do
   alias Ruxi.Repo
-  def query(sql, params \\ []), do: Ecto.Adapters.SQL.query!(Repo, sql, params)
+  def query(sql, params \\ []), do: Ecto.Adapters.SQL.query!(Repo, sql, params, log: false)
 
   def rows(sql, params \\ []) do
     r = query(sql, params)

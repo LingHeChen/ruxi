@@ -13,6 +13,7 @@ defmodule Ruxi.MixProject do
         {:postgrex, "~> 0.21"},
         {:bandit, "~> 1.8"},
         {:jason, "~> 1.4"},
+        {:oban, "~> 2.19.4"},
         {:cors_plug, "~> 3.0"}
       ],
       aliases: [

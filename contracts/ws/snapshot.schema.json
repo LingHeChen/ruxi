@@ -225,6 +225,42 @@
             "additionalProperties": true
           },
           "maxItems": 100
+        },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "seq": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "kind": {
+                "enum": [
+                  "phase",
+                  "lifecycle",
+                  "shared_clue"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "occurred_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "seq",
+              "kind",
+              "label",
+              "occurred_at"
+            ],
+            "additionalProperties": true
+          },
+          "maxItems": 200
         }
       },
       "required": [

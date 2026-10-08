@@ -11,6 +11,8 @@ import httpx
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from adapters import ModelConfig, build_adapter
+from media_pipeline import transcode
+from editor_adapter import edit
 
 load_dotenv(Path(__file__).with_name('.env'), override=False)
 CORE_URL = os.environ.get("CORE_URL", "http://localhost:4000")
@@ -19,6 +21,9 @@ WORKER_ID = os.environ.get("WORKER_ID", "local-hint-worker")
 stats = {"accepted": 0, "ignored": 0, "errors": 0}
 model_config = ModelConfig.from_env()
 adapter = build_adapter(model_config)
+SUPPORTED_KINDS = os.environ.get('SUPPORTED_KINDS', 'player_hint,editor_ai,media_transcode').split(',')
+if not SUPPORTED_KINDS or any(kind not in ('player_hint', 'editor_ai', 'media_transcode') for kind in SUPPORTED_KINDS):
+    raise ValueError('invalid supported task kinds')
 
 
 def canonical_hash(result: dict) -> str:
@@ -51,7 +56,16 @@ async def heartbeat(client: httpx.AsyncClient, job: dict):
 async def process(client: httpx.AsyncClient, job: dict):
     beat = asyncio.create_task(heartbeat(client, job))
     try:
-        result = await adapter.hint(job["input"])
+        async def compute():
+            if job['kind'] == 'player_hint': return await adapter.hint(job['input'])
+            if job['kind'] == 'editor_ai': return await edit(client, job, model_config)
+            if job['kind'] == 'media_transcode': return await transcode(client, job)
+            raise ValueError('unsupported job kind')
+        computation = asyncio.create_task(compute())
+        done, _ = await asyncio.wait({beat, computation}, return_when=asyncio.FIRST_COMPLETED)
+        if beat in done:
+            await beat  # A lost/revoked lease interrupts computation and never commits outputs.
+        result = await computation
         body = {"attempt": job["attempt"], "lease_token": job["lease_token"],
                 "result_hash": canonical_hash(result), "result": result}
         # Lost responses retry exactly the same completed attempt/hash.
@@ -64,12 +78,18 @@ async def process(client: httpx.AsyncClient, job: dict):
                 if retry == 2:
                     raise
                 await asyncio.sleep(2 ** retry)
+    except (ValueError, KeyError, OSError) as error:
+        code = str(error) if str(error).isupper() and len(str(error)) <= 64 else 'PROCESSING_FAILED'
+        await post(client, f'/internal/work/{job["job_id"]}/fail', {
+            'attempt': job['attempt'], 'lease_token': job['lease_token'], 'code': code, 'retryable': False})
+        stats['errors'] += 1
     finally:
         beat.cancel()
-        try:
-            await beat
-        except asyncio.CancelledError:
-            pass
+        if 'computation' in locals():
+            computation.cancel()
+            await asyncio.gather(beat, computation, return_exceptions=True)
+        else:
+            await asyncio.gather(beat, return_exceptions=True)
 
 
 async def loop():
@@ -78,7 +98,7 @@ async def loop():
         while True:
             try:
                 job = await post(client, "/internal/work/claim", {
-                    "worker_id": WORKER_ID, "supported_kinds": ["player_hint"], "claim_id": str(uuid.uuid4())})
+                    "worker_id": WORKER_ID, "supported_kinds": SUPPORTED_KINDS, "claim_id": str(uuid.uuid4())})
                 if job.get("job_id"):
                     await process(client, job)
                 else:

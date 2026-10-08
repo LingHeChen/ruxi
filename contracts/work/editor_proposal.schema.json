@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "target": {
+      "oneOf": [
+        {
+          "const": [
+            "title"
+          ]
+        },
+        {
+          "const": [
+            "description"
+          ]
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "assets"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "const": "summary"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        }
+      ]
+    },
+    "original": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "suggested": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "maxItems": 5
+    },
+    "source": {
+      "enum": [
+        "ai",
+        "template"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "target",
+    "original",
+    "suggested",
+    "notes",
+    "source"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,71 @@
+name: Verify Ruxi
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ruxi_test
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MIX_ENV: test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:55432/ruxi_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.1'
+          elixir-version: '1.19.5'
+      - run: mix deps.get
+        working-directory: services/core
+      - run: mix run --no-start priv/repo/init_schema.exs
+        working-directory: services/core
+      - run: mix ecto.migrate
+        working-directory: services/core
+      - run: mix compile --warnings-as-errors && mix test
+        working-directory: services/core
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install --require-hashes -r requirements.lock && pip install --no-deps -e . && pip install pytest==9.1.1 && pytest -q
+        working-directory: services/worker
+      - run: python scripts/generate_contracts.py && git diff --exit-code contracts
+  protocol-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/protocol_client.test.mjs
+  flutter:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [mobile, creator]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+      - run: flutter pub get && flutter analyze && flutter test && flutter build web
+        working-directory: apps/${{ matrix.app }}

@@ -134,6 +134,7 @@ defmodule Ruxi.Privacy do
       Enum.flat_map(rooms, fn r ->
         DB.rows("SELECT id FROM work_items WHERE room_id=$1", [r["room_id"]])
       end)
+      |> Kernel.++(DB.rows("SELECT id FROM work_items WHERE created_by=$1", [uid]))
       |> MapSet.new(&DB.str(&1["id"]))
 
     # Short-lived encrypted retry copies are part of the erasure scope too.
@@ -154,6 +155,14 @@ defmodule Ruxi.Privacy do
             row["claim_id"]
           ])
     end
+
+    # Retain licensed published media, but sever the erased author's identity.
+    DB.query("UPDATE assets SET created_by=NULL,filename='已注销作者素材' WHERE created_by=$1", [uid])
+
+    DB.query(
+      "UPDATE work_items SET input_json='{}',result_json=NULL,result_hash=NULL,completion_response_json=NULL,status='failed',lease_hash=NULL,lease_until=NULL,created_by=NULL WHERE created_by=$1",
+      [uid]
+    )
 
     for room <- rooms do
       old = Store.load!(DB.str(room["room_id"]), true)["state_json"]

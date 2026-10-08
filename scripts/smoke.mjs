@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const base=process.env.API_BASE ?? 'http://localhost:4000';
+const ending=process.env.SMOKE_ENDING??'E1';
+assert(['E1','E2','E3'].includes(ending));
+const winningOption={E1:'publish',E2:'wait',E3:'leave'}[ending];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function eventually(fn,timeout=10000){const end=Date.now()+timeout;while(Date.now()<end){if(await fn())return;await sleep(30);}throw Error('condition timed out');}
 class Player{
@@ -11,12 +14,12 @@ class Player{
  async connect(room,replay=false){const cachedSeq=replay?this.seq:0;const cachedEpoch=this.epoch;this.synced=false;this.room=room;const t=await this.http('POST',`/v1/rooms/${room}/socket-ticket`,{device_id:this.device,takeover:false});this.member=t.membership_id;this.generation=t.control_generation;this.epoch=t.recovery_epoch;this.topic=`player_room:${room}:${this.member}`;this.ws=new WebSocket(base.replace(/^http/,'ws')+`/socket/websocket?vsn=2.0.0&ticket=${t.socket_ticket}`);this.join='j'+(++this.ref);
   this.ws.onmessage=({data})=>{const f=JSON.parse(data);this.frames.push(f);const [_,ref,topic,event,p]=f;if(event==='phx_reply'){const c=this.pending.get(ref);if(c){this.pending.delete(ref);c(p);}}else if(event==='sync_snapshot'){this.view=p.snapshot;this.seq=p.base_seq;this.epoch=p.recovery_epoch;}else if(event==='view_event'){this.events.push(p);if(p.seq>this.seq){assert.equal(p.seq,this.seq+1);this.view={...this.view,...p.payload.replace};this.seq=p.seq;}}else if(event==='sync_complete'){this.call('sync_ack',{sync_id:p.sync_id,last_seq:this.seq}).then(()=>this.synced=true);}};
   await new Promise((resolve,reject)=>{this.ws.onopen=resolve;this.ws.onerror=reject;});
-  const j=await this.call('phx_join',{protocol_version:1,control_generation:this.generation,recovery_epoch:replay?cachedEpoch:this.epoch,last_seq:cachedSeq,has_snapshot:replay},this.join);assert.equal(j.status,'ok');assert.equal(j.response.mode,replay?'replay':'snapshot');assert.equal(typeof j.response.base_seq,'number');await eventually(()=>this.synced);
+  const j=await this.call('phx_join',{protocol_version:1,control_generation:this.generation,recovery_epoch:replay?cachedEpoch:this.epoch,last_seq:cachedSeq,has_snapshot:replay},this.join);assert.equal(j.status,'ok');assert.equal(j.response.mode,replay?'replay':'snapshot');assert.equal(typeof j.response.base_seq,'number');await eventually(()=>this.synced);clearInterval(this.heartbeatTimer);this.heartbeatTimer=setInterval(()=>this.call('heartbeat',{},String(++this.ref),'phoenix').catch(()=>{}),25000);
  }
  call(event,p,ref=String(++this.ref),topic=this.topic){return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{this.pending.delete(ref);reject(Error('reply timeout '+event));},10000);this.pending.set(ref,v=>{clearTimeout(timeout);resolve(v);});this.ws.send(JSON.stringify([event==='heartbeat'?null:this.join,ref,topic,event,p]));});}
  intent(type,payload={},extra={}){return {protocol_version:1,recovery_epoch:this.epoch,command_id:randomUUID(),phase_id:this.view.room.phase_id,control_generation:this.generation,type,payload,...extra};}
  async command(type,payload={},extra={},intent=null){const c=intent??this.intent(type,payload,extra);const r=await this.call('command',c);assert.equal(r.response.status,'committed',JSON.stringify(r.response));await eventually(()=>this.seq>=r.response.receipt_seq);return {reply:r.response,intent:c};}
- async close(){this.ws?.close();}
+ async close(){clearInterval(this.heartbeatTimer);this.ws?.close();}
 }
 const players=[];
 try{
@@ -62,13 +65,13 @@ try{
  for(const p of players)await p.command('media_complete',{media_id:'interlude',media_epoch:1,mode:'summary'});
  await eventually(()=>players.every(p=>p.view.room.phase_code==='decision'));
  await sleep(200);const privateVoteSeq=c.seq;
- await a.command('vote',{round_id:a.view.vote_round.round_id,option_id:'publish'});await b.command('vote',{round_id:b.view.vote_round.round_id,option_id:'publish'});await sleep(200);assert.equal(c.seq,privateVoteSeq);assert.equal(c.view.own_vote,null);
+ await a.command('vote',{round_id:a.view.vote_round.round_id,option_id:winningOption});await b.command('vote',{round_id:b.view.vote_round.round_id,option_id:winningOption});await sleep(200);assert.equal(c.seq,privateVoteSeq);assert.equal(c.view.own_vote,null);
  const heartbeat=await a.call('heartbeat',{},undefined,'phoenix');assert.equal(heartbeat.status,'ok');
  console.log('PASS: three identities, Phoenix join/sync/heartbeat/reconnect, private media/topic authorization, private streams, idempotency, transfer, hints, interlude, private voting. Waiting for authoritative 45-second deadline…');
- await eventually(()=>players.every(p=>p.view.room.phase_code==='ending'),48000);assert.equal(a.view.room.ending_code,'E1');assert.deepEqual(a.view.vote_round.tally,{leave:0,wait:0,publish:2});
- for(const p of players)await p.command('media_complete',{media_id:'ending_E1',media_epoch:1,mode:'summary'});await eventually(()=>players.every(p=>p.view.room.lifecycle==='finished'));
+ await eventually(()=>players.every(p=>p.view.room.phase_code==='ending'),48000);assert.equal(a.view.room.ending_code,ending);assert.deepEqual(a.view.vote_round.tally,{leave:winningOption==='leave'?2:0,wait:winningOption==='wait'?2:0,publish:winningOption==='publish'?2:0});
+ for(const p of players)await p.command('media_complete',{media_id:'ending_'+ending,media_epoch:1,mode:'summary'});await eventually(()=>players.every(p=>p.view.room.lifecycle==='finished'));
  const snap=await a.http('GET',`/v1/rooms/${a.room}/snapshot`,undefined,true);assert.equal(snap.snapshot.room.lifecycle,'finished');assert.equal(snap.base_seq,a.seq);
  mkdirSync(new URL('../.local/',import.meta.url),{recursive:true});
  writeFileSync(new URL('../.local/smoke-views.json',import.meta.url),JSON.stringify({snapshots:players.map(p=>p.view),events:players.flatMap(p=>p.events)}));
- console.log('PASS: deadline E1 settlement, ending confirmation, consistent durable snapshot. Synthetic view fixtures saved for schema validation.');
+ console.log('PASS: deadline '+ending+' settlement, ending confirmation, consistent durable snapshot. Synthetic view fixtures saved for schema validation.');
 }finally{for(const p of players)await p.close();}

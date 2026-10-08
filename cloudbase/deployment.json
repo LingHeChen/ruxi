@@ -4,7 +4,8 @@
   "database": {
     "engine": "postgresql",
     "schema": "ruxi",
-    "migration": "20261008120500_ruxi_initial"
+    "migration": "20261008120500_ruxi_initial",
+    "localMigrationHead": "20261008001200"
   },
   "core": {
     "serverName": "ruxi-core",
@@ -12,12 +13,39 @@
     "dockerfile": "infra/core.production.Dockerfile",
     "port": 4000,
     "minInstances": 1,
-    "maxInstances": 1
+    "maxInstances": 1,
+    "requiredPersistentPaths": [
+      "/persistent/erasure-ledger.jsonl",
+      "/persistent/objects"
+    ]
   },
   "worker": {
-    "serverName": "ruxi-worker",
+    "serverName": "ruxi-ai-worker",
     "serverType": "container",
     "dockerfile": "services/worker/Dockerfile",
-    "port": 8000
-  }
+    "port": 8000,
+    "supportedKinds": [
+      "player_hint",
+      "editor_ai"
+    ],
+    "maxInstances": 2
+  },
+  "mediaWorker": {
+    "serverName": "ruxi-media-worker",
+    "serverType": "container",
+    "dockerfile": "services/worker/Dockerfile",
+    "port": 8000,
+    "supportedKinds": [
+      "media_transcode"
+    ],
+    "minInstances": 1,
+    "maxInstances": 1,
+    "requiredMemoryMiB": 2048,
+    "requiredCPU": 2,
+    "vendorSecrets": false
+  },
+  "notes": [
+    "Planning manifest; not a CloudBase deployment result.",
+    "Media Worker receives no vendor key; credentials restricted to its supported kinds."
+  ]
 }

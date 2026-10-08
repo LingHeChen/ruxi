@@ -1,8 +1,16 @@
 # 入戏 Ruxi
 
-根据 `Ruxi_Design_Documents_C1.zip` 实现的三人协作互动剧开发版。Flutter Android/iOS 玩家端、Flutter Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
+根据 `Ruxi_Design_Documents_C1.zip` 实现的协作互动剧平台。Flutter Android/iOS 玩家端、Flutter Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
 
-已实现《末班车的第七位乘客》的三人玩法闭环。已补充八段原创程序化动效开发视频、字幕与同视角摘要，并接入授权播放器。最终影视素材、真机播放验收、备份演练及完整上线门槛尚未完成，详见 [实现与验收状态](docs/IMPLEMENTATION_STATUS.md)。
+已实现《末班车的第七位乘客》的三人玩法闭环。已补充八段原创程序化动效开发视频、字幕与同视角摘要，并接入授权播放器。制作端上传、转码、首帧、字幕、AI 建议和发布流程已接通，备份恢复与进程崩溃演练已通过。真机、浏览器和云端上线验收仍需执行，详见 [实现与验收状态](docs/IMPLEMENTATION_STATUS.md)。
+
+核心设计与取舍见 [架构说明](docs/ARCHITECTURE.md)，制作和恢复流程见 [运行手册](docs/OPERATIONS.md)。
+
+<details><summary>iOS 模拟器实际首页</summary>
+
+<img src="docs/screenshots/ios-home.png" width="280" alt="入戏 iOS 首页：原创三人互动故事">
+
+</details>
 
 ## 目录
 
@@ -25,6 +33,7 @@ docker compose -f infra/compose.yaml up -d postgres
 export DATABASE_URL='postgres://ruxi:local-development@localhost:55432/ruxi_dev'
 cd services/core
 mix setup
+ulimit -n 4096
 PHX_SERVER=true mix run --no-halt
 ```
 
@@ -61,12 +70,12 @@ Web 试玩身份按标签页保存：在地址栏分别打开三个新标签页�
 
 ```sh
 cd services/core
-mix run priv/repo/admin_code.exs 33333333-3333-4333-8333-333333333333 editor reviewer publisher
+mix run --no-start priv/repo/admin_code.exs 33333333-3333-4333-8333-333333333333 editor reviewer publisher
 cd ../../apps/creator
 flutter run -d chrome --web-port 8081
 ```
 
-输入 CLI 返回的登录码。先基于样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。样片的媒体已就绪，创建草稿后可验证、审核并发布开发版本；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
+输入 CLI 返回的登录码。先基于样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。可上传自有授权视频，自动转码并预览首帧，附加字幕后绑定草稿；AI 建议需人工确认。样片媒体已就绪，创建草稿后可验证、审核并发布；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
 
 可选运行 Python Worker：
 
@@ -76,9 +85,11 @@ uv sync --extra test
 uv run uvicorn worker:app --host 127.0.0.1 --port 8000
 ```
 
-不启动 Worker 时，core 仍会在 8 秒后提供固定提示。Worker 无数据库连接，通过绑定身份和任务种类的凭证领取任务。AI 使用供应商适配层，支持固定模板、DeepSeek 和 OpenAI 兼容接口；配置方式见 [AI 配置](docs/AI_CONFIGURATION.md)。未配置密钥时使用模板。两次真实合成提示联调通过，完整模型质量评估仍待完成。
+不启动 Worker 时，core 仍会在 8 秒后提供固定提示。Worker 无数据库连接，通过绑定身份和任务种类的凭证领取任务。AI 使用供应商适配层，支持固定模板、DeepSeek 和 OpenAI 兼容接口；配置方式见 [AI 配置](docs/AI_CONFIGURATION.md)。未配置密钥时使用模板。六项真实合成提示与真实编辑建议流程通过，人工剧情质量仍需验收。
 
 ## 验证
+
+隔离测试库已创建后，可运行 `scripts/verify.sh` 完成 Core、Worker、协议归并及两端分析/测试/Web 构建。
 
 ```sh
 cd services/core
@@ -100,7 +111,7 @@ node scripts/smoke.mjs
 
 `smoke.mjs` 创建三个真实游客并连接 Phoenix V2 帧，验证隐私、重复命令、道具、提示、中场、投票及 E1 持久化。它使用真实 45 秒决策截止，不修改服务器时钟或提供 HTTP 玩法后门。
 
-视频来源记录和 SHA-256 位于 `content/demo/media/manifest.json`，均为本项目原创程序化画面、叙事文字及合成音。重建：`python3 scripts/generate_demo_media.py`，需要 FFmpeg 和中文字体；可设置 `RUXI_VIDEO_FONT` 指向本机字体。视频源不依赖外部影视、图像或音乐。静态媒体由开发签名网关分发，生产应切对象存储/CDN。
+视频来源记录和 SHA-256 位于 `content/demo/media/manifest.json`，均为本项目原创程序化画面、叙事文字及合成音。重建：`python3 scripts/generate_demo_media.py`，需要 FFmpeg 和中文字体；可设置 `RUXI_VIDEO_FONT` 指向本机字体。视频源不依赖外部影视、图像或音乐。媒体经授权签名网关分发；上传对象由不可变本地适配器管理，生产必须挂载持久 OBJECT_ROOT，后续可替换对象存储/CDN。
 
 生成/检查机器契约：`python3 scripts/generate_contracts.py`；Python 契约测试验证正反例、Schema 自身及五条 golden fixtures。运行 smoke 后可执行 `services/worker/.venv/bin/python scripts/check_live_contracts.py` 校验实际快照和事件。完整验收记录见 [VALIDATION.md](docs/VALIDATION.md)。
 
@@ -110,4 +121,4 @@ node scripts/smoke.mjs
 
 目标环境为 `tnt-like-d2gmmbwti62706aae`：Elixir 与 Python 部署到云托管，Flutter Web 部署到独立静态托管应用。云端及本地使用独立 `ruxi` schema，不在 `public` 下建业务表。部署记录及尚缺前置项见 [CloudBase 文档](docs/CLOUDBASE.md)。
 
-项目使用 [MIT 许可](LICENSE)，依赖及工具遵循各自许可。全部开发及验收完成后发布公开 GitHub 仓库。
+项目使用 [MIT 许可](LICENSE)，依赖及工具遵循各自许可。源码仓库：[LingHeChen/ruxi](https://github.com/LingHeChen/ruxi)。应用的真机和云端发行验收独立于源码公开发布，未完成的项目见验收记录。

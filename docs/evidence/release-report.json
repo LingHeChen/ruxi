@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-08T14:40:54.643Z",
+  "passed": true,
+  "checks": [
+    "fresh isolated ruxi schema migrations and seed",
+    "strict production runtime configuration",
+    "OTP release process /health HTTP 200"
+  ],
+  "limitations": [
+    "Local release, not a container or CloudBase deployment."
+  ]
+}

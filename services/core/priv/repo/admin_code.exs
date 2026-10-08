@@ -1,4 +1,14 @@
 alias Ruxi.{DB, Util}
+
+if Process.whereis(Ruxi.Supervisor),
+  do:
+    raise(
+      "Run this administration command with mix run --no-start; it must not start a second Core dispatcher"
+    )
+
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = Application.ensure_all_started(:postgrex)
+{:ok, _} = Ruxi.Repo.start_link()
 [user_id | roles] = System.argv()
 roles = if roles == [], do: ~w(editor reviewer publisher), else: roles
 Util.require!(Enum.all?(roles, &(&1 in ~w(editor reviewer publisher))), "INVALID_ARGUMENT")

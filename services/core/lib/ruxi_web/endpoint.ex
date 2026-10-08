@@ -8,10 +8,12 @@ defmodule RuxiWeb.Endpoint do
 
   plug(CORSPlug,
     origin: &RuxiWeb.Endpoint.allowed_origins/0,
-    headers: ["authorization", "content-type", "x-device-id", "x-control-generation"]
+    headers: ["authorization", "content-type", "x-device-id", "x-control-generation", "range"],
+    expose: ["accept-ranges", "content-range", "content-length", "retry-after"]
   )
 
   plug(Plug.RequestId)
+  plug(Ruxi.Uploads)
 
   plug(Plug.Parsers,
     parsers: [:json],
@@ -40,6 +42,8 @@ defmodule RuxiWeb.Socket do
       {:ok, ctx} -> {:ok, assign(socket, :ctx, ctx)}
       _ -> :error
     end
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] -> :error
   end
 
   def connect(_, _, _), do: :error
@@ -74,6 +78,8 @@ defmodule RuxiWeb.RoomChannel do
       else
         {:noreply, socket}
       end
+    rescue
+      _ in [DBConnection.ConnectionError, Postgrex.Error] -> {:stop, :normal, socket}
     catch
       {:error, _} -> {:stop, :normal, socket}
     end
@@ -122,6 +128,11 @@ defmodule RuxiWeb.RoomChannel do
     else
       {:error, %{"error" => Util.error("NOT_ALLOWED")}}
     end
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] ->
+      {:error, %{"error" => Util.error("OWNER_UNAVAILABLE")}}
+  catch
+    :exit, _ -> {:error, %{"error" => Util.error("OWNER_UNAVAILABLE")}}
   end
 
   def handle_info({:sync, baseline, sync}, socket) do
@@ -161,6 +172,8 @@ defmodule RuxiWeb.RoomChannel do
         push(socket, "resync_required", %{"reason" => code, "recovery_epoch" => Util.epoch()})
         {:stop, :normal, socket}
     end
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] -> {:stop, :normal, socket}
   end
 
   def handle_info(:watermark, socket) do
@@ -171,6 +184,8 @@ defmodule RuxiWeb.RoomChannel do
         Auth.valid!(ctx)
         Store.auth!(Store.load!(ctx.room)["state_json"], ctx)
         :ok
+      rescue
+        _ in [DBConnection.ConnectionError, Postgrex.Error] -> {:error, "OWNER_UNAVAILABLE"}
       catch
         {:error, c} -> {:error, c}
       end
@@ -219,6 +234,8 @@ defmodule RuxiWeb.RoomChannel do
       )
 
       {:reply, {:ok, %{}}, assign(socket, :synced, true)}
+    rescue
+      _ in [DBConnection.ConnectionError, Postgrex.Error] -> {:stop, :normal, socket}
     catch
       {:error, code} -> {:reply, {:error, %{"error" => Util.error(code)}}, socket}
     end
@@ -227,6 +244,7 @@ defmodule RuxiWeb.RoomChannel do
   def handle_in("command", c, socket) do
     r =
       try do
+        Util.require!(is_map(c), "INVALID_ARGUMENT")
         Auth.valid!(socket.assigns.ctx)
         Ruxi.Limiter.check!({:command, socket.assigns.ctx.member}, 5, 10)
 
@@ -235,7 +253,11 @@ defmodule RuxiWeb.RoomChannel do
 
         Util.require!(socket.assigns.synced, "NOT_ALLOWED")
         RoomServer.command(socket.assigns.ctx, c)
+      rescue
+        _ in [DBConnection.ConnectionError, Postgrex.Error] -> {:error, "OWNER_UNAVAILABLE"}
+        _ in [ArgumentError, Ecto.CastError] -> {:error, "INVALID_ARGUMENT"}
       catch
+        :exit, _ -> {:error, "OWNER_UNAVAILABLE"}
         {:error, code} -> {:error, code}
       end
 
@@ -248,15 +270,16 @@ defmodule RuxiWeb.RoomChannel do
     end
   end
 
-  def handle_in("clock_ping", p, socket),
-    do:
-      {:reply,
-       {:ok,
-        %{
-          "nonce" => p["nonce"],
-          "server_received_at" => Util.iso(Util.now()),
-          "server_sent_at" => Util.iso(Util.now())
-        }}, socket}
+  def handle_in("clock_ping", %{"nonce" => nonce} = p, socket)
+      when is_binary(nonce) and byte_size(nonce) <= 128 and map_size(p) == 1,
+      do:
+        {:reply,
+         {:ok,
+          %{
+            "nonce" => p["nonce"],
+            "server_received_at" => Util.iso(Util.now()),
+            "server_sent_at" => Util.iso(Util.now())
+          }}, socket}
 
   def handle_in(_, _, socket),
     do: {:reply, {:error, %{"error" => Util.error("INVALID_ARGUMENT")}}, socket}
@@ -268,5 +291,9 @@ defmodule RuxiWeb.RoomChannel do
     end
 
     :ok
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error, MatchError] -> :ok
+  catch
+    :exit, _ -> :ok
   end
 end

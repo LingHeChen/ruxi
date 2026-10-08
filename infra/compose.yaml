@@ -21,6 +21,9 @@ services:
       CORE_INSTANCE: core-1
       WORKER_TOKEN: local-worker-change-me
       RECOVERY_EPOCH: compose-C1
+      OBJECT_ROOT: /persistent/objects
+      ERASURE_LEDGER_PATH: /persistent/erasure-ledger.jsonl
+    volumes: ["ruxi-objects:/persistent"]
     ports: ["4000:4000"]
     depends_on:
       postgres:
@@ -35,3 +38,4 @@ services:
     depends_on: [core]
 volumes:
   ruxi-db:
+  ruxi-objects:

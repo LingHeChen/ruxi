@@ -36,11 +36,27 @@ defmodule Ruxi.Store do
         else: new
 
     rid = DB.uuid(new["room_id"])
+    new = Ruxi.PublicRecap.advance(old, new, now)
 
     DB.query(
       "UPDATE rooms SET state_json=$2,lifecycle=$3,deadline_at=$4,revision=revision+1,updated_at=$5 WHERE id=$1",
       [rid, new, new["lifecycle"], new["deadline"], now]
     )
+
+    if new["lifecycle"] in ~w(finished abandoned) do
+      DB.query(
+        "INSERT INTO room_summaries(room_id,content_version_id,seat_count,ending_code,lifecycle,started_at,terminal_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(room_id) DO NOTHING",
+        [
+          rid,
+          DB.uuid(new["content_version_id"]),
+          length(new["members"]),
+          new["ending"],
+          new["lifecycle"],
+          new["started_at"],
+          new["terminal_at"]
+        ]
+      )
+    end
 
     for m <- new["members"] do
       DB.query(
@@ -121,6 +137,29 @@ defmodule Ruxi.Store do
         "INSERT INTO vote_rounds(room_id,id,options_json,display_options_json,status) VALUES($1,$2,$3,$4,$5) ON CONFLICT(room_id,id) DO UPDATE SET status=$5",
         [rid, round, r["options"], r["display_options"], r["status"]]
       )
+
+      frozen =
+        DB.one("SELECT electorate_frozen FROM vote_rounds WHERE room_id=$1 AND id=$2", [
+          rid,
+          round
+        ])["electorate_frozen"]
+
+      if not frozen do
+        electorate =
+          r["electorate"] || Enum.map(Enum.filter(new["members"], &(not &1["left"])), & &1["id"])
+
+        for mid <- electorate,
+            do:
+              DB.query(
+                "INSERT INTO vote_electorate(room_id,round_id,member_id) VALUES($1,$2,$3)",
+                [rid, round, DB.uuid(mid)]
+              )
+
+        DB.query("UPDATE vote_rounds SET electorate_frozen=true WHERE room_id=$1 AND id=$2", [
+          rid,
+          round
+        ])
+      end
 
       for {mid, option} <- new["votes"],
           do:
@@ -417,6 +456,10 @@ defmodule Ruxi.RoomServer do
   def start_link(rid),
     do: GenServer.start_link(__MODULE__, rid, name: {:via, Registry, {Ruxi.RoomRegistry, rid}})
 
+  def child_spec(rid) do
+    %{id: {__MODULE__, rid}, start: {__MODULE__, :start_link, [rid]}, restart: :transient}
+  end
+
   def command(ctx, c) do
     {:ok, pid} = ensure(ctx.room)
     GenServer.call(pid, {:command, ctx, c})
@@ -447,7 +490,14 @@ defmodule Ruxi.RoomServer do
           [DB.uuid(rid), owner, now + 15_000]
         )
 
-        s = row["state_json"]
+        cached = row["state_json"]
+        s = Ruxi.Authority.restore(row)
+
+        if s != cached do
+          require Logger
+          Logger.warning("room structural recovery cache repaired from committed facts")
+          Store.save(cached, s, "member_changed", now)
+        end
 
         n =
           Enum.reduce(s["members"], s, fn m, acc ->
@@ -477,7 +527,14 @@ defmodule Ruxi.RoomServer do
     end
   end
 
-  def handle_call({:command, ctx, c}, _, st), do: {:reply, Store.command(ctx, c, st.owner), st}
+  def handle_call({:command, ctx, c}, _, st) do
+    {:reply, Store.command(ctx, c, st.owner), st}
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] ->
+      require Logger
+      Logger.warning("room command database failure; retry requires receipt verification")
+      {:reply, {:error, "OWNER_UNAVAILABLE"}, st}
+  end
 
   def handle_call({:presence, ctx, on}, _, st) do
     r =
@@ -498,32 +555,69 @@ defmodule Ruxi.RoomServer do
       end)
 
     {:reply, r, st}
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] ->
+      require Logger
+      Logger.warning("room presence database failure")
+      {:reply, {:error, "OWNER_UNAVAILABLE"}, st}
   end
 
   def handle_info(:tick, st) do
-    DB.transaction(fn ->
-      row = Store.load!(st.rid, true)
-      now = DB.time()
-      Util.require!(row["owner_instance"] == st.owner, "OWNER_UNAVAILABLE")
-      DB.query("UPDATE rooms SET lease_until=$2 WHERE id=$1", [DB.uuid(st.rid), now + 15_000])
-      s = row["state_json"]
-      n = Rules.tick(s, now)
+    result =
+      DB.transaction(fn ->
+        row = Store.load!(st.rid, true)
+        now = DB.time()
+        Util.require!(row["owner_instance"] == st.owner, "OWNER_UNAVAILABLE")
+        DB.query("UPDATE rooms SET lease_until=$2 WHERE id=$1", [DB.uuid(st.rid), now + 15_000])
+        s = row["state_json"]
+        n = Rules.tick(s, now)
 
-      blocked =
-        DB.one("SELECT availability FROM content_versions WHERE id=$1", [
-          DB.uuid(s["content_version_id"])
-        ])["availability"] == "blocked"
+        blocked =
+          DB.one("SELECT availability FROM content_versions WHERE id=$1", [
+            DB.uuid(s["content_version_id"])
+          ])["availability"] == "blocked"
 
-      n =
-        if blocked and n["lifecycle"] == "running" and n["phase"] != "ending",
-          do: Rules.block(n, now),
-          else: n
+        n =
+          if blocked and n["lifecycle"] == "running" and n["phase"] != "ending",
+            do: Rules.block(n, now),
+            else: n
 
-      if n != s, do: Store.save(s, n, "phase_changed", now)
-    end)
+        if n != s, do: Store.save(s, n, "phase_changed", now)
 
-    Process.send_after(self(), :tick, 1000)
-    {:noreply, st}
+        retire =
+          n["lifecycle"] in ["finished", "abandoned"] or
+            (n["lifecycle"] == "suspended" and Enum.all?(n["members"], &(not &1["online"])))
+
+        if retire do
+          DB.query(
+            "UPDATE rooms SET owner_instance=NULL,lease_until=NULL WHERE id=$1 AND owner_instance=$2",
+            [DB.uuid(st.rid), st.owner]
+          )
+        end
+
+        retire
+      end)
+
+    case result do
+      {:ok, true} ->
+        {:stop, :normal, st}
+
+      {:error, _} ->
+        {:stop, :normal, st}
+
+      _ ->
+        Process.send_after(self(), :tick, 1000)
+        {:noreply, st}
+    end
+  rescue
+    _ in [DBConnection.ConnectionError, Postgrex.Error] ->
+      require Logger
+
+      Logger.warning(
+        "room timer suspended after database failure; ownership requires reacquisition"
+      )
+
+      {:stop, :normal, st}
   end
 end
 
@@ -532,38 +626,53 @@ defmodule Ruxi.Dispatcher do
   alias Ruxi.DB
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
-  def init(_),
-    do:
-      (
-        Process.send_after(self(), :dispatch, 100)
-        {:ok, nil}
-      )
+  def init(_) do
+    Process.send_after(self(), :dispatch, 100)
+    {:ok, %{last_scan: System.monotonic_time(:second) - 5}}
+  end
 
-  def handle_info(:dispatch, s) do
-    try do
-      if rem(System.monotonic_time(:second), 5) == 0 do
-        for row <-
-              DB.rows("SELECT id FROM rooms WHERE lifecycle IN ('running','paused','suspended')"),
-            do: Ruxi.RoomServer.ensure(DB.str(row["id"]))
+  def recoverable_rooms do
+    DB.rows("SELECT id FROM rooms WHERE lifecycle IN ('running','paused')")
+    |> Enum.map(&DB.str(&1["id"]))
+  end
+
+  def handle_info(:dispatch, state) do
+    next =
+      try do
+        now = System.monotonic_time(:second)
+
+        state =
+          if now - state.last_scan >= 5 do
+            for rid <- recoverable_rooms(), do: Ruxi.RoomServer.ensure(rid)
+            %{state | last_scan: now}
+          else
+            state
+          end
+
+        batch =
+          DB.rows(
+            "SELECT o.id,o.room_id,o.member_id,e.event_json FROM outbox o JOIN member_view_events e USING(room_id,member_id,seq) WHERE o.delivered_at IS NULL ORDER BY o.id LIMIT 200"
+          )
+
+        for row <- batch do
+          topic = "player_room:#{DB.str(row["room_id"])}:#{DB.str(row["member_id"])}"
+          RuxiWeb.Endpoint.broadcast(topic, "view_event", row["event_json"])
+        end
+
+        if batch != [] do
+          # Broadcast before marking: failures may replay, never discard a committed event.
+          DB.query(
+            "UPDATE outbox SET delivered_at=$2 WHERE id=ANY($1::bigint[]) AND delivered_at IS NULL",
+            [Enum.map(batch, & &1["id"]), Ruxi.Util.now()]
+          )
+        end
+
+        state
+      rescue
+        _ -> state
       end
-
-      for r <-
-            DB.rows(
-              "SELECT o.id,o.room_id,o.member_id,e.event_json FROM outbox o JOIN member_view_events e USING(room_id,member_id,seq) WHERE o.delivered_at IS NULL ORDER BY o.id LIMIT 200"
-            ) do
-        topic = "player_room:#{DB.str(r["room_id"])}:#{DB.str(r["member_id"])}"
-        RuxiWeb.Endpoint.broadcast(topic, "view_event", r["event_json"])
-
-        DB.query("UPDATE outbox SET delivered_at=$2 WHERE id=$1 AND delivered_at IS NULL", [
-          r["id"],
-          Ruxi.Util.now()
-        ])
-      end
-    rescue
-      _ -> :ok
-    end
 
     Process.send_after(self(), :dispatch, 100)
-    {:noreply, s}
+    {:noreply, next}
   end
 end

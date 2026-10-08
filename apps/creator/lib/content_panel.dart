@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'rule_editor.dart';
+import 'narrative_panel.dart';
 
 class ContentPanel extends StatelessWidget {
   const ContentPanel({
@@ -65,6 +66,25 @@ class ContentPanel extends StatelessWidget {
           'ending_ms',
         ].every((k) => timing[k] is num) &&
         decision['duration_ms'] is num &&
+        decision['options'] is List &&
+        (decision['options'] as List).every((v) => v is String) &&
+        (graph['role_definitions'] == null ||
+            graph['role_definitions'] is Map &&
+                (graph['role_definitions'] as Map).values.every(
+                  (v) =>
+                      v is Map &&
+                      v['title'] is String &&
+                      v['description'] is String,
+                )) &&
+        (graph['clues'] == null ||
+            graph['clues'] is Map &&
+                (graph['clues'] as Map).values.every(
+                  (v) =>
+                      v is Map &&
+                      v['title'] is String &&
+                      v['text'] is String &&
+                      v['shareable'] is bool,
+                )) &&
         graph['roles'] is List &&
         (graph['roles'] as List).every((r) => r is String) &&
         graph['variables'] is Map &&
@@ -74,11 +94,21 @@ class ContentPanel extends StatelessWidget {
         actions.every(
           (a) =>
               a is Map &&
+              a['requires'] is Map &&
+              a['role'] is String &&
+              (graph['roles'] as List).contains(a['role']) &&
               a['effects'] is List &&
               (a['effects'] as List).every((e) => e is Map),
         ) &&
         assets is List &&
-        assets.every((a) => a is Map && a['duration_ms'] is num);
+        assets.every(
+          (a) =>
+              a is Map &&
+              a['duration_ms'] is num &&
+              a['media_id'] is String &&
+              a['summary'] is String &&
+              a['source'] is String,
+        );
     if (!readable) {
       return const Card(
         child: Padding(
@@ -114,6 +144,42 @@ class ContentPanel extends StatelessWidget {
               ),
             ),
           ),
+          section(
+            '剧目介绍',
+            TextFormField(
+              initialValue: graph['description'] ?? '',
+              readOnly: readOnly,
+              maxLength: 2000,
+              minLines: 2,
+              maxLines: 5,
+              decoration: const InputDecoration(labelText: '玩家可见介绍'),
+              onChanged: (v) => onGraph({...graph, 'description': v}),
+            ),
+          ),
+          if (!readOnly)
+            section(
+              '片段图文摘要',
+              Column(
+                children: [
+                  for (var i = 0; i < assets.length; i++)
+                    TextFormField(
+                      initialValue: assets[i]['summary'],
+                      maxLength: 2000,
+                      minLines: 2,
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        labelText: '${assets[i]['media_id']} · 授权摘要',
+                      ),
+                      onChanged: (v) {
+                        final next = List<dynamic>.from(assets);
+                        next[i] = {...assets[i], 'summary': v};
+                        onGraph({...graph, 'assets': next});
+                      },
+                    ),
+                ],
+              ),
+            ),
+          if (!readOnly) NarrativePanel(graph: graph, onChanged: onGraph),
           section(
             '角色与行动',
             table(

@@ -6,9 +6,14 @@ defmodule Ruxi.Jobs do
 
     DB.transaction(fn ->
       Util.require!(
-        p["worker_id"] == principal["worker_id"] and "player_hint" in principal["allowed_kinds"] and
+        p["worker_id"] == principal["worker_id"] and
           Ruxi.Contract.uuid?(p["claim_id"]) and
-          p["supported_kinds"] == ["player_hint"],
+          is_list(p["supported_kinds"]) and p["supported_kinds"] != [] and
+          length(p["supported_kinds"]) <= 3 and
+          Enum.all?(
+            p["supported_kinds"],
+            &(&1 in principal["allowed_kinds"] and &1 in ~w(player_hint media_transcode editor_ai))
+          ),
         "INVALID_ARGUMENT"
       )
 
@@ -23,12 +28,14 @@ defmodule Ruxi.Jobs do
       now = DB.time()
 
       if cached && cached["expires_at"] > now do
-        Auth.unseal(cached["reply_ciphertext"])
+        reply = Auth.unseal(cached["reply_ciphertext"])
+        Util.require!(reply["kind"] in p["supported_kinds"], "RESULT_CONFLICT")
+        reply
       else
         job =
           DB.one(
-            "SELECT * FROM work_items WHERE kind='player_hint' AND (status='queued' OR (status='leased' AND lease_until<=$1)) ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
-            [now]
+            "SELECT * FROM work_items WHERE kind=ANY($2::text[]) AND (room_id IS NOT NULL OR attempt < 3) AND (status='queued' OR (status='leased' AND lease_until<=$1)) ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
+            [now, p["supported_kinds"]]
           )
 
         if job do
@@ -64,126 +71,136 @@ defmodule Ruxi.Jobs do
   end
 
   def dispatch([id, op], p, principal) when op in ~w(heartbeat complete fail) do
-    fields =
-      ~w(attempt lease_token) ++
-        case op do
-          "complete" -> ~w(result_hash result)
-          "fail" -> ~w(code retryable)
-          _ -> []
-        end
+    meta = DB.one("SELECT room_id FROM work_items WHERE id=$1", [DB.uuid(id)])
+    Util.require!(meta != nil, "RESOURCE_NOT_FOUND")
 
-    RuxiWeb.Router.json!(p, fields)
+    if meta["room_id"] == nil do
+      Ruxi.ProductionJobs.dispatch(id, op, p, principal)
+    else
+      fields =
+        ~w(attempt lease_token) ++
+          case op do
+            "complete" -> ~w(result_hash result)
+            "fail" -> ~w(code retryable)
+            _ -> []
+          end
 
-    DB.transaction(fn ->
-      # Room first, then work item: same lock order as deadline fallback.
-      meta = DB.one("SELECT room_id FROM work_items WHERE id=$1", [DB.uuid(id)])
-      Util.require!(meta != nil, "RESOURCE_NOT_FOUND")
-      row = Store.load!(DB.str(meta["room_id"]), true)
-      job = DB.one("SELECT * FROM work_items WHERE id=$1 FOR UPDATE", [DB.uuid(id)])
+      RuxiWeb.Router.json!(p, fields)
 
-      Util.require!(
-        job["leased_by"] == principal["worker_id"] and job["kind"] in principal["allowed_kinds"],
-        "NOT_ALLOWED"
-      )
+      DB.transaction(fn ->
+        # Room first, then work item: same lock order as deadline fallback.
+        meta = DB.one("SELECT room_id FROM work_items WHERE id=$1", [DB.uuid(id)])
+        Util.require!(meta != nil, "RESOURCE_NOT_FOUND")
+        row = Store.load!(DB.str(meta["room_id"]), true)
+        job = DB.one("SELECT * FROM work_items WHERE id=$1 FOR UPDATE", [DB.uuid(id)])
 
-      now = DB.time()
-
-      if op == "complete" and job["completed_attempt"] == p["attempt"] do
-        Util.require!(job["result_hash"] == p["result_hash"], "RESULT_CONFLICT")
-        job["completion_response_json"]
-      else
         Util.require!(
-          job["status"] == "leased" and job["attempt"] == p["attempt"] and
-            job["lease_hash"] == Util.hash(p["lease_token"] || "") and job["lease_until"] > now,
-          "STALE_LEASE"
+          job["leased_by"] == principal["worker_id"] and job["kind"] in principal["allowed_kinds"],
+          "NOT_ALLOWED"
         )
 
-        case op do
-          "heartbeat" ->
-            DB.query("UPDATE work_items SET lease_until=$2 WHERE id=$1", [job["id"], now + 60_000])
+        now = DB.time()
 
-            %{"lease_until" => Util.iso(now + 60_000), "cancel_requested" => false}
+        if op == "complete" and job["completed_attempt"] == p["attempt"] do
+          Util.require!(job["result_hash"] == p["result_hash"], "RESULT_CONFLICT")
+          job["completion_response_json"]
+        else
+          Util.require!(
+            job["status"] == "leased" and job["attempt"] == p["attempt"] and
+              job["lease_hash"] == Util.hash(p["lease_token"] || "") and job["lease_until"] > now,
+            "STALE_LEASE"
+          )
 
-          "fail" ->
-            Util.require!(
-              is_boolean(p["retryable"]) and is_binary(p["code"]) and
-                String.length(p["code"]) in 1..64,
-              "INVALID_ARGUMENT"
-            )
-
-            if p["retryable"] do
-              DB.query("UPDATE work_items SET status='queued',lease_until=NULL WHERE id=$1", [
-                job["id"]
+          case op do
+            "heartbeat" ->
+              DB.query("UPDATE work_items SET lease_until=$2 WHERE id=$1", [
+                job["id"],
+                now + 60_000
               ])
-            else
-              state = row["state_json"]
-              mid = DB.str(job["member_id"])
-              pending = Rules.member(state, mid)["hint_pending"]
 
-              if pending && pending["reservation"] == job["basis"]["reservation_id"] do
-                updated = Rules.update_member(state, mid, &Map.put(&1, "hint_pending", nil))
-                Store.save(state, updated, "hint_failed", now)
+              %{"lease_until" => Util.iso(now + 60_000), "cancel_requested" => false}
+
+            "fail" ->
+              Util.require!(
+                is_boolean(p["retryable"]) and is_binary(p["code"]) and
+                  String.length(p["code"]) in 1..64,
+                "INVALID_ARGUMENT"
+              )
+
+              if p["retryable"] do
+                DB.query("UPDATE work_items SET status='queued',lease_until=NULL WHERE id=$1", [
+                  job["id"]
+                ])
+              else
+                state = row["state_json"]
+                mid = DB.str(job["member_id"])
+                pending = Rules.member(state, mid)["hint_pending"]
+
+                if pending && pending["reservation"] == job["basis"]["reservation_id"] do
+                  updated = Rules.update_member(state, mid, &Map.put(&1, "hint_pending", nil))
+                  Store.save(state, updated, "hint_failed", now)
+                end
+
+                DB.query("UPDATE work_items SET status='failed',lease_until=NULL WHERE id=$1", [
+                  job["id"]
+                ])
               end
 
-              DB.query("UPDATE work_items SET status='failed',lease_until=NULL WHERE id=$1", [
-                job["id"]
-              ])
-            end
+              %{"status" => "failed"}
 
-            %{"status" => "failed"}
+            "complete" ->
+              result = p["result"]
 
-          "complete" ->
-            result = p["result"]
+              Util.require!(
+                is_map(result) and Enum.sort(Map.keys(result)) == ~w(evidence_ids narrative) and
+                  is_binary(result["narrative"]) and
+                  String.length(String.trim(result["narrative"])) in 1..2000 and
+                  is_list(result["evidence_ids"]) and length(result["evidence_ids"]) <= 100 and
+                  Enum.all?(result["evidence_ids"], &is_binary/1),
+                "INVALID_ARGUMENT"
+              )
 
-            Util.require!(
-              is_map(result) and Enum.sort(Map.keys(result)) == ~w(evidence_ids narrative) and
-                is_binary(result["narrative"]) and
-                String.length(String.trim(result["narrative"])) in 1..2000 and
-                is_list(result["evidence_ids"]) and length(result["evidence_ids"]) <= 100 and
-                Enum.all?(result["evidence_ids"], &is_binary/1),
-              "INVALID_ARGUMENT"
-            )
+              Util.require!(p["result_hash"] == Util.hash(result), "RESULT_CONFLICT")
+              s = row["state_json"]
+              n = Rules.tick(s, now)
+              mid = DB.str(job["member_id"])
+              m = Rules.member(n, mid)
 
-            Util.require!(p["result_hash"] == Util.hash(result), "RESULT_CONFLICT")
-            s = row["state_json"]
-            n = Rules.tick(s, now)
-            mid = DB.str(job["member_id"])
-            m = Rules.member(n, mid)
+              eligible =
+                n["phase_id"] == job["basis"]["phase_id"] and
+                  Rules.knowledge_hash(n, mid) == job["basis"]["knowledge_hash"] and
+                  m["hint_pending"] != nil and
+                  m["hint_pending"]["reservation"] == job["basis"]["reservation_id"] and
+                  Enum.all?(result["evidence_ids"], &(&1 in (m["known"] ++ n["shared"])))
 
-            eligible =
-              n["phase_id"] == job["basis"]["phase_id"] and
-                Rules.knowledge_hash(n, mid) == job["basis"]["knowledge_hash"] and
-                m["hint_pending"] != nil and
-                m["hint_pending"]["reservation"] == job["basis"]["reservation_id"] and
-                Enum.all?(result["evidence_ids"], &(&1 in (m["known"] ++ n["shared"])))
+              n =
+                if eligible,
+                  do:
+                    Rules.finish_hint(
+                      n,
+                      mid,
+                      job["basis"]["reservation_id"],
+                      result["narrative"],
+                      if(result["narrative"] == job["input_json"]["template"],
+                        do: "template",
+                        else: "ai"
+                      )
+                    ),
+                  else: n
 
-            n =
-              if eligible,
-                do:
-                  Rules.finish_hint(
-                    n,
-                    mid,
-                    job["basis"]["reservation_id"],
-                    result["narrative"],
-                    if(result["narrative"] == job["input_json"]["template"],
-                      do: "template",
-                      else: "ai"
-                    )
-                  ),
-                else: n
+              if n != s, do: Store.save(s, n, "hint_ready", now)
+              reply = %{"status" => if(eligible, do: "accepted", else: "ignored")}
 
-            if n != s, do: Store.save(s, n, "hint_ready", now)
-            reply = %{"status" => if(eligible, do: "accepted", else: "ignored")}
+              DB.query(
+                "UPDATE work_items SET status='completed',result_hash=$2,result_json=$3,completion_response_json=$4,completed_attempt=$5 WHERE id=$1",
+                [job["id"], p["result_hash"], result, reply, p["attempt"]]
+              )
 
-            DB.query(
-              "UPDATE work_items SET status='completed',result_hash=$2,result_json=$3,completion_response_json=$4,completed_attempt=$5 WHERE id=$1",
-              [job["id"], p["result_hash"], result, reply, p["attempt"]]
-            )
-
-            reply
+              reply
+          end
         end
-      end
-    end)
+      end)
+    end
   end
 
   def dispatch(_, _, _), do: Util.fail("INVALID_ARGUMENT")

@@ -46,7 +46,7 @@ models={
  'room':response({'room_id':UUID,'content_version_id':UUID,'lifecycle':{'enum':['lobby','running','paused','suspended','finished','abandoned']},'phase_id':nullable(UUID),'phase_code':nullable({'enum':['briefing','exploration','decision','ending']}),'exploration_step':{'enum':['active','interlude']},'deadline_at':nullable(DATE),'remaining_ms':nullable(INT),'timer_generation':INT,'host_membership_id':UUID,'ending_code':nullable(CODE)},['room_id','content_version_id','lifecycle','phase_id','phase_code','deadline_at','remaining_ms','timer_generation','host_membership_id']),
  'self':response({'membership_id':UUID,'control_generation':{**INT,'minimum':1},'role_code':nullable(role)}),
  'members':arr(response({'membership_id':UUID,'display_name':{'type':'string'},'role_code':nullable(role),'ready':BOOL,'online':BOOL,'briefing_ready':BOOL}),4),
- 'public_scene':response({'title':{'type':'string'},'description':{'type':'string'},'shared_clues':arr(clue)}),
+ 'public_scene':response({'title':{'type':'string'},'description':{'type':'string'},'shared_clues':arr(clue),'timeline':arr(response({'seq':{**INT,'minimum':1},'kind':{'enum':['phase','lifecycle','shared_clue']},'label':{'type':'string','maxLength':500},'occurred_at':DATE}),200)},['title','description','shared_clues']),
  'own_role':nullable(response({'role_code':role,'title':{'type':'string'},'description':{'type':'string'}})),
  'own_clues':arr(clue),
  'visible_items':arr(response({'item_id':CODE,'title':{'type':'string'},'owner_membership_id':UUID,'version':{**INT,'minimum':1},'transferable':BOOL})),
@@ -133,12 +133,29 @@ endpoint('/v1/admin/stories/{story_id}/versions','get')
 endpoint('/v1/admin/versions/{version_id}/preview','post',{'revision':INT,'command_id':UUID})
 endpoint('/v1/admin/previews/step','post',{'preview_token':{'type':'string','maxLength':65536},'actor_role':CODE,'type':CODE,'payload':{'type':'object'},'command_id':UUID,'target_version':INT},required=['preview_token','actor_role','type','payload','command_id'])
 endpoint('/v1/admin/jobs/{job_id}','get')
-endpoint('/internal/work/claim','post',{'worker_id':TEXT,'supported_kinds':{'const':['player_hint']},'claim_id':UUID})
+endpoint('/internal/work/claim','post',{'worker_id':TEXT,'supported_kinds':{'type':'array','minItems':1,'maxItems':3,'uniqueItems':True,'items':{'enum':['player_hint','media_transcode','editor_ai']}},'claim_id':UUID})
 for op in ['heartbeat','complete','fail']:
  props={'attempt':INT,'lease_token':TEXT}
- if op=='complete':props.update({'result_hash':TEXT,'result':result})
+ if op=='complete':props.update({'result_hash':TEXT,'result':{'oneOf':[result,obj({'outputs':arr(obj({'asset_id':UUID,'object_key':TEXT,'sha256':TEXT,'mime_type':TEXT,'size_bytes':INT}),3)}),obj({'proposal_ref':TEXT,'sha256':TEXT})]}})
  if op=='fail':props.update({'code':CODE,'retryable':BOOL})
  endpoint('/internal/work/{job_id}/'+op,'post',props)
+SHA={'type':'string','pattern':'^[0-9a-f]{64}$'}
+endpoint('/v1/admin/operations','get',summary='Reviewer-only deidentified committed room outcomes and operational gauges')
+endpoint('/v1/admin/assets/{asset_id}/captions','post',{'command_id':UUID,'vtt':{'type':'string','maxLength':60000}},summary='Validate plain timed VTT and create a new immutable asset; published subtitle bytes remain frozen')
+endpoint('/v1/admin/assets/{asset_id}/preview','get',summary='Editor-owned 60-second first-frame preview, revoked with the session')
+endpoint('/v1/admin/assets','get',summary='Editor-owned production assets and transcode state')
+endpoint('/v1/admin/assets/upload-intents','post',{'command_id':UUID,'filename':{'type':'string','minLength':1,'maxLength':180},'mime_type':{'enum':['video/mp4','video/webm','video/quicktime']},'size_bytes':{'type':'integer','minimum':1,'maximum':524288000},'sha256':SHA})
+endpoint('/v1/admin/assets/{asset_id}/complete','post',{'command_id':UUID,'sha256':SHA,'size_bytes':INT,'rights_source':{'type':'string','minLength':1,'maxLength':2000}})
+endpoint('/v1/admin/versions/{version_id}/ai','post',{'command_id':UUID,'revision':INT,'target':{'enum':['title','description','asset_summary']},'instruction':TEXT,'media_id':CODE},required=['command_id','revision','target','instruction'])
+endpoint('/v1/admin/ai/jobs/{job_id}','get')
+endpoint('/v1/admin/ai/jobs/{job_id}/apply','post',{'command_id':UUID,'revision':INT},summary='Explicit human acceptance bound to the frozen proposal revision and hash')
+endpoint('/internal/work/{job_id}/output-intents','post',{'attempt':INT,'lease_token':TEXT,'outputs':arr(obj({'kind':{'enum':['video','poster','subtitle','proposal']},'size_bytes':INT,'sha256':SHA}),3)})
+endpoint('/internal/work/{job_id}/source','get',summary='Worker-only source stream; X-Work-Attempt and X-Lease-Token required')
+paths['/internal/work/{job_id}/source']['get']['parameters'] += [{'name':'X-Work-Attempt','in':'header','required':True,'schema':INT},{'name':'X-Lease-Token','in':'header','required':True,'schema':TEXT}]
 paths['/internal/work/claim']['post']['responses']['204']={'description':'No available work'}
-write('contracts/http/openapi.json',{'openapi':'3.1.0','info':{'title':'入戏 C1 development API','version':'0.1.0','description':'Implemented sample slice. Original media uploads, full content AST, production retention and analytics are tracked in docs/IMPLEMENTATION_STATUS.md.'},'servers':[{'url':'http://localhost:4000'}],'paths':paths,'components':{'securitySchemes':{'bearer':{'type':'http','scheme':'bearer'}}}})
+write('contracts/http/openapi.json',{'openapi':'3.1.0','info':{'title':'入戏 C1 development API','version':'0.1.0','description':'Authoritative multiplayer game, creator content pipeline, bounded AI and media processing. Operational validation is tracked in docs/IMPLEMENTATION_STATUS.md.'},'servers':[{'url':'http://localhost:4000'}],'paths':paths,'components':{'securitySchemes':{'bearer':{'type':'http','scheme':'bearer'}}}})
+proposal=obj({'schema_version':{'const':1},'target':{'oneOf':[{'const':['title']},{'const':['description']}, {'type':'array','prefixItems':[{'const':'assets'},INT,{'const':'summary'}],'minItems':3,'maxItems':3}]},'original':{'type':'string','maxLength':2000},'suggested':{'type':'string','minLength':1,'maxLength':2000},'notes':arr({'type':'string','maxLength':200},5),'source':{'enum':['ai','template']}})
+write('contracts/work/editor_proposal.schema.json',{'$schema':'https://json-schema.org/draft/2020-12/schema',**proposal})
+write('contracts/work/editor_ai_complete.schema.json',{'$schema':'https://json-schema.org/draft/2020-12/schema',**obj({'attempt':INT,'lease_token':TEXT,'result_hash':SHA,'result':obj({'proposal_ref':TEXT,'sha256':SHA})})})
+write('contracts/work/media_transcode_complete.schema.json',{'$schema':'https://json-schema.org/draft/2020-12/schema',**obj({'attempt':INT,'lease_token':TEXT,'result_hash':SHA,'result':obj({'outputs':{'type':'array','minItems':3,'maxItems':3,'items':obj({'asset_id':UUID,'object_key':TEXT,'sha256':SHA,'mime_type':{'enum':['video/mp4','image/jpeg','text/vtt']},'size_bytes':{'type':'integer','minimum':1,'maximum':524288000}})}})})})
 print(f'Generated {len(paths)} HTTP paths and C1 WS/work/content fixtures')

@@ -157,6 +157,7 @@ defmodule Ruxi.Rules do
           "deadline" => now + decision["duration_ms"],
           "round" => %{
             "round_id" => U.id(),
+            "electorate" => Enum.filter(s["members"], &(not &1["left"])) |> Enum.map(& &1["id"]),
             "options" =>
               Enum.map(options, &%{"option_id" => &1, "label" => Content.option_label(s, &1)}),
             "tie_priority" => decision["tie_priority"],
@@ -423,7 +424,7 @@ defmodule Ruxi.Rules do
           "ROOM_NOT_READY"
         )
 
-        n = phase(Map.put(s, "invite", nil), "briefing", now)
+        n = phase(s |> Map.put("invite", nil) |> Map.put("started_at", now), "briefing", now)
         {n, %{"phase_id" => n["phase_id"]}, "room_started"}
 
       "request_role_swap" ->
@@ -610,6 +611,11 @@ defmodule Ruxi.Rules do
       "vote" ->
         U.require!(s["lifecycle"] == "running" and s["phase"] == "decision", "NOT_ALLOWED")
         U.require!(p["round_id"] == s["round"]["round_id"], "TARGET_CHANGED")
+
+        U.require!(
+          is_nil(s["round"]["electorate"]) or id in s["round"]["electorate"],
+          "NOT_ALLOWED"
+        )
 
         U.require!(
           Enum.any?(s["round"]["options"], &(&1["option_id"] == p["option_id"])),
@@ -915,6 +921,7 @@ defmodule Ruxi.Rules do
     room = %{
       "room_id" => s["room_id"],
       "content_version_id" => s["content_version_id"],
+      "story_id" => s["story_id"],
       "seat_count" => Content.graph(s)["seat_count"],
       "lifecycle" => s["lifecycle"],
       "phase_id" => s["phase_id"],
@@ -978,7 +985,8 @@ defmodule Ruxi.Rules do
       "public_scene" => %{
         "title" => Content.graph(s)["title"],
         "description" => Content.graph(s)["description"] || "23:17。车门即将关闭，一段未来留言打破了车厢的寂静。",
-        "shared_clues" => Enum.map(s["shared"], clue)
+        "shared_clues" => Enum.map(s["shared"], clue),
+        "timeline" => s["public_timeline"] || []
       },
       "own_role" => role,
       "own_clues" => Enum.map(m["known"], clue),

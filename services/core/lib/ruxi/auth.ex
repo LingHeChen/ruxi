@@ -284,7 +284,11 @@ defmodule Ruxi.Auth do
       s =
         Rules.initial(rid, ver, mid, now, story["graph"])
         |> Rules.add_member(mid, ctx.user, now)
-        |> Map.merge(%{"invite" => invite, "invite_expires" => now + 86_400_000})
+        |> Map.merge(%{
+          "invite" => invite,
+          "invite_expires" => now + 86_400_000,
+          "story_id" => p["story_id"]
+        })
 
       DB.query(
         "INSERT INTO rooms(id,content_version_id,state_json,lifecycle,deadline_at,updated_at) VALUES($1,$2,$3,'lobby',$4,$5)",

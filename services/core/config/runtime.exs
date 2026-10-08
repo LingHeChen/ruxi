@@ -15,6 +15,11 @@ if config_env() == :prod do
   instance = required.("CORE_INSTANCE")
   ledger = required.("ERASURE_LEDGER_PATH")
   if Path.type(ledger) != :absolute, do: raise("ERASURE_LEDGER_PATH must be absolute")
+  objects = required.("OBJECT_ROOT")
+
+  if Path.type(objects) != :absolute,
+    do: raise("OBJECT_ROOT must be an absolute durable mount path")
+
   credentials = required.("WORKER_CREDENTIALS_JSON") |> Jason.decode!()
 
   unless is_list(credentials) and credentials != [] and
@@ -23,7 +28,7 @@ if config_env() == :prod do
                is_list(c["allowed_kinds"]) and c["allowed_kinds"] != [] and
                Enum.all?(
                  c["allowed_kinds"],
-                 &(&1 in ~w(player_hint editor_ai media_transcode media_first_frame))
+                 &(&1 in ~w(player_hint editor_ai media_transcode))
                )
            end),
          do: raise("invalid WORKER_CREDENTIALS_JSON")

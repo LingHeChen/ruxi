@@ -10,17 +10,34 @@ defmodule Ruxi.Media do
   end
 
   def ready?, do: ready?(Content.demo_graph())
+  def lookup(id), do: Enum.find(manifest(), &(&1["asset_id"] == id)) || Ruxi.Assets.lookup(id)
+
+  def file(asset, kind) do
+    key =
+      case kind do
+        "subtitle" -> asset["subtitle_file"]
+        "poster" -> asset["poster_file"]
+        _ -> asset["file"]
+      end
+
+    if asset["object_store"], do: Ruxi.Objects.path(key), else: Path.join(root(), key)
+  end
 
   def ready?(g) do
     assets = if is_map(g), do: g["assets"], else: nil
 
     is_list(assets) and assets != [] and
       Enum.all?(assets, fn declared ->
-        asset = Enum.find(manifest(), &(&1["asset_id"] == declared["asset_id"]))
+        asset = lookup(declared["asset_id"])
 
         if asset && asset["sha256"] == declared["sha256"] do
-          file = Path.join(root(), asset["file"])
-          File.exists?(file) and Util.hash(File.read!(file)) == asset["sha256"]
+          path = file(asset, "video")
+
+          File.regular?(path) and Ruxi.Objects.hash(path) == asset["sha256"] and
+            asset["duration_ms"] == declared["duration_ms"] and
+            (asset["object_store"] != true or
+               (asset["source"] == declared["source"] and File.regular?(file(asset, "poster")) and
+                  File.regular?(file(asset, "subtitle"))))
         else
           false
         end
@@ -50,10 +67,7 @@ defmodule Ruxi.Media do
 
       Util.require!(media != nil, "RESOURCE_NOT_FOUND")
 
-      asset =
-        if v["graph"]["asset_status"] == "programmatic_demo_ready",
-          do: Enum.find(manifest(), &(&1["asset_id"] == p["asset_id"])),
-          else: nil
+      asset = lookup(p["asset_id"])
 
       declared = Enum.find(v["graph"]["assets"] || [], &(&1["asset_id"] == p["asset_id"]))
 
@@ -83,7 +97,8 @@ defmodule Ruxi.Media do
           "duration_ms" => asset["duration_ms"],
           "subtitle" => %{"url" => origin <> "/media/" <> subtitle, "language" => "zh-CN"},
           "summary" => summary,
-          "asset_status" => "programmatic_demo_ready"
+          "asset_status" =>
+            if(asset["object_store"], do: "ready", else: "programmatic_demo_ready")
         }
       else
         %{
@@ -108,7 +123,7 @@ defmodule Ruxi.Media do
             DB.uuid(cap["version_id"])
           ])
 
-        asset = Enum.find(manifest(), &(&1["asset_id"] == cap["asset_id"]))
+        asset = lookup(cap["asset_id"])
 
         Util.require!(
           version != nil and version["availability"] != "blocked" and asset != nil,
@@ -124,11 +139,7 @@ defmodule Ruxi.Media do
           "RESOURCE_NOT_FOUND"
         )
 
-        file =
-          Path.join(
-            root(),
-            if(cap["kind"] == "subtitle", do: asset["subtitle_file"], else: asset["file"])
-          )
+        file = file(asset, cap["kind"])
 
         size = File.stat!(file).size
 

@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-08T14:21:27.053Z",
+  "backup_age_at_restore_seconds": 77.314,
+  "total_drill_seconds": 120.752,
+  "backup_completed_at": "2026-10-08T14:20:09.740Z",
+  "checks": {
+    "erasure_applied": true,
+    "owners_fenced": true,
+    "recovery_epoch": "restore-drill-c1247cba-df3a-4aa1-9a12-2e486b533c0e",
+    "sessions_revoked": true,
+    "verified": true
+  },
+  "limitations": [
+    "Local isolated PostgreSQL restore, same host and PG role.",
+    "This measures one exercise; cloud scheduled backup, external ledger durability and WAL recovery need deployment validation."
+  ]
+}

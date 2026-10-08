@@ -1,54 +1,51 @@
-# C1 开发版验收记录
+# C1 工程验收记录
 
-验收日期：2026-10-08。范围为冻结三人样片《末班车的第七位乘客》的可运行开发实现；不是生产上线认证。
+日期：2026-10-08。范围为原设计中的玩家、制作、模型、素材和运营功能。记录本地实际检查；设备和云端检查不以构建成功代替。
 
-## 自动化结果
+## 自动化
 
-| 检查 | 结果 |
-| --- | --- |
-| Elixir `mix test` | 48 项通过 |
-| Elixir `mix compile --warnings-as-errors` | 通过 |
-| Python `uv run pytest` | 22 项通过 |
-| 玩家 Flutter analyze / test | 无分析问题，11 项通过 |
-| 制作台 Flutter analyze / test | 无分析问题，4 项通过 |
-| 玩家与制作台 Flutter Web 构建 | 通过 |
-| Android debug APK 构建 | 当前注销、诊断与聊天界面版本通过 |
-| iOS Simulator 构建 | 当前注销、诊断与聊天界面版本通过 |
-| Docker Compose 配置校验 | 通过；未运行容器 |
+|检查|结果|
+|---|---|
+|Core 编译与 PostgreSQL 测试|warnings-as-errors 通过；61 项通过|
+|Python Worker|29 项通过|
+|玩家端 Flutter|分析无问题；15 项通过|
+|制作台 Flutter|分析无问题；7 项通过|
+|Node 协议归并|2 项通过|
+|两端 Web|构建通过|
+|Android debug APK / iOS Simulator|构建通过，已实际启动 iOS 首页|
+|生产 OTP release|构建及 /health 200 通过|
+|Docker Compose|配置通过；daemon 不可用，未实际构建运行容器|
 
-合计 85 项测试。新增覆盖认证失败预算与 429、埋点边界/去重/隐私/定时与退避、聊天举报去重/权限/审计、审核移除后的历史清理与水位更新、诊断与举报正文清理，以及账号注销及独立台账恢复。这些测试不能代替复合验收项全部通过。
+合计 114 项（以最后运行结果为准）。覆盖三结局、权限、回执、投影、冻结选民、租约、不可变素材、字幕、人工编辑建议、公开复盘、离线房间释放、有界诊断、聊天治理及擦除。
 
-## 真实协议联调
+## 实际 HTTP / WebSocket / Worker
 
-`node scripts/smoke.mjs` 已通过：三个独立游客经真实 Phoenix V2 WebSocket 建房、入房、同步、心跳及断线重连；跨角色媒体和错误私有 topic 被拒绝；线索、道具交付、重复命令、提示、中场和私有投票完成闭环。等待真实 45 秒决策截止后得到 E1，全员确认结局后读取持久化快照。
+- `smoke.mjs`：E1、E2、E3 均经过真实三游客和 45 秒决策截止。签名 MP4 Range 206、授权字幕、伪造 capability 和私人媒体拒绝、设备重连、重复分享、道具及提示闭环通过。
+- `smoke_creator.mjs`：CLI 管理员登录、版本草稿、验证、三视角隔离预览、幂等和 revision 失效通过。
+- `smoke_production.mjs`：真实原文件上传、Worker 转码、首帧、不可变字幕修订、AI 惰性建议与人工应用、验证/审核/冻结发布、三玩家授权播放通过。模型建议来自真实供应商。
+- `smoke_operations.mjs`：诊断接受/拒绝与去重、隐私字段拒绝、注销后凭证撤销、失败预算与 Retry-After 通过。
+- `smoke_races.mjs`：同时选唯一角色、并发同 ID 开局、接受与取消交付竞争、并发重复接受、归属版本仅增加一次及私有隔离通过。
+- `check_live_contracts.py`：最新 E1 的 3 份合成快照和 96 条事件符合 JSON Schema。
+- 真实 DeepSeek 六项合成提示均结构合规、非模板、未出现未授权 canary，耗时 1.236–2.094 秒；不代替人工剧情质量审阅。
 
-`node scripts/smoke_creator.mjs` 已通过：受控 CLI 登录、剧目和版本读取、草稿创建、AST 验证、隔离多角色预览、私有调查、道具交付、提示、E1、预览幂等及修改版本后旧预览失效。预览不创建真实游戏房间，也不发布内容。
+## 故障与恢复
 
-`node scripts/smoke_operations.mjs` 已通过真实 HTTP：analytics/batches 接受及拒绝回执、重复事件、隐私字段拒绝、注销后访问/刷新凭据失效，以及失败预算触发的 429 / Retry-After。修改后再次运行三人玩法联调，真实截止 E1 结算通过。
+`fault_drill.mjs` 在独立数据库的提交响应期间 SIGKILL，重启后重放三个视角、原命令回执精确相同、数据库只有一条命令、私有线索隔离均通过。
 
-签名视频 Range 请求返回 206 和正确字节段，字幕可读取，伪造媒体地址被拒绝。视频为本项目生成的八段原创开发动效，来源和哈希记录在媒体 manifest 中。
+`restore_drill.mjs` 在独立 PostgreSQL 17 数据库恢复约 618 MiB 备份，然后执行离线恢复控制与最新独立擦除台账。最新演练 120.752 秒，恢复时备份年龄 77.314 秒；已擦除账号仍被擦除，旧会话全部撤销，owner/租约与恢复 epoch 已重置。该单次本地测量不代表云端 RPO/RTO SLA、异地备份或 PITR 通过。
 
-`services/worker/.venv/bin/python scripts/check_live_contracts.py` 校验本轮联调产生的 **3 份快照、96 条事件**，全部符合 JSON Schema。样本位于被忽略的 `.local/smoke-views.json`，仅包含合成玩家视图。
+## 持续负载
 
-## 可查看产物
+完整复测：100 房间、300 WS，目标 100 有效命令/秒，25 分钟共 150,000 次尝试和成功，零错误。意图到回执及本地投影应用 p50 94 ms、p95 492 ms、p99 763 ms。本机 Apple M4 / 10 逻辑核心 / 32 GiB；期间同机进行了备份恢复和编译，并非独占负载机器。
 
-- 玩家 Web：`http://localhost:8080`
-- 制作台 Web：`http://localhost:8081`
-- Android：`apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`
-- iOS 模拟器：`apps/mobile/build/ios/iphonesimulator/Runner.app`
+额外 5 分钟专项覆盖 10% 客户端的轮换重连，结果待该轮完成记录。首轮发生单次重连超时，次轮因脚本未缓冲乱序中断；后续又发现历史挂起房间持续定时查询，均没有计为通过。已修复脚本的持久补发、重连前排空请求，以及挂起房间释放进程与租约，由 Oban 处理到期。额外重连专项首次因恢复扫描重新唤醒历史挂起房间失败；已限制只扫描运行/暂停房间、每 5 秒扫描一次，并批量更新广播回执，失败轮次没有计为通过。
 
-## 验收限制
+负载实际为 briefing 阶段聊天，循环本机 HTTP/WS，不包含 TLS/WAN、视频分发或手机 UI。测量意图到回执及本地协议投影应用，不能当成正式 QA29 的提交到手机显示延迟、混合业务比例或 WSS 证明。
 
-当前环境没有可用的应用内浏览器实例，因此未完成实际浏览器交互及截图验收。Widget 布局测试不能代替浏览器视觉验收。
+## 产物及限制
 
-未安装到实体手机测试；模拟器构建成功不能证明真机播放、弱网、后台切换或性能符合上线要求。Docker daemon 不可用，未验证容器运行。未进行 100 房间压测、备份恢复演练、完整无障碍审计或最终影视素材验收。
+玩家 `http://localhost:8080`，制作台 `http://localhost:8081`；APK 位于 `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`，模拟器应用位于 `apps/mobile/build/ios/iphonesimulator/Runner.app`。
 
-生产媒体链路、完整真实模型评估及云端持久台账等未完成范围见 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)。启动方式和开发配置见 [README](../README.md)。
+iOS 27 iPhone 18 Pro 模拟器实际首页已启动并留图 `docs/screenshots/ios-home.png`。未安装实体手机测试；应用内浏览器实例不可用，未完成真实浏览器视觉与交互验收。G0/G1 未测子项仍按 [QA_TRACE.md](QA_TRACE.md) 记录。
 
-## CloudBase 及生产模式演练
-
-目标环境的迁移 `20261008120500` 已成功应用，独立 `ruxi` schema 中有 25 张表，匿名和认证前端角色无 schema 使用权限。其他应用的迁移及数据保留。
-
-本地生产 OTP release 构建成功，以生产 runtime 配置启动后 `/health` 返回 200，随后停止演练进程。这不能代替云托管容器构建及云数据库连接验收。
-
-两次真实 DeepSeek 合成提示返回合法非模板结果；关闭 thinking 的一次耗时约 2.27 秒。完整模型质量与剧情泄露评估仍待执行。
+CloudBase 独立 ruxi schema 初始 25 表已验证；本地迁移推进至 012，增量尚未应用云端，容器、持久卷、TLS/WSS、连接权限和告警待部署验收。按用户要求先开发后部署。

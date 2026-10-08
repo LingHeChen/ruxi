@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../data/room_client.dart';
 import '../data/media_clock.dart';
+import '../data/captions.dart';
 
 /// One active decoder. Closing or backgrounding never advances the room.
 class AuthorizedMediaSheet extends StatefulWidget {
@@ -63,7 +64,12 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
         setState(() => loading = false);
         return;
       }
-      final p = VideoPlayerController.networkUrl(Uri.parse(a['url']));
+      final p = VideoPlayerController.networkUrl(
+        Uri.parse(a['url']),
+        closedCaptionFile: a['subtitle']?['url'] is String
+            ? authorizedCaptions(a['subtitle']['url'])
+            : null,
+      );
       player = p;
       await p.initialize().timeout(const Duration(seconds: 30));
       if (!mounted || current != generation) {
@@ -231,7 +237,7 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
             ),
             const SizedBox(height: 12),
             const Text(
-              '原创动效开发样片 · 最终影视素材待制作',
+              '原创剧情片段',
               style: TextStyle(color: Color(0xffb0b7bd), fontSize: 12),
             ),
             const SizedBox(height: 16),
@@ -264,7 +270,35 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
                     aspectRatio: p.value.aspectRatio,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: VideoPlayer(p),
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          VideoPlayer(p),
+                          if (p.value.caption.text.isNotEmpty)
+                            Positioned(
+                              left: 12,
+                              right: 12,
+                              bottom: 12,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.85),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Text(
+                                    p.value.caption.text,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

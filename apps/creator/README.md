@@ -1,17 +1,5 @@
-# ruxi_creator
+# 入戏制作台
 
-A new Flutter project.
+启动、环境配置和验收见项目根 [README](../../README.md)。
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+运行 `flutter pub get`、`flutter analyze`、`flutter test`；Web 产物通过 `flutter build web` 构建，API 地址以 `--dart-define=API_BASE=HTTPS地址` 设置。

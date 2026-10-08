@@ -1,6 +1,6 @@
 defmodule Ruxi.WorkerAuth do
   alias Ruxi.Util
-  @kinds ~w(player_hint editor_ai media_transcode media_first_frame)
+  @kinds ~w(player_hint editor_ai media_transcode)
   def configured do
     case System.get_env("WORKER_CREDENTIALS_JSON") do
       nil ->
@@ -8,7 +8,7 @@ defmodule Ruxi.WorkerAuth do
           %{
             "worker_id" => "local-hint-worker",
             "token" => Application.fetch_env!(:ruxi, :worker_token),
-            "allowed_kinds" => ["player_hint"]
+            "allowed_kinds" => ["player_hint", "editor_ai", "media_transcode"]
           }
         ]
 

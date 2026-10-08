@@ -7,6 +7,8 @@ import 'package:uuid/uuid.dart';
 import 'content_panel.dart';
 import 'preview_panel.dart';
 import 'report_panel.dart';
+import 'production_panel.dart';
+import 'operations_panel.dart';
 
 const amber = Color(0xfff3ad47);
 void main() => runApp(
@@ -85,7 +87,21 @@ class _CreatorState extends State<Creator> {
       refreshToken = refreshed['refresh_token'];
       return api(method, path, body, true);
     }
-    if (r.statusCode >= 400) throw Exception(d['error']['code']);
+    if (r.statusCode >= 400) {
+      const messages = {
+        'REVISION_CONFLICT': '草稿已发生变化，请重新读取版本后再操作。',
+        'AUTH_EXPIRED': '登录已过期，请重新领取登录码。',
+        'UNAUTHORIZED': '登录凭证无效或已过期。',
+        'NOT_ALLOWED': '当前账号无权执行此操作，或版本已冻结。',
+        'CONTENT_INVALID': '内容未通过验证，请检查规则和素材。',
+        'ASSET_MISMATCH': '文件内容与上传信息不符，请重新上传。',
+        'RIGHTS_REQUIRED': '请填写素材版权与来源说明。',
+        'INVALID_CAPTIONS': '字幕格式或时间范围不正确，请检查 WebVTT。',
+        'INVALID_ARGUMENT': '输入信息不完整或格式不正确。',
+        'RATE_LIMITED': '操作过于频繁，请稍后再试。',
+      };
+      throw Exception(messages[d['error']['code']] ?? '操作失败，请刷新后重试。');
+    }
     return d['data'];
   }
 
@@ -155,6 +171,26 @@ class _CreatorState extends State<Creator> {
           ),
         ),
         actions: [
+          if (token.isNotEmpty && roles.contains('reviewer'))
+            TextButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('运营概览'),
+                  content: OperationsPanel(
+                    load: () => api('GET', '/v1/admin/operations'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c),
+                      child: const Text('关闭'),
+                    ),
+                  ],
+                ),
+              ),
+              child: const Text('运营概览'),
+            ),
+
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
@@ -493,6 +529,25 @@ class _CreatorState extends State<Creator> {
                         editor.text = const JsonEncoder.withIndent('  ')
                             .convert(graph);
                       }),
+                    ),
+                  if (workspace == 'content' &&
+                      roles.contains('editor') &&
+                      version!['status'] != 'published')
+                    ProductionPanel(
+                      key: ValueKey('production:${id.text}:$revision'),
+                      api: (method, path, [body]) => api(method, path, body),
+                      versionId: id.text,
+                      revision: revision,
+                      graph: Map<String, dynamic>.from(version!['graph']),
+                      onGraph: (graph) => setState(() {
+                        version!['graph'] = graph;
+                        editor.text = const JsonEncoder.withIndent('  ')
+                            .convert(graph);
+                      }),
+                      onReload: () async {
+                        await load();
+                        if (mounted) setState(() {});
+                      },
                     ),
                   if (workspace == 'preview')
                     PreviewPanel(
