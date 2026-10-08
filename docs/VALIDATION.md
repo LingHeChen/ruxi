@@ -22,6 +22,8 @@
 
 2026-10-08，[GitHub Actions 验证](https://github.com/LingHeChen/ruxi/actions/runs/37797937142)对源码提交 `689fc8d` 全部通过：Core 数据库迁移、严格编译与测试，Worker 哈希锁定安装、测试与协议生成一致性，两套 Flutter 静态分析、测试与 Web 构建，Node 协议测试，以及 Core/Worker 生产 Docker 镜像构建。源码已以 MIT 许可证公开于 [LingHeChen/ruxi](https://github.com/LingHeChen/ruxi)。镜像构建成功不代表容器运行、CloudBase 部署或正式运营验收完成。
 
+补做后的最终源码提交 `b0c1e1a` 的 [GitHub Actions 验证](https://github.com/LingHeChen/ruxi/actions/runs/37804280391)六个任务全部成功，涵盖上述 135 项测试、两套 Web 构建、契约再生成和两个生产镜像构建；摘要保存于 `docs/evidence/portal-ci.json`。新迁移 013 也通过独立空数据库的生产 release 演练。正式产品验收仍未认定通过。
+
 ## 软件入口与后台补做
 
 用户指出上一版直接开房、缺少登录注册/个人空间/搜索分类，以及制作台没有正式后台形态；此前“全部功能完成”的结论撤回。本次加入四个玩家入口与账号闭环，以及后台导航、工作概览、剧目表、展示设置、素材库、用户目录和角色分配。
