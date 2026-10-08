@@ -18,6 +18,10 @@
 
 合计 115 项（以最后运行结果为准）。覆盖三结局、权限、回执、投影、冻结选民、租约、不可变素材、字幕、人工编辑建议、公开复盘、离线房间释放、有界诊断、聊天治理及擦除。
 
+## GitHub 独立环境验证
+
+2026-10-08，[GitHub Actions 验证](https://github.com/LingHeChen/ruxi/actions/runs/37797937142)对源码提交 `689fc8d` 全部通过：Core 数据库迁移、严格编译与测试，Worker 哈希锁定安装、测试与协议生成一致性，两套 Flutter 静态分析、测试与 Web 构建，Node 协议测试，以及 Core/Worker 生产 Docker 镜像构建。源码已以 MIT 许可证公开于 [LingHeChen/ruxi](https://github.com/LingHeChen/ruxi)。镜像构建成功不代表容器运行、CloudBase 部署或正式运营验收完成。
+
 ## 实际 HTTP / WebSocket / Worker
 
 - `smoke.mjs`：E1、E2、E3 均经过真实三游客和 45 秒决策截止。签名 MP4 Range 206、授权字幕、伪造 capability 和私人媒体拒绝、设备重连、重复分享、道具及提示闭环通过。
