@@ -2,6 +2,8 @@ defmodule Ruxi.C2.Content do
   @moduledoc "C2 compilation validates references, types and audience boundaries independently of the editor."
   alias Ruxi.C2.Schema
   @collections ~w(roles locations links objects clues actions templates events media votes)
+  def validate(%{"schema_version" => 4} = story), do: Ruxi.C3.Interactions.validate(story)
+
   def validate(story) do
     errors = Schema.validate(story, Schema.load("story"))
     errors = if errors == [], do: semantic(story), else: errors
@@ -13,6 +15,25 @@ defmodule Ruxi.C2.Content do
       "hash" => if(errors == [], do: Ruxi.Util.hash(story), else: nil)
     }
   end
+
+  def validate_c3_base(story) do
+    schema =
+      Application.app_dir(:ruxi, "priv/c3/story.schema.json") |> File.read!() |> Jason.decode!()
+
+    errors = Schema.validate(story, schema)
+    if errors == [], do: semantic(story), else: errors
+  end
+
+  def validate_condition(story, c),
+    do:
+      condition(
+        c,
+        story,
+        Map.new(@collections, &{&1, index(story, &1)}),
+        "/c3_settings",
+        false,
+        0
+      )
 
   def compile!(story) do
     report = validate(story)
@@ -252,6 +273,10 @@ defmodule Ruxi.C2.Content do
           require_ref(e["ref"], ids["locations"], path)
 
         "grant" ->
+          require_ref(e["ref"], ids["objects"], path) ++
+            if(global, do: issue("UNSAFE_AUDIENCE", path), else: [])
+
+        "destroy" ->
           require_ref(e["ref"], ids["objects"], path) ++
             if(global, do: issue("UNSAFE_AUDIENCE", path), else: [])
 

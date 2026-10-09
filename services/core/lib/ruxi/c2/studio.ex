@@ -54,7 +54,7 @@ defmodule Ruxi.C2.Studio do
     Auth.role!(ctx, "editor")
 
     Util.require!(
-      is_binary(p["title"]) and String.length(p["title"]) in 1..120 and p["seat_count"] in 1..4,
+      is_binary(p["title"]) and String.length(p["title"]) in 1..120 and p["seat_count"] in 1..6,
       "INVALID_ARGUMENT"
     )
 
@@ -117,6 +117,23 @@ defmodule Ruxi.C2.Studio do
       "initial" => %{"world" => %{}, "inventory" => Map.new(roles, &{&1["id"], []})},
       "media" => []
     }
+    |> then(fn story ->
+      if seats >= 1,
+        do:
+          Map.merge(story, %{
+            "schema_version" => 4,
+            "c3" => %{
+              "profile_version" => 1,
+              "suggested_content_version" => 4,
+              "map_mode" => "mixed",
+              "passages" => [],
+              "interactions" => []
+            },
+            "secrets" => %{},
+            "c3_settings" => %{"barriers" => %{}, "arrival_rules" => %{}}
+          }),
+        else: story
+    end)
   end
 
   def draft(ctx, id),
@@ -138,7 +155,7 @@ defmodule Ruxi.C2.Studio do
     revision!(p["revision"], revision)
 
     Util.require!(
-      p["archived_at"] == nil and is_map(content) and content["schema_version"] == 3 and
+      p["archived_at"] == nil and is_map(content) and content["schema_version"] in [3, 4] and
         byte_size(Jason.encode!(content)) <= 1_000_000,
       "INVALID_ARGUMENT"
     )
@@ -330,7 +347,9 @@ defmodule Ruxi.C2.Studio do
     %{
       "story" => p["content"],
       "editor_layout" => p["layout"],
-      "schema_version" => 3,
+      "schema_version" => p["content"]["schema_version"],
+      "audience" => "author_only",
+      "contains_server_secrets" => map_size(p["content"]["secrets"] || %{}) > 0,
       "revision" => p["revision"],
       "sources" =>
         DB.rows("SELECT id,title,source_hash,rights_note FROM c2_sources WHERE project_id=$1", [
@@ -344,8 +363,8 @@ defmodule Ruxi.C2.Studio do
     graph = body["story"]
 
     Util.require!(
-      is_map(graph) and graph["schema_version"] == 3 and is_list(graph["roles"]) and
-        length(graph["roles"]) in 1..4,
+      is_map(graph) and graph["schema_version"] in [3, 4] and is_list(graph["roles"]) and
+        length(graph["roles"]) in 1..6,
       "INVALID_ARGUMENT"
     )
 
@@ -375,6 +394,34 @@ defmodule Ruxi.C2.Studio do
     )
 
     preview_response(pid, state, now)
+  end
+
+  def projection_preview(ctx, id, body) do
+    p = project!(ctx, id)
+    revision!(p["revision"], body["draft_revision"])
+    Content.compile!(p["content"])
+    role = body["role_id"]
+    Util.require!(Map.has_key?(Content.index(p["content"], "roles"), role), "INVALID_ARGUMENT")
+    s = Engine.initial(p["content"], 0)
+    fixture = body["fixture_id"] || "initial"
+    Util.require!(fixture in ~w(initial blocked repaired), "INVALID_ARGUMENT")
+
+    s =
+      if fixture != "initial" and s["engine_version"] == 3 do
+        Map.update!(s, "barriers", fn xs ->
+          Map.new(xs, fn {k, _} -> {k, if(fixture == "blocked", do: "blocked", else: "open")} end)
+        end)
+        |> Ruxi.C3.World.observe(1)
+      else
+        s
+      end
+
+    %{
+      "draft_revision" => p["revision"],
+      "role_id" => role,
+      "fixture_id" => fixture,
+      "view" => Engine.project(s, role, 1)
+    }
   end
 
   def preview_step(ctx, id, body) do

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": 3
+    },
+    "command_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "control_epoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "step_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "const": "interaction.submit"
+    },
+    "body": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "quote_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "const": "password"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "type": "string",
+                  "maxLength": 512
+                }
+              },
+              "required": [
+                "answer"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "quote_id",
+            "kind",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "quote_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "const": "check"
+            },
+            "input": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "quote_id",
+            "kind",
+            "input"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "protocol_version",
+    "command_id",
+    "control_epoch",
+    "step_id",
+    "type",
+    "body"
+  ],
+  "additionalProperties": false
+}

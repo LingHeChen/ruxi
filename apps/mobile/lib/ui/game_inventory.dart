@@ -254,6 +254,14 @@ class _GameInventoryState extends State<GameInventory> {
                     color: Color(0xffdeded1),
                   ),
                 ),
+                if (panel == GamePanel.clues && item['source'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(
+                      '${item['category'] == 'reported' ? '转述 · 尚未证实' : '亲历记录'} · ${item['source']} · 第 ${item['acquired_tick']} 回合',
+                      style: const TextStyle(color: novelGold, fontSize: 12),
+                    ),
+                  ),
                 if (item['reserved'] == true)
                   const Padding(
                     padding: EdgeInsets.only(top: 16),

@@ -45,7 +45,7 @@ defmodule Ruxi.C2.Store do
       )
 
     rows =
-      if seats in 1..4,
+      if seats in 1..6,
         do: Enum.filter(rows, &(length(&1["content"]["roles"]) == seats)),
         else: rows
 
@@ -86,8 +86,8 @@ defmodule Ruxi.C2.Store do
         "story_id" => DB.str(p["id"]),
         "release_id" => DB.str(p["current_release_id"]),
         "seat_count" => length(p["content"]["roles"]),
-        "schema_version" => 3,
-        "protocol_version" => 2,
+        "schema_version" => p["content"]["schema_version"],
+        "protocol_version" => if(p["content"]["schema_version"] == 4, do: 3, else: 2),
         "roles" => Enum.map(p["content"]["roles"], &Map.take(&1, ~w(id label))),
         "estimated_minutes" =>
           ceil(
@@ -110,6 +110,7 @@ defmodule Ruxi.C2.Store do
       "RESOURCE_NOT_FOUND"
     )
 
+    capability!(release["content"], p)
     id = Util.id()
     invite = Auth.invite_code()
     now = DB.time()
@@ -145,7 +146,7 @@ defmodule Ruxi.C2.Store do
       "member_id" => DB.str(m["id"]),
       "release_id" => DB.str(release["id"]),
       "invite_code" => invite,
-      "protocol_version" => 2
+      "protocol_version" => protocol(state)
     }
   end
 
@@ -163,6 +164,7 @@ defmodule Ruxi.C2.Store do
       "INVITE_EXPIRED"
     )
 
+    capability!(r["state"]["content"], p)
     rid = DB.str(r["id"])
 
     old =
@@ -180,7 +182,12 @@ defmodule Ruxi.C2.Store do
 
     m = old || insert_member(ctx, rid, now)
     emit_all(rid, r["state"], r["state"], now)
-    %{"room_id" => rid, "member_id" => DB.str(m["id"]), "protocol_version" => 2}
+
+    %{
+      "room_id" => rid,
+      "member_id" => DB.str(m["id"]),
+      "protocol_version" => protocol(r["state"])
+    }
   end
 
   defp insert_member(ctx, id, now) do
@@ -209,7 +216,7 @@ defmodule Ruxi.C2.Store do
       view = project(r["state"], m, members(id), r, now)
 
       %{
-        "protocol_version" => 2,
+        "protocol_version" => protocol(r["state"]),
         "room_id" => id,
         "member_id" => DB.str(m["id"]),
         "stream_id" => DB.str(m["stream_id"]),
@@ -288,6 +295,52 @@ defmodule Ruxi.C2.Store do
     end
   end
 
+  defp capability!(content, p) do
+    if content["schema_version"] == 4,
+      do:
+        Util.require!(
+          Enum.all?(
+            ~w(password_v1 check_v1 world_projection_v2),
+            &(&1 in (p["capabilities"] || []))
+          ),
+          "UNSUPPORTED_CAPABILITY"
+        )
+  end
+
+  def protocol(state), do: if(state["content"]["schema_version"] == 4, do: 3, else: 2)
+  defp protocol_schema(2), do: Ruxi.C2.Schema.load("protocol")
+
+  defp protocol_schema(3),
+    do:
+      Application.app_dir(:ruxi, "priv/c3/protocol.schema.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+  defp command_hash(c),
+    do:
+      if(c["protocol_version"] == 3, do: Ruxi.C3.Interactions.fingerprint(c), else: Util.hash(c))
+
+  def interaction_quote(ctx, id, p) do
+    DB.transaction(fn ->
+      r = room!(id, true)
+      m = member!(ctx, id, true)
+      now = DB.time()
+      Util.require!(protocol(r["state"]) == 3, "UNSUPPORTED_CAPABILITY")
+      Util.require!(m["device_id"] == DB.uuid(ctx.device), "STALE_CONTROL")
+      Util.require!(p["step_id"] == r["state"]["step_id"], "STEP_CLOSED")
+      epoch = fence!(r, now)
+
+      case Ruxi.C3.Interactions.quote(r["state"], m["role_id"], p["interaction_id"], now) do
+        {:ok, next, q} ->
+          save(r, next, epoch, now)
+          q
+
+        {:error, c, _} ->
+          Util.fail(c)
+      end
+    end)
+  end
+
   def command(ctx, id, c) do
     DB.transaction(fn ->
       r = room!(id, true)
@@ -295,13 +348,14 @@ defmodule Ruxi.C2.Store do
       now = DB.time()
 
       Util.require!(
-        is_map(c) and c["protocol_version"] == 2 and Ruxi.Contract.uuid?(c["command_id"]) and
+        is_map(c) and c["protocol_version"] == protocol(r["state"]) and
+          Ruxi.Contract.uuid?(c["command_id"]) and
           is_map(c["body"]) and is_binary(c["type"]),
         "INVALID_ARGUMENT"
       )
 
       Util.require!(
-        Ruxi.C2.Schema.validate(c, Ruxi.C2.Schema.load("protocol")) == [],
+        Ruxi.C2.Schema.validate(c, protocol_schema(protocol(r["state"]))) == [],
         "INVALID_ARGUMENT"
       )
 
@@ -318,7 +372,7 @@ defmodule Ruxi.C2.Store do
         ])
 
       if old do
-        Util.require!(old["payload_hash"] == Util.hash(c), "IDEMPOTENCY_CONFLICT")
+        Util.require!(old["payload_hash"] == command_hash(c), "IDEMPOTENCY_CONFLICT")
         old["result"]
       else
         owner = fence!(r, now)
@@ -341,7 +395,7 @@ defmodule Ruxi.C2.Store do
 
         DB.query(
           "INSERT INTO c2_commands(room_id,member_id,command_id,payload_hash,result,created_at) VALUES($1,$2,$3,$4,$5,$6)",
-          [r["id"], m["id"], DB.uuid(c["command_id"]), Util.hash(c), result, now]
+          [r["id"], m["id"], DB.uuid(c["command_id"]), command_hash(c), result, now]
         )
 
         result
@@ -534,7 +588,7 @@ defmodule Ruxi.C2.Store do
       _ ->
         Util.require!(r["release_status"] != "blocked", "ROOM_SUSPENDED")
 
-        if c["type"] in ~w(action.submit action.cancel round.end),
+        if c["type"] in ~w(action.submit interaction.submit action.cancel round.end),
           do: Util.require!(c["step_id"] == s["step_id"], "STEP_CLOSED")
 
         b = if c["type"] == "action.submit", do: Map.put(b, "step_id", c["step_id"]), else: b
@@ -550,7 +604,9 @@ defmodule Ruxi.C2.Store do
             do: Map.update!(b, "audience_member_ids", &Enum.map(&1, fn id -> mapping[id] end)),
             else: b
 
-        case Engine.command(s, role, c["type"], b, c["command_id"], now) do
+        case Ruxi.C3.Draws.with_room(r, fn ->
+               Engine.command(s, role, c["type"], b, c["command_id"], now)
+             end) do
           {:ok, next, result} ->
             {next, result}
 
@@ -615,7 +671,7 @@ defmodule Ruxi.C2.Store do
       end
 
       DB.query(
-        "UPDATE c2_intents SET status='replaced' WHERE room_id=$1 AND status IN ('queued','locked')",
+        "UPDATE c2_intents SET status='replaced',payload=payload-'answer_cipher' WHERE room_id=$1 AND status IN ('queued','locked')",
         [r["id"]]
       )
 
@@ -638,7 +694,7 @@ defmodule Ruxi.C2.Store do
 
         if intent do
           DB.query(
-            "INSERT INTO c2_intents(id,room_id,member_id,step_id,status,cost,payload) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status",
+            "INSERT INTO c2_intents(id,room_id,member_id,step_id,status,cost,payload) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO UPDATE SET status=EXCLUDED.status,payload=EXCLUDED.payload",
             [
               DB.uuid(result["intent_id"]),
               r["id"],
@@ -658,6 +714,11 @@ defmodule Ruxi.C2.Store do
               "INSERT INTO c2_step_settlements VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
               [r["id"], DB.uuid(record["step_id"]), record, now]
             )
+
+      DB.query("DELETE FROM c2_ownership WHERE room_id=$1 AND NOT (item_id=ANY($2::text[]))", [
+        r["id"],
+        Map.keys(s["ownership"])
+      ])
 
       for {item, o} <- s["ownership"],
           do:
@@ -795,7 +856,7 @@ defmodule Ruxi.C2.Store do
           if s["lobby_expires_at"] <= now, do: Map.put(s, "status", "abandoned"), else: s
         else
           {:ok, next} =
-            case Engine.tick(s, now) do
+            case Ruxi.C3.Draws.with_room(r, fn -> Engine.tick(s, now) end) do
               {:ok, x} -> {:ok, x}
               {:error, _, x} -> {:ok, x}
             end

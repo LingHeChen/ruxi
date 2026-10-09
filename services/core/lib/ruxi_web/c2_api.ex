@@ -37,6 +37,9 @@ defmodule RuxiWeb.C2API do
   defp dispatch(c, "POST", ["session", "control"]),
     do: Store.ticket(ctx(c), body(c)["room_id"], true)
 
+  defp dispatch(c, "POST", ["projects", id, "projection-preview"]),
+    do: mutate(c, fn ctx, p -> Studio.projection_preview(ctx, id, p) end, "admin")
+
   defp dispatch(c, "POST", ["projects", id, "preview"]),
     do: mutate(c, fn ctx, p -> Studio.preview(ctx, id, p) end, "admin")
 
@@ -48,6 +51,9 @@ defmodule RuxiWeb.C2API do
 
   defp dispatch(c, "POST", ["rooms", id, "socket-ticket"]),
     do: Store.ticket(ctx(c), id, body(c)["takeover"] == true)
+
+  defp dispatch(c, "POST", ["rooms", id, "interaction-quotes"]),
+    do: Store.interaction_quote(ctx(c), id, body(c))
 
   defp dispatch(c, "GET", ["rooms", id, "snapshot"]), do: Store.snapshot(ctx(c), id)
   defp dispatch(c, "POST", ["rooms", id, "commands"]), do: Store.command(ctx(c), id, body(c))

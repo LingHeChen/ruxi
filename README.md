@@ -1,8 +1,10 @@
 # 入戏 Ruxi
 
-根据 `Ruxi_Design_Documents_C1.zip` 实现的协作互动剧平台。Flutter Android/iOS 玩家端、React + Ant Design Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
+根据 C1、C2 及 C3 增量设计开发的协作互动剧平台。Flutter Android/iOS 玩家端、React + Ant Design Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
 
 已实现《末班车的第七位乘客》的三人玩法闭环。已补充八段原创程序化动效开发视频、字幕与同视角摘要，并接入授权播放器。制作端上传、转码、首帧、字幕、AI 建议和发布流程已接通，备份恢复与进程崩溃演练已通过。真机、浏览器和云端上线验收仍需执行，详见 [实现与验收状态](docs/IMPLEMENTATION_STATUS.md)。
+
+C3 核心互动开发进度、真实联调证据与尚未完成的验收见 [C3 开发记录](docs/C3_DEVELOPMENT.md)。当前支持密码输入、服务端骰子判定、方向通路与角色地图、分层工作台和三人样例《雨夜档案馆》；尚未达到 C3 全部验收门槛。
 
 核心设计与取舍见 [架构说明](docs/ARCHITECTURE.md)，制作和恢复流程见 [运行手册](docs/OPERATIONS.md)。
 

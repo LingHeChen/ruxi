@@ -1,0 +1,168 @@
+{
+  "checks": [
+    {
+      "name": "G正文与源文本一致",
+      "status": "PASS"
+    },
+    {
+      "name": "G没有空模板或TODO",
+      "status": "PASS"
+    },
+    {
+      "name": "W正文与源文本一致",
+      "status": "PASS"
+    },
+    {
+      "name": "W没有空模板或TODO",
+      "status": "PASS"
+    },
+    {
+      "name": "T正文与源文本一致",
+      "status": "PASS"
+    },
+    {
+      "name": "T没有空模板或TODO",
+      "status": "PASS"
+    },
+    {
+      "name": "index.html链接 prototypes/studio.html",
+      "status": "PASS"
+    },
+    {
+      "name": "index.html链接 prototypes/interactions.html",
+      "status": "PASS"
+    },
+    {
+      "name": "index.html链接 docs/Ruxi_C3_Gameplay.docx",
+      "status": "PASS"
+    },
+    {
+      "name": "index.html链接 docs/Ruxi_C3_Studio_UI.docx",
+      "status": "PASS"
+    },
+    {
+      "name": "index.html链接 docs/Ruxi_C3_Technical_Acceptance.docx",
+      "status": "PASS"
+    },
+    {
+      "name": "interactions.html链接 studio.html",
+      "status": "PASS"
+    },
+    {
+      "name": "studio.html链接 interactions.html",
+      "status": "PASS"
+    },
+    {
+      "name": "16项范围覆盖",
+      "status": "PASS"
+    },
+    {
+      "name": "20条实施验收用例",
+      "status": "PASS"
+    },
+    {
+      "name": "F01有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F02有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F03有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F04有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F05有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F06有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F07有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F08有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F09有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F10有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F11有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F12有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F13有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F14有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F15有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "F16有处置依据归属",
+      "status": "PASS"
+    },
+    {
+      "name": "本期仅两种新增互动",
+      "status": "PASS"
+    },
+    {
+      "name": "四位密码与正文一致",
+      "status": "PASS"
+    },
+    {
+      "name": "样例概率与规范一致",
+      "status": "PASS"
+    },
+    {
+      "name": "骰子持久化与故障恢复有明确语义",
+      "status": "PASS"
+    },
+    {
+      "name": "延期战斗有协议拒绝测试",
+      "status": "PASS"
+    },
+    {
+      "name": "增量不冒充完整DSL",
+      "status": "PASS"
+    },
+    {
+      "name": "文字不超页边",
+      "status": "PASS"
+    }
+  ],
+  "layout": {
+    "Ruxi_C3_Technical_Acceptance": {
+      "pages": 9
+    },
+    "Ruxi_C3_Gameplay": {
+      "pages": 7
+    },
+    "Ruxi_C3_Studio_UI": {
+      "pages": 7
+    }
+  },
+  "overflow": []
+}

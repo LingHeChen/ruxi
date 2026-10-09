@@ -1,0 +1,88 @@
+{
+  "checks": [
+    {
+      "name": "增量 profile 通过形状校验",
+      "status": "PASS"
+    },
+    {
+      "name": "本期拒绝战斗互动",
+      "status": "PASS"
+    },
+    {
+      "name": "拒绝超界概率",
+      "status": "PASS"
+    },
+    {
+      "name": "拒绝隐藏概率修正",
+      "status": "PASS"
+    },
+    {
+      "name": "password命令形状有效",
+      "status": "PASS"
+    },
+    {
+      "name": "check命令形状有效",
+      "status": "PASS"
+    },
+    {
+      "name": "拒绝客户端骰子点数",
+      "status": "PASS"
+    },
+    {
+      "name": "1d100阈值 0",
+      "status": "PASS"
+    },
+    {
+      "name": "1d100阈值 1",
+      "status": "PASS"
+    },
+    {
+      "name": "1d100阈值 60",
+      "status": "PASS"
+    },
+    {
+      "name": "1d100阈值 100",
+      "status": "PASS"
+    },
+    {
+      "name": "前导零保留",
+      "status": "PASS"
+    },
+    {
+      "name": "规范化示例",
+      "status": "PASS"
+    },
+    {
+      "name": "重复命令不重复计次扣费",
+      "status": "PASS"
+    },
+    {
+      "name": "同命令异参拒绝",
+      "status": "PASS"
+    },
+    {
+      "name": "共享最后机会耗尽后不再执行",
+      "status": "PASS"
+    },
+    {
+      "name": "解锁后排队猜测失效不扣费",
+      "status": "PASS"
+    },
+    {
+      "name": "quote_check无答案字段",
+      "status": "PASS"
+    },
+    {
+      "name": "private_result无答案字段",
+      "status": "PASS"
+    },
+    {
+      "name": "map_patch无答案字段",
+      "status": "PASS"
+    }
+  ],
+  "limitations": [
+    "参考状态机仅为附件语义实验",
+    "无真实DB WS CSPRNG或权限验证"
+  ]
+}

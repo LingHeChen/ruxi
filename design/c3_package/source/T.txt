@@ -1,0 +1,104 @@
+# 1 基线与兼容策略
+本文件与 G 玩法、W 工作台构成 C3 增量规范，优先级为用户本期范围→G 领域行为→T 契约→W 呈现。C2 中未被覆盖的账号、资产、任务、房间与运维流程继续适用。C2 中 1–100 阈值改为 0–100、地图全展开和全知位置默认值被本期覆盖。
+用户确认产品已经开发完成；当前未读取实际仓库，因此 schema_version=4、protocol_version=3 是本轮建议发布版本，不是对现有线上版本的事实判断。HTTP 暂沿用 /api/v2，新增字段与端点按 feature capability 协商；Phoenix 传输 vsn=2.0.0 不变。对照实际代码后如编号已占用，只更新版本映射，不改语义。
+C3 房间固定 content_hash、engine_version 与 protocol_version。旧房继续旧解释器，不在恢复时迁移；新客户端可以兼容旧房，旧客户端未声明 password_v1、check_v1、world_projection_v2 不得进入需要这些能力的新房。不得把密码输入降级成默认成功选项。
+contracts/extension.schema.json 是本期独立增量 profile 的形状校验，examples/extension.json 是其有效样例；它不是替换 C2 完整 DSL 的可执行包。完整编译器需按本文件映射合并基础 DSL，并做跨引用和投影检查。没有虚构可直接运行的完整线上 Schema。
+# 2 领域对象与存储
+定义、运行态、知识投影和画布布局分别存储。发布定义不可变；运行态按房间实例化；知识增量按成员持有；布局坐标不影响通路代价。可复用现有表，但必须满足下述逻辑键和约束。
+|逻辑表|键与核心字段|不变量|
+|passage_def|release_id, passage_id；a,b,ab,ba,barrier_id|方向端点合法，费用非负，返程显式存在或缺省禁用|
+|barrier_state|room_id,barrier_id；state,revision|状态为 open/blocked/destroyed，恢复须规则授权|
+|member_map_knowledge|room_id,member_id,entity_ref；level,last_seen_tick,observed_state|unknown 不生成可枚举记录；知识不等于真实状态|
+|role_membership|room_id,role_id；faction_id,valid_from,valid_to,visibility|同类互斥阵营时间区间不重叠|
+|objective_state|room_id,objective_id,subject_id；progress,latched,result|只在声明的时机评估，结算幂等|
+|interaction_instance|room_id,interaction_id；status,revision|同一共享谜题有唯一 solved 状态|
+|attempt_counter|room_id,interaction_id,scope_key；used,blocked_until_round,locked|actor 作用域按角色，room 按房间，重连不重置|
+|interaction_quote|quote_id；member_id,step_id,dependencies,cost,target,expires_at|仅服务器创建，只允许报价目标使用|
+|resolution_draw|room_id,step_id,intent_id,draw_slot；roll,algorithm_version|唯一键绑定一次执行，1≤roll≤100|
+|command_receipt|room_id,member_id,command_id；fingerprint,status,result|相同键异参冲突，不能重复扣费|
+|evidence_record|room_id,evidence_id；origin,provenance,expiry_tick,audience|痕迹删除不删除已授权知识|
+|outbox_projection|room_id,member_id,view_seq；payload|只存该受众投影，不下发整房状态|
+所有跨对象外键包含 room_id 或 release_id，防止跨房引用。密码猜测以临时加密意图保存，终局回执写入后清除原文；长期幂等 fingerprint 用服务端密钥 HMAC，不能用裸摘要暴露低熵输入。密钥轮换保留未结算意图所需旧版本，处理完再撤销。
+# 3 状态机与统一命令链
+password 共享实例为 ready→solved；locked 存在于 attempt_counter 对应作用域，actor 只锁本人，room 锁全房间。冷却用 blocked_until_round 表示；显式 reset 事件才能清次数或解除 locked。check 默认执行后 consumed 于对应 scope，次数未耗尽可继续 ready。互动实例与玩家本地 editing/queued/confirming/resolved 状态分开。
+打开互动请求 quote，不扣费。确认后 room.command type=interaction.submit，服务端校验控制权、协议、step、quote、输入形状和可用点，创建意图并预留 AP。报价在成功 queued 时消费；同 command_id 重试读原结果，不能用同 quote_id 创建另一意图。取消会释放 AP，重新提交须取新报价。
+锁定后按 G6 轮换顺序执行：重查条件与报价依赖→必要时抽样→计算成功/失败→扣费和次数→状态/物品/知识效果→到达和 action_end 事件。整步结果与成员投影 outbox 同一事务提交。引用版本变化而与本动作无关，不使所有报价失效；依赖集合由规则引擎记录，客户端不能自报。
+QUOTE_STALE、TARGET_UNAVAILABLE、STEP_CLOSED、AP_INSUFFICIENT 均不掷骰、不扣费、不增加尝试；错误密码与判定失败属于已执行结果，正常扣费计次。预检阶段不提前匹配密码，因此提交反馈不能成为免费答案探测器。
+原子 group_move 产生一次 group_arrival，载荷为冻结参与者集合 moved_members；组到达事件只执行一次，逐人知识授予按成员循环但不能重复封路或扣费。普通 arrival 是单人移动产生的专用触发，优先于该动作一般 action_end；后续沿用 step_end、round_end。每步事件触发上限沿用 32，超过则整个步世界事务回滚并挂起。内部随机抽样记录保留用于原步骤恢复，不向玩家提前揭示。
+# 4 随机性与崩溃恢复
+生产随机源使用服务端安全随机整数采样，无模偏差；具体运行时 API 在实际工程锁定依赖时确认。记录 algorithm_version，客户端 seed、roll、target 与 success 字段一律拒绝。1d100≤target 的概率来自枚举 100 个等可能结果，0 与 100 边界确定。
+为避免数据库重试或房间接管重掷，使用持久 draw journal：冻结 step 输入后，仅内部解析器可为确实将执行的 check 创建唯一 draw key；随机结果经小事务写入后才被世界结算读取。唯一冲突读取已有记录。未完成持久写入的随机数不可返回或用于生成外部叙述。
+世界整步事务失败时 AP、物品、次数、事件与 outbox 全回滚，已持久 draw journal 可保留但不产生玩家可见事件。房间进入 suspended；同一冻结 step 恢复必须使用同一 draw key。放弃该 step 只能经显式运维修复记录，旧 draw 标为 abandoned 并保持审计，不向玩家提供反复回滚求好运入口。
+journal 创建与恢复检查 owner_epoch fencing；旧 owner 不能为新 step 写骰子结果。故障注入覆盖写 draw 前、写后世界事务前、事务后 outbox 前与发送后回执丢失。这里提供的是设计方案，未宣称已在真实数据库验证。
+# 5 密码服务端处理
+quote 返回输入类型、字符范围、长度、次数与风险的授权提示，不含任何答案信息。pin 仅接受 ASCII 0–9；text 最大 64 个 Unicode code point，长度在指定规范化之后计算，输入原始字节上限 512。拒绝控制字符；NFKC casefold 版本由运行包记录。
+服务端验证格式后入队，结算时读取答案 secret_ref 并比较。答案支持作者显式别名，不能由 AI 临时模糊匹配。多人共享计数用同一步事务串行更新；在第二次已失败且只剩一次时，第一条有效执行消耗最后次数，其余意图安全失效退款。
+答案编辑仅作者/审核授权端点可见，普通素材下载、项目公开导出、玩家缓存和错误日志都不得出现。作者授权的完整项目导出可以包含答案，但必须标明仅制作使用，不可直接托管给玩家。观战与复盘不获得答案，除非终局披露策略明确允许。
+# 6 增量接口与通信
+沿用 Bearer、控制 epoch、If-Match 与成员私有 Phoenix 流。HTTP 错误格式 error.code/safe_message/retryable/trace_id，命令使用 command_id 幂等。quote 不因重复点击变成无限独立有效报价；每角色每互动每步最多一个活动报价，重新取价使旧未提交报价失效。
+|接口或事件|输入|结果与权限|
+|POST /api/v2/rooms/{id}/interaction-quotes|interaction_id,target_id,step_id|quote_id,cost,input_spec或check_preview,attempts_remaining,expires_at；仅有权行动者|
+|room.command interaction.submit|quote_id,input={answer}或空对象|queued/committed/rejected；答案只供password|
+|room.command action.cancel|intent_id|锁定前取消；沿用原命令语义|
+|GET /api/v2/rooms/{id}/commands/{command_id}|原命令 ID|原发起人查询 pending/committed/rejected，不回显答案|
+|room.view interaction_result|服务端生成|resolution_id,kind,outcome,ap_delta；check 按受众附roll与target|
+|room.view map_patch|服务端生成|本成员可见的新增/更新/删除实体与last_seen_tick|
+|POST /api/v2/studio/projects/{id}/projection-preview|draft_revision,role_id,fixture_id|作者独立投影，不写草稿；角色输出不得带全知对象|
+|POST /api/v2/studio/projects/{id}/path-validation|draft_revision,scenario_ids,budget|任务ID；复用既有任务查询取消与结果保存|
+报价有效期沿用 60 秒且不超过所属 step 截止时间；房间暂停时旧报价失效，恢复重新取价。input_spec 只能描述格式不能提示答案差异。未知/不可见 interaction_id 返回统一 TARGET_UNAVAILABLE，不用错误码证明隐藏对象存在。
+command envelope 包含 protocol_version=3、command_id、control_epoch、step_id、type、body；room_id/member_id 取授权 topic，不信任 body。protocol 3 不改变 Phoenix framing。commands.schema.json 定义两种 submit body，区别由 kind=password/check 表示并与 quote 一致检查。
+错误增加 INPUT_INVALID、ATTEMPT_LOCKED、QUOTE_EXPIRED、QUOTE_STALE、QUOTE_USED、TARGET_UNAVAILABLE、UNSUPPORTED_CAPABILITY。客户端对 2 秒无回执显示等待，8 秒后查询原命令；不换 ID 重试。回复乱序按 receipt_seq 和 view_seq 处理，动画以 resolution_id 去重。
+# 7 地图 知识与对抗投影
+服务端先执行世界状态机，再为每个角色计算视图。真实 barrier 变化与成员观察更新分离；知识中的 observed_state、last_seen_tick 不因远程世界变化自动更新。hinted 地点使用成员范围不透明 hint_id，定位后以明确替换关系合并，不能从 hash 或坐标猜真实 ID。
+频道授权逐条校验读写并在阵营变更时失效缓存；旧访问 URL 需要短期签名与再次授权，不能仅移除 UI。公开线索的来源只显示已获授权的传播片段。公开反馈中不透露“另一玩家刚刚抢先解锁”这类未授权事实。
+AI、语音、字幕、通知、日志和埋点复用授权输出，不各自重新拼全知上下文。AI 调用不含密码答案、全阵营表和下一随机结果。公共事件与私有事件分开生成叙述，生成缓存键包含受众与知识版本，防止复用他人叙事。
+# 8 工作台保存与编译
+作者编辑 domain document，布局单独保存；模型与 React Flow 节点建立稳定 ID 映射。每个 view 的选中、filter 与 viewport 存本地编辑状态，不混入发布 DSL。任意对象修改通过领域命令更新，然后所有视图派生刷新。
+草稿允许字段不全；发布需要 shape、引用、条件类型、secret projection、路径、尝试预算与目标冲突检查。编译器把 password 答案分离到 server secrets，将可显示 input_spec 编入授权可见描述；不能先发完整 JSON 再让 Flutter 隐藏。
+小说改编任务输出同样的扩展 profile 与来源标注；密码谜题、概率参数、卧底目标属于作者审核的改编内容，不冒充原小说事实。改编 apply 延续 base_revision 三方合并与人工字段保护；失败不会覆盖已有剧情。
+# 9 迁移与发布
+先盘点实际线上 schema/protocol 及 C2 语义差异，建立旧 ID 到 passage/interaction 的确定映射。双向旧边只有确认语义等价时合并；不能把两条费用不同的边强制同步。旧输入门禁选项不得自动变成密码题，须作者补答案、线索和尝试策略。旧概率阈值 1–100 可原样迁移，新增 0 仅用于 C3。
+转换产生新草稿和缺项报告，保留旧 release。跑旧预设路径、各角色新路径、失败后续与授权比较；通过后发布新 hash，只让新房选择。数据库先 expand 增表/字段，服务兼容读旧；旧客户端缺能力返回升级提示，禁止静默丢字段。
+回滚只切新房 release 指针，C3 活动房继续 C3 引擎。无法继续时保存并挂起，不把状态强塞回 C2。迁移统计记录项目数、成功、需人工补全及失败；日志不记录答案或私人目标正文。
+# 10 运营与质量目标
+记录 quote_stale、invalidated、executed_failure、password_locked、draw_replay、projection_denied、path_uncovered 与玩家等待时长，用于发现不可玩内容。埋点沿用异步批量投递，不能阻塞动画或命令；原始答案、私聊和阵营身份不作为分析属性。
+保留策略继承 C2 运行配置，但临时密码明文一旦结果提交即删除；失败任务超时不应无限保留。随机 journal 与审计跟随房间审计生命周期清理，用户注销按原匿名化/擦除清单执行。具体线上保留期限需沿用真实部署配置，不凭本文件改写。
+性能目标沿用 C2 的 100 个三人房、300 连接及同区域 RTT≤100ms：回执 p95≤300ms，已提交结果到授权视图应用 p95≤500ms；新增投影压力单独测。真实 React Flow 用 W9 密度夹具验证，Flutter 在 390/768/1440 等逻辑宽度与 200% 字体检查。阈值是验收目标，非本轮实测结论。
+# 11 验收用例与发布门槛
+|用例|步骤与预期|关联|
+|C301|首人过门后封返程，排队返程意图失效退款，远方未观察者地图不刷新真相|G4–5 W3 T7|
+|C302|全队移动缺一人时全取消；全员满足时只触发一次到达事件|G5 T3|
+|C303|未知密室在JSON、DOM、计数、小地图和AI中均不存在；线索发现后显式出现|G3–4 T7|
+|C304|pin 0427保留前导零；格式错不扣点；错误密码扣费计次；正确后不再接受|G7 W7 T5|
+|C305|最后一次机会多人同时猜，先执行者耗尽后其余退款；断线不清次数|G7 T3–5|
+|C306|重复command与回执丢失只执行一次；同键不同answer报冲突且不回显|T2–6|
+|C307|枚举roll 1–100验证target 0/1/60/100对应0/1/60/100个成功结果|G8 T4|
+|C308|提交后修正依赖变化则失效退款；客户端roll/seed/target字段拒绝|G8 T4–6|
+|C309|随机journal各崩溃点恢复得到同一roll，世界事务失败无扣费无通知|T3–4|
+|C310|跳过动画、减动效、重连与重复view只呈现一个结果，不产生新骰|W7 T6|
+|C311|卧底销毁原件但副本已提交，按条件结算；换阵营撤销未来频道读写|G9 T7|
+|C312|NPC日程不穿锁门；环境按tick推进；阅读、暂停、打开面板不额外推进|G6 G10|
+|C313|所有允许身份分配，仅预设行动可到合法终态；修电失败仍可撤离|G12 W6|
+|C314|保存未完整草稿成功但发布被阻止；切视图共享实体；删除提示引用|W4 W9 T8|
+|C315|旧房复原结果不变；新客户端兼容旧房；旧客户端不得降级进入C3房|T1 T9|
+|C316|角色切换不残留密码、地图和目标缓存；帮助/设置/历史返回不丢命令|W2 T7|
+|C317|手机键盘、读屏、连续操作与200%字体可用；桌面大规模地图没有细线节点|W7–9|
+|C318|AI注入不能获取秘密、造骰或启用战斗；超时预设仍可用|G11 T7|
+|C319|事件循环回滚世界并挂起；同一步恢复使用原draw，不靠回滚重掷|T3–4|
+|C320|终局只披露本人结果；未全员同意不得开放全知复盘|G2 W2 T7|
+关键规则、泄密、重复扣费、随机重抽、无法完成、迁移破坏为阻断项；未执行不视为通过。每次运行记录环境、代码 SHA、release hash、步骤、实际结果和证据。离线纯函数及 HTML 检查只证明设计附件行为，不替代生产验收。
+# 12 C2 文档影响与交付边界
+|原文档|本轮覆盖内容|权威位置|
+|D01 产品|模式声明、扩展范围、延期互动|G1–2 与能力表|
+|D02 玩法|地图、通路、尝试、判定、非战斗对抗|G3–12|
+|D03 UI|地图分层、两类新互动、多角色预览|W 全文|
+|D04 技术|报价、draw journal、按受众投影|T2–8|
+|D05 数据|通路、尝试、知识、目标、随机日志|T2 与增量profile|
+|D06 接口|protocol3、quote、submit、错误与结果|T6 与commands schema|
+|D07 工作台|世界到场景到互动，非巨型全部展开|W1–6 W9|
+|D08 DSL|schema4建议映射与白名单扩展|T1 T8 与extension schema|
+|D09 AI|知识裁剪、无答案无骰子、改编审核|G11 T7–8|
+|D10 素材|地图与互动控件，无战斗素材依赖|W7–9|
+|D11 测试|新增C301–C320及保留回归|T11|
+|D12 运维|双版本、journal恢复、回滚|T4 T9–10|
+本次以增量包发布，未把旧十二篇覆盖重写。开发应同时读取 C2 与此表，冲突以本期覆盖主题为准；旧 HTML 不作为本期工作台视觉依据。现有程序已开发的事实与本次新增设计未实施的事实必须分别记录。交付检查结论和未执行项见 verification/review.txt。

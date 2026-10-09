@@ -1,0 +1,1763 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 4
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "ap_per_round": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "step_timeout_s": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 300
+        },
+        "proposal_ttl_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
+        },
+        "round_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "ap_per_round",
+        "step_timeout_s",
+        "proposal_ttl_s",
+        "round_limit"
+      ],
+      "additionalProperties": false
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "knowledge": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "location",
+          "knowledge"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "discovered": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "description",
+          "discovered"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "discovered": {
+            "type": "boolean",
+            "default": true
+          },
+          "display_condition": {
+            "$ref": "#/$defs/condition"
+          }
+        },
+        "required": [
+          "id",
+          "from",
+          "to",
+          "cost",
+          "condition"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "location",
+          "tags"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "clues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "text": {
+            "type": "string"
+          },
+          "shareable": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "shareable"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "failure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "threshold": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100
+          },
+          "max_uses": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "display_condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "required_participants": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "risk_text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "location",
+          "target",
+          "cost",
+          "condition",
+          "effects",
+          "failure",
+          "threshold",
+          "max_uses"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "failure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "threshold": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100
+          },
+          "max_uses": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "intent": {
+            "type": "string"
+          },
+          "required_tag": {
+            "type": "string"
+          },
+          "display_condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "required_participants": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "risk_text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "location",
+          "target",
+          "cost",
+          "condition",
+          "effects",
+          "failure",
+          "threshold",
+          "max_uses",
+          "intent",
+          "required_tag"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "trigger": {
+            "enum": [
+              "room_start",
+              "action_end",
+              "step_end",
+              "round_end",
+              "arrival",
+              "group_arrival"
+            ]
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "once": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "trigger",
+          "priority",
+          "condition",
+          "effects",
+          "once"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "initial": {
+      "type": "object",
+      "properties": {
+        "world": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "integer",
+              "boolean",
+              "null"
+            ]
+          },
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "inventory": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          }
+        }
+      },
+      "required": [
+        "world",
+        "inventory"
+      ],
+      "additionalProperties": false
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "kind": {
+            "enum": [
+              "image",
+              "video",
+              "audio",
+              "text"
+            ]
+          },
+          "uri": {
+            "type": "string"
+          },
+          "audience": {
+            "oneOf": [
+              {
+                "enum": [
+                  "public"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                }
+              }
+            ]
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "uri",
+          "audience",
+          "summary"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "votes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "duration_s": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 300
+          },
+          "default_option": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "$ref": "#/$defs/condition"
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/effect"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "condition",
+                "effects"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "duration_s",
+          "default_option",
+          "options"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "c3": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "urn:ruxi:c3:extension",
+      "title": "C3 extension profile only",
+      "type": "object",
+      "properties": {
+        "profile_version": {
+          "const": 1
+        },
+        "suggested_content_version": {
+          "const": 4
+        },
+        "map_mode": {
+          "enum": [
+            "full",
+            "explore",
+            "clue",
+            "mixed"
+          ]
+        },
+        "passages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "a": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "b": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "barrier_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ab": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "cost": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "discover_if": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "enum": [
+                          "eq",
+                          "known",
+                          "always"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "boolean",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "enter_if": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "enum": [
+                          "eq",
+                          "known",
+                          "always"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "boolean",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "arrival_events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    }
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "cost",
+                  "discover_if",
+                  "enter_if",
+                  "arrival_events"
+                ],
+                "additionalProperties": false
+              },
+              "ba": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "cost": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "discover_if": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "eq",
+                              "known",
+                              "always"
+                            ]
+                          },
+                          "ref": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "value": {
+                            "type": [
+                              "string",
+                              "boolean",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "op"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "enter_if": {
+                        "type": "object",
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "eq",
+                              "known",
+                              "always"
+                            ]
+                          },
+                          "ref": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "value": {
+                            "type": [
+                              "string",
+                              "boolean",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "op"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "arrival_events": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]*$"
+                        }
+                      }
+                    },
+                    "required": [
+                      "enabled",
+                      "cost",
+                      "discover_if",
+                      "enter_if",
+                      "arrival_events"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "a",
+              "b",
+              "barrier_id",
+              "ab",
+              "ba"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "interactions": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "target_id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "password"
+                    ]
+                  },
+                  "cost": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "attempts": {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "enum": [
+                          "actor",
+                          "room"
+                        ]
+                      },
+                      "max": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "reset_event": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "max",
+                      "reset_event"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "on_success": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "set_barrier",
+                            "reveal",
+                            "set_flag",
+                            "grant_item",
+                            "leave_trace",
+                            "reset_attempts",
+                            "set_membership"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]*$"
+                        },
+                        "value": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "on_failure": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "set_barrier",
+                            "reveal",
+                            "set_flag",
+                            "grant_item",
+                            "leave_trace",
+                            "reset_attempts",
+                            "set_membership"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]*$"
+                        },
+                        "value": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "audience": {
+                    "enum": [
+                      "actor",
+                      "observers",
+                      "public"
+                    ]
+                  },
+                  "format": {
+                    "enum": [
+                      "pin",
+                      "text"
+                    ]
+                  },
+                  "normalization": {
+                    "enum": [
+                      "exact",
+                      "nfkc_trim_casefold"
+                    ]
+                  },
+                  "min_length": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 64
+                  },
+                  "max_length": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 64
+                  },
+                  "answer_secret_ref": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "target_id",
+                  "kind",
+                  "cost",
+                  "attempts",
+                  "on_success",
+                  "on_failure",
+                  "audience",
+                  "format",
+                  "normalization",
+                  "min_length",
+                  "max_length",
+                  "answer_secret_ref"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "target_id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "check"
+                    ]
+                  },
+                  "cost": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "attempts": {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "enum": [
+                          "actor",
+                          "room"
+                        ]
+                      },
+                      "max": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "reset_event": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "max",
+                      "reset_event"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "on_success": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "set_barrier",
+                            "reveal",
+                            "set_flag",
+                            "grant_item",
+                            "leave_trace",
+                            "reset_attempts",
+                            "set_membership"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]*$"
+                        },
+                        "value": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "on_failure": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "set_barrier",
+                            "reveal",
+                            "set_flag",
+                            "grant_item",
+                            "leave_trace",
+                            "reset_attempts",
+                            "set_membership"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]*$"
+                        },
+                        "value": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "audience": {
+                    "enum": [
+                      "actor",
+                      "observers",
+                      "public"
+                    ]
+                  },
+                  "base_target": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "modifiers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "when": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "enum": [
+                                "eq",
+                                "known",
+                                "always"
+                              ]
+                            },
+                            "ref": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "value": {
+                              "type": [
+                                "string",
+                                "boolean",
+                                "integer"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "op"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "delta": {
+                          "type": "integer",
+                          "minimum": -100,
+                          "maximum": 100
+                        },
+                        "visibility": {
+                          "enum": [
+                            "actor"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "when",
+                        "delta",
+                        "visibility"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "formula": {
+                    "enum": [
+                      "1d100_lte"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "target_id",
+                  "kind",
+                  "cost",
+                  "attempts",
+                  "on_success",
+                  "on_failure",
+                  "audience",
+                  "base_target",
+                  "modifiers",
+                  "formula"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "profile_version",
+        "suggested_content_version",
+        "map_mode",
+        "passages",
+        "interactions"
+      ],
+      "additionalProperties": false
+    },
+    "c3_settings": {
+      "type": "object",
+      "properties": {
+        "barriers": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "open",
+              "blocked",
+              "destroyed"
+            ]
+          }
+        },
+        "arrival_rules": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "enum": [
+                    "set_barrier",
+                    "reveal",
+                    "set_flag",
+                    "grant_item",
+                    "leave_trace",
+                    "reset_attempts",
+                    "set_membership"
+                  ]
+                },
+                "ref": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "boolean",
+                    "integer"
+                  ]
+                }
+              },
+              "required": [
+                "op",
+                "ref"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "initial_known_locations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "interaction_labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "risk_text": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "passage_groups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          }
+        },
+        "legacy_passage_conditions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "enter": {
+                "$ref": "#/$defs/condition"
+              },
+              "discover": {
+                "$ref": "#/$defs/condition"
+              }
+            },
+            "required": [
+              "enter",
+              "discover"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "factions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "memberships": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "objectives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "layer": {
+                "enum": [
+                  "public",
+                  "faction",
+                  "personal"
+                ]
+              },
+              "role_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "faction_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "condition": {
+                "$ref": "#/$defs/condition"
+              },
+              "latch": {
+                "type": "boolean"
+              },
+              "membership_policy": {
+                "enum": [
+                  "follow_current",
+                  "retain_assigned",
+                  "retire"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "layer",
+              "role_ids",
+              "condition",
+              "latch",
+              "membership_policy"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "interaction_roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "action_roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "npcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "schedule": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "round": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "link_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "round",
+                    "link_id"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "location",
+              "schedule"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 512
+            }
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "rules",
+    "roles",
+    "locations",
+    "links",
+    "objects",
+    "clues",
+    "actions",
+    "templates",
+    "events",
+    "initial",
+    "media",
+    "c3"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ruxi:c3:story",
+  "$defs": {
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "all",
+                "any"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "not"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/condition"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "eq",
+                "ne",
+                "gte",
+                "lte"
+              ]
+            },
+            "ref": {
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "ref",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "has_knowledge",
+                "owns"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "required": [
+            "op",
+            "ref"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "effect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "set"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "ref",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "move",
+                "end"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "required": [
+            "op",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "reveal"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "audience": {
+              "enum": [
+                "self",
+                "all",
+                "participants"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "ref",
+            "audience"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "grant"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "required": [
+            "op",
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "cue"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "audience": {
+              "enum": [
+                "self",
+                "all",
+                "participants"
+              ]
+            },
+            "blocking": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "op",
+            "ref",
+            "audience",
+            "blocking"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "start_vote"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "required": [
+            "op",
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "discover"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "audience": {
+              "enum": [
+                "self",
+                "all",
+                "participants"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "ref",
+            "audience"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "destroy"
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "ref"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

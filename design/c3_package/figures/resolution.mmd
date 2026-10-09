@@ -1,0 +1,15 @@
+sequenceDiagram
+ participant P as 玩家
+ participant R as 房间规则
+ participant D as 持久存储
+ participant V as 授权投影
+ P->>R: 请求互动报价
+ R-->>P: 费用 概率或输入规则
+ P->>R: 提交相同命令ID
+ R->>D: 创建意图并预留行动点
+ R-->>P: 已排队
+ Note over R,D: 本步锁定 按轮换席位结算
+ R->>D: 重查依赖 骰子记录只创建一次
+ R->>D: 原子提交状态 次数 回执与投影
+ D->>V: 提交后发送成员消息
+ V-->>P: 授权结果与地图变化

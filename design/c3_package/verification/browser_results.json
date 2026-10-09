@@ -1,0 +1,101 @@
+{
+  "checks": [
+    {
+      "name": "角色地图不显示隐藏地点卡",
+      "status": "PASS"
+    },
+    {
+      "name": "未观察远处变化提示待确认",
+      "status": "PASS"
+    },
+    {
+      "name": "技师知道维修间",
+      "status": "PASS"
+    },
+    {
+      "name": "费用修改同步地图和摘要",
+      "status": "PASS"
+    },
+    {
+      "name": "撤销恢复费用",
+      "status": "PASS"
+    },
+    {
+      "name": "场景深入保持面包屑",
+      "status": "PASS"
+    },
+    {
+      "name": "保存后重新载入",
+      "status": "PASS"
+    },
+    {
+      "name": "工作台页面无水平溢出 390",
+      "status": "PASS"
+    },
+    {
+      "name": "工作台页面无水平溢出 1024",
+      "status": "PASS"
+    },
+    {
+      "name": "工作台页面无水平溢出 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "排队仅预留不扣费",
+      "status": "PASS"
+    },
+    {
+      "name": "取消未锁定不扣费",
+      "status": "PASS"
+    },
+    {
+      "name": "错误密码扣费并计次",
+      "status": "PASS"
+    },
+    {
+      "name": "正确密码完成",
+      "status": "PASS"
+    },
+    {
+      "name": "结果不重复结算",
+      "status": "PASS"
+    },
+    {
+      "name": "已成功互动重开仍不可提交",
+      "status": "PASS"
+    },
+    {
+      "name": "固定骰子结果呈现",
+      "status": "PASS"
+    },
+    {
+      "name": "减动效不播放动画",
+      "status": "PASS"
+    },
+    {
+      "name": "断线禁止新增提交",
+      "status": "PASS"
+    },
+    {
+      "name": "互动页无水平溢出 390",
+      "status": "PASS"
+    },
+    {
+      "name": "互动页无水平溢出 768",
+      "status": "PASS"
+    },
+    {
+      "name": "互动页无水平溢出 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "无JS运行错误",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "本地模拟不是正式React Flow或Flutter",
+    "密码与骰子公开测试夹具不提供安全保障"
+  ]
+}

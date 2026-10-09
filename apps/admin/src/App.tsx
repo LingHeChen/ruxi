@@ -323,7 +323,7 @@ export function AdminApp() {
             <Route path="stories" element={<Projects />} />
             <Route path="stories/:id/releases" element={<Releases />} />
             <Route
-              path="stories/:id/world"
+              path="stories/:id/world/:location?/:subview?/:interaction?"
               element={
                 <Suspense fallback={<Spin />}>
                   <World />

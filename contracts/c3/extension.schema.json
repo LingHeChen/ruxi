@@ -1,0 +1,617 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ruxi:c3:extension",
+  "title": "C3 extension profile only",
+  "type": "object",
+  "properties": {
+    "profile_version": {
+      "const": 1
+    },
+    "suggested_content_version": {
+      "const": 4
+    },
+    "map_mode": {
+      "enum": [
+        "full",
+        "explore",
+        "clue",
+        "mixed"
+      ]
+    },
+    "passages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "a": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "b": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "barrier_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ab": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "cost": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "discover_if": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "eq",
+                      "known",
+                      "always"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "boolean",
+                      "integer"
+                    ]
+                  }
+                },
+                "required": [
+                  "op"
+                ],
+                "additionalProperties": false
+              },
+              "enter_if": {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "eq",
+                      "known",
+                      "always"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "boolean",
+                      "integer"
+                    ]
+                  }
+                },
+                "required": [
+                  "op"
+                ],
+                "additionalProperties": false
+              },
+              "arrival_events": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                }
+              }
+            },
+            "required": [
+              "enabled",
+              "cost",
+              "discover_if",
+              "enter_if",
+              "arrival_events"
+            ],
+            "additionalProperties": false
+          },
+          "ba": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "cost": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "discover_if": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "enum": [
+                          "eq",
+                          "known",
+                          "always"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "boolean",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "enter_if": {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "enum": [
+                          "eq",
+                          "known",
+                          "always"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "boolean",
+                          "integer"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "arrival_events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    }
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "cost",
+                  "discover_if",
+                  "enter_if",
+                  "arrival_events"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "a",
+          "b",
+          "barrier_id",
+          "ab",
+          "ba"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "target_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "kind": {
+                "enum": [
+                  "password"
+                ]
+              },
+              "cost": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "attempts": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "enum": [
+                      "actor",
+                      "room"
+                    ]
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "reset_event": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "scope",
+                  "max",
+                  "reset_event"
+                ],
+                "additionalProperties": false
+              },
+              "on_success": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "enum": [
+                        "set_barrier",
+                        "reveal",
+                        "set_flag",
+                        "grant_item",
+                        "leave_trace",
+                        "reset_attempts",
+                        "set_membership"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "integer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "on_failure": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "enum": [
+                        "set_barrier",
+                        "reveal",
+                        "set_flag",
+                        "grant_item",
+                        "leave_trace",
+                        "reset_attempts",
+                        "set_membership"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "integer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "audience": {
+                "enum": [
+                  "actor",
+                  "observers",
+                  "public"
+                ]
+              },
+              "format": {
+                "enum": [
+                  "pin",
+                  "text"
+                ]
+              },
+              "normalization": {
+                "enum": [
+                  "exact",
+                  "nfkc_trim_casefold"
+                ]
+              },
+              "min_length": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "max_length": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "answer_secret_ref": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            },
+            "required": [
+              "id",
+              "target_id",
+              "kind",
+              "cost",
+              "attempts",
+              "on_success",
+              "on_failure",
+              "audience",
+              "format",
+              "normalization",
+              "min_length",
+              "max_length",
+              "answer_secret_ref"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "target_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "kind": {
+                "enum": [
+                  "check"
+                ]
+              },
+              "cost": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "attempts": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "enum": [
+                      "actor",
+                      "room"
+                    ]
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "reset_event": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "scope",
+                  "max",
+                  "reset_event"
+                ],
+                "additionalProperties": false
+              },
+              "on_success": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "enum": [
+                        "set_barrier",
+                        "reveal",
+                        "set_flag",
+                        "grant_item",
+                        "leave_trace",
+                        "reset_attempts",
+                        "set_membership"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "integer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "on_failure": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "enum": [
+                        "set_barrier",
+                        "reveal",
+                        "set_flag",
+                        "grant_item",
+                        "leave_trace",
+                        "reset_attempts",
+                        "set_membership"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "boolean",
+                        "integer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "ref"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "audience": {
+                "enum": [
+                  "actor",
+                  "observers",
+                  "public"
+                ]
+              },
+              "base_target": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "modifiers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "when": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "eq",
+                            "known",
+                            "always"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "value": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "delta": {
+                      "type": "integer",
+                      "minimum": -100,
+                      "maximum": 100
+                    },
+                    "visibility": {
+                      "enum": [
+                        "actor"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "when",
+                    "delta",
+                    "visibility"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "formula": {
+                "enum": [
+                  "1d100_lte"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "target_id",
+              "kind",
+              "cost",
+              "attempts",
+              "on_success",
+              "on_failure",
+              "audience",
+              "base_target",
+              "modifiers",
+              "formula"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "profile_version",
+    "suggested_content_version",
+    "map_mode",
+    "passages",
+    "interactions"
+  ],
+  "additionalProperties": false
+}

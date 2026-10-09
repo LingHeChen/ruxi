@@ -11,7 +11,9 @@ class C2ViewReducer {
   String stream = '';
   int seq = 0;
   void snapshot(Json value) {
-    if (value['protocol_version'] != 2) throw ApiError('UPGRADE_REQUIRED');
+    if (![2, 3].contains(value['protocol_version'])) {
+      throw ApiError('UPGRADE_REQUIRED');
+    }
     blocks = Map<String, dynamic>.from(value['blocks']);
     stream = value['stream_id'];
     seq = value['view_seq'];
@@ -139,7 +141,7 @@ class C2Client extends ChangeNotifier {
         onDone: () => _disconnected(attempt),
       );
       _send('phx_join', {
-        'protocol_version': 2,
+        'protocol_version': snapshot?['protocol_version'] ?? 2,
         'control_epoch': ticket['control_epoch'],
       });
       _heartbeat = Timer.periodic(
@@ -175,7 +177,7 @@ class C2Client extends ChangeNotifier {
   Future<void> command(String type, [Json body = const {}]) async {
     if (busy || pending != null || snapshot == null) return;
     final envelope = <String, dynamic>{
-      'protocol_version': 2,
+      'protocol_version': snapshot?['protocol_version'] ?? 2,
       'command_id': uuid.v4(),
       'control_epoch': snapshot!['control_epoch'],
       'step_id': view?['room']['step_id'],

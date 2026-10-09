@@ -743,3 +743,13 @@ a {
   width: 10px;
   height: 10px;
 }
+
+/* C3 world cards keep their size independent of scene density. */
+.world-location-node { color:#172a25; height:100%; padding:18px; background:#f5f6f3; border-radius:16px; }
+.world-location-node .location-node-title { padding:0; gap:8px; }
+.location-node-title strong { font-size:16px; }
+.location-node-title small { font-size:12px; }
+.location-node-summary { margin:12px 0 8px; font-size:14px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.location-node-visibility { font-size:12px; color:#245f50; }
+.world-breadcrumb { flex-wrap:wrap; }
+.scene-object-grid { height:100%; overflow:auto; padding:24px; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:16px; align-content:start; background:#f5f6f3; }

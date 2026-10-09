@@ -1,0 +1,65 @@
+{
+  "password": {
+    "protocol_version": 3,
+    "command_id": "cmd-pw-01",
+    "control_epoch": 1,
+    "step_id": "r1s1",
+    "type": "interaction.submit",
+    "body": {
+      "quote_id": "q-pw-01",
+      "kind": "password",
+      "input": {
+        "answer": "0427"
+      }
+    }
+  },
+  "check": {
+    "protocol_version": 3,
+    "command_id": "cmd-roll-01",
+    "control_epoch": 1,
+    "step_id": "r1s1",
+    "type": "interaction.submit",
+    "body": {
+      "quote_id": "q-roll-01",
+      "kind": "check",
+      "input": {}
+    }
+  },
+  "quote_check": {
+    "quote_id": "q-roll-01",
+    "interaction_id": "repair_power",
+    "cost": 1,
+    "check_preview": {
+      "formula": "1d100_lte",
+      "target": 60,
+      "modifiers": [
+        {
+          "label": "技师专长",
+          "delta": 10
+        }
+      ]
+    },
+    "attempts_remaining": 1,
+    "expires_at": "2026-10-09T09:00:30Z"
+  },
+  "private_result": {
+    "resolution_id": "res-01",
+    "kind": "check",
+    "outcome": "success",
+    "ap_delta": -1,
+    "roll_id": "roll-01",
+    "roll": 37,
+    "target": 60
+  },
+  "map_patch": {
+    "upsert": [
+      {
+        "id": "archive",
+        "knowledge": "located",
+        "visited": true,
+        "last_seen_tick": 1
+      }
+    ],
+    "remove": []
+  }
+}

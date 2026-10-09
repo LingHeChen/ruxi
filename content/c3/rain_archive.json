@@ -1,0 +1,645 @@
+{
+  "schema_version": 4,
+  "id": "rain_archive",
+  "title": "雨夜档案馆",
+  "rules": {
+    "ap_per_round": 3,
+    "step_timeout_s": 45,
+    "proposal_ttl_s": 60,
+    "round_limit": 4
+  },
+  "roles": [
+    {
+      "id": "investigator",
+      "label": "调查员",
+      "location": "duty",
+      "knowledge": [],
+      "goals": [
+        "提交登记簿或其副本，并安全撤离。"
+      ]
+    },
+    {
+      "id": "technician",
+      "label": "技师",
+      "location": "duty",
+      "knowledge": [
+        "maintenance_hint"
+      ],
+      "goals": [
+        "尝试修复电源，并安全撤离。"
+      ]
+    },
+    {
+      "id": "custodian",
+      "label": "保管员",
+      "location": "duty",
+      "knowledge": [],
+      "goals": [
+        "隐秘目标：销毁登记簿原件，阻止副本提交。",
+        "安全撤离。"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "duty",
+      "label": "值班室",
+      "description": "雨夜封馆之前，留下登记簿中的证据，并找到安全出口。",
+      "discovered": true
+    },
+    {
+      "id": "archive",
+      "label": "档案室",
+      "description": "保险柜里保存着最后一本登记簿。进门之后，返程的门可能锁闭。",
+      "discovered": true
+    },
+    {
+      "id": "exit",
+      "label": "安全出口",
+      "description": "这里通向雨幕。离馆之后仍可等待同伴。",
+      "discovered": false
+    },
+    {
+      "id": "maintenance",
+      "label": "维修间",
+      "description": "备用电源仍有修复的机会。",
+      "discovered": false
+    }
+  ],
+  "links": [],
+  "objects": [
+    {
+      "id": "safe",
+      "label": "保险柜",
+      "location": "archive",
+      "tags": [],
+      "description": "输入四位密码。"
+    },
+    {
+      "id": "generator",
+      "label": "备用电源",
+      "location": "maintenance",
+      "tags": [],
+      "description": "尝试修复，失败仍可撤离。"
+    },
+    {
+      "id": "ledger",
+      "label": "登记簿",
+      "location": "archive",
+      "tags": [
+        "evidence"
+      ],
+      "description": "原始投递登记。"
+    }
+  ],
+  "clues": [
+    {
+      "id": "code",
+      "label": "收据上的数字",
+      "text": "收据背面写着：0427。",
+      "shareable": true
+    },
+    {
+      "id": "maintenance_hint",
+      "label": "熟悉的维修间",
+      "text": "你知道值班室旁有一间维修间。",
+      "shareable": false
+    },
+    {
+      "id": "burn_mark",
+      "label": "烧焦痕迹",
+      "text": "修电失败留下的烧焦痕迹。备用电源无法恢复，但安全出口仍可通行。",
+      "shareable": true
+    },
+    {
+      "id": "failed_keypad",
+      "label": "错误输入",
+      "text": "保险柜没有打开。这次输入已消耗一次尝试。",
+      "shareable": false
+    },
+    {
+      "id": "copy",
+      "label": "登记簿副本",
+      "text": "你已抄录登记簿。即使原件损毁，这份记录仍然存在。",
+      "shareable": true
+    },
+    {
+      "id": "ash",
+      "label": "纸张灰烬",
+      "text": "登记簿被焚毁，地面留下灰烬。",
+      "shareable": true
+    }
+  ],
+  "actions": [
+    {
+      "id": "read_receipt",
+      "label": "查看封馆收据",
+      "location": "duty",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "display_condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "code",
+          "audience": "self"
+        },
+        {
+          "op": "discover",
+          "ref": "exit",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    },
+    {
+      "id": "take_ledger",
+      "label": "拿取登记簿",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.safe_open",
+            "value": true
+          },
+          {
+            "op": "eq",
+            "ref": "world.destroyed",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.safe_open",
+            "value": true
+          },
+          {
+            "op": "eq",
+            "ref": "world.destroyed",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "ledger"
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    },
+    {
+      "id": "copy_ledger",
+      "label": "抄录登记簿",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "display_condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "copy",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    },
+    {
+      "id": "submit_copy",
+      "label": "提交抄录副本",
+      "location": "exit",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "has_knowledge",
+        "ref": "copy"
+      },
+      "display_condition": {
+        "op": "has_knowledge",
+        "ref": "copy"
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.submitted",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    },
+    {
+      "id": "submit_ledger",
+      "label": "提交登记簿",
+      "location": "exit",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "display_condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.submitted",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    },
+    {
+      "id": "destroy_ledger",
+      "label": "焚毁登记簿原件",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "display_condition": {
+        "op": "owns",
+        "ref": "ledger"
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.destroyed",
+          "value": true
+        },
+        {
+          "op": "reveal",
+          "ref": "ash",
+          "audience": "self"
+        },
+        {
+          "op": "destroy",
+          "ref": "ledger"
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次操作都会推进这个雨夜。",
+      "threshold": null
+    }
+  ],
+  "templates": [],
+  "events": [
+    {
+      "id": "curfew",
+      "trigger": "round_end",
+      "priority": 100,
+      "once": true,
+      "condition": {
+        "op": "gte",
+        "ref": "clock.round",
+        "value": 4
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "closing"
+        }
+      ]
+    }
+  ],
+  "initial": {
+    "world": {
+      "safe_open": false,
+      "submitted": false,
+      "destroyed": false
+    },
+    "inventory": {
+      "investigator": [],
+      "technician": [],
+      "custodian": []
+    }
+  },
+  "media": [
+    {
+      "id": "opening",
+      "kind": "text",
+      "summary": "雨夜封馆在即。每个人都有自己的任务。先读收据，找到出口；保险柜需要四位密码。第一人进入档案室后返程会封闭，修电可能恢复它，安全出口始终是另一条退路。",
+      "audience": "public",
+      "uri": ""
+    },
+    {
+      "id": "closing",
+      "kind": "text",
+      "summary": "封馆时刻到了。雨夜中的行动已经结束，你可以查看自己的记录。",
+      "audience": "public",
+      "uri": ""
+    }
+  ],
+  "votes": [],
+  "c3": {
+    "profile_version": 1,
+    "suggested_content_version": 4,
+    "map_mode": "clue",
+    "passages": [
+      {
+        "id": "duty_archive",
+        "a": "duty",
+        "b": "archive",
+        "barrier_id": "return_gate",
+        "ab": {
+          "enabled": true,
+          "cost": 1,
+          "discover_if": {
+            "op": "always"
+          },
+          "enter_if": {
+            "op": "always"
+          },
+          "arrival_events": [
+            "seal_return"
+          ]
+        },
+        "ba": {
+          "enabled": true,
+          "cost": 1,
+          "discover_if": {
+            "op": "always"
+          },
+          "enter_if": {
+            "op": "eq",
+            "ref": "return_gate",
+            "value": "open"
+          },
+          "arrival_events": []
+        }
+      },
+      {
+        "id": "archive_exit",
+        "a": "archive",
+        "b": "exit",
+        "barrier_id": null,
+        "ab": {
+          "enabled": true,
+          "cost": 1,
+          "discover_if": {
+            "op": "always"
+          },
+          "enter_if": {
+            "op": "always"
+          },
+          "arrival_events": []
+        },
+        "ba": null
+      },
+      {
+        "id": "duty_maintenance",
+        "a": "duty",
+        "b": "maintenance",
+        "barrier_id": null,
+        "ab": {
+          "enabled": true,
+          "cost": 1,
+          "discover_if": {
+            "op": "known",
+            "ref": "maintenance_hint"
+          },
+          "enter_if": {
+            "op": "always"
+          },
+          "arrival_events": []
+        },
+        "ba": {
+          "enabled": true,
+          "cost": 1,
+          "discover_if": {
+            "op": "always"
+          },
+          "enter_if": {
+            "op": "always"
+          },
+          "arrival_events": []
+        }
+      }
+    ],
+    "interactions": [
+      {
+        "id": "safe_password",
+        "target_id": "safe",
+        "kind": "password",
+        "cost": 1,
+        "attempts": {
+          "scope": "room",
+          "max": 3,
+          "reset_event": null
+        },
+        "on_success": [
+          {
+            "op": "set_flag",
+            "ref": "safe_open",
+            "value": true
+          }
+        ],
+        "on_failure": [
+          {
+            "op": "leave_trace",
+            "ref": "failed_keypad"
+          }
+        ],
+        "audience": "actor",
+        "format": "pin",
+        "normalization": "exact",
+        "min_length": 4,
+        "max_length": 4,
+        "answer_secret_ref": "safe_code"
+      },
+      {
+        "id": "repair_power",
+        "target_id": "generator",
+        "kind": "check",
+        "cost": 1,
+        "attempts": {
+          "scope": "actor",
+          "max": 1,
+          "reset_event": null
+        },
+        "on_success": [
+          {
+            "op": "set_barrier",
+            "ref": "return_gate",
+            "value": "open"
+          }
+        ],
+        "on_failure": [
+          {
+            "op": "leave_trace",
+            "ref": "burn_mark"
+          }
+        ],
+        "audience": "actor",
+        "base_target": 50,
+        "modifiers": [
+          {
+            "label": "技师专长",
+            "when": {
+              "op": "eq",
+              "ref": "role",
+              "value": "technician"
+            },
+            "delta": 10,
+            "visibility": "actor"
+          }
+        ],
+        "formula": "1d100_lte"
+      }
+    ]
+  },
+  "secrets": {
+    "safe_code": {
+      "answer": "0427",
+      "aliases": []
+    }
+  },
+  "c3_settings": {
+    "barriers": {
+      "return_gate": "open"
+    },
+    "arrival_rules": {
+      "seal_return": [
+        {
+          "op": "set_barrier",
+          "ref": "return_gate",
+          "value": "blocked"
+        }
+      ]
+    },
+    "initial_known_locations": {
+      "technician": [
+        "maintenance"
+      ]
+    },
+    "interaction_labels": {
+      "safe_password": {
+        "label": "输入保险柜密码",
+        "risk_text": "错误输入扣除1点余力；全房间共3次尝试，耗尽后锁定。"
+      },
+      "repair_power": {
+        "label": "修复备用电源",
+        "risk_text": "失败留下烧焦痕迹；仍可经档案室前往安全出口。"
+      }
+    },
+    "factions": [
+      "investigation",
+      "cover"
+    ],
+    "memberships": {
+      "investigator": "investigation",
+      "technician": "investigation",
+      "custodian": "cover"
+    },
+    "action_roles": {
+      "destroy_ledger": [
+        "custodian"
+      ]
+    },
+    "interaction_roles": {
+      "repair_power": [
+        "technician"
+      ]
+    },
+    "objectives": [
+      {
+        "id": "escape",
+        "label": "安全撤离",
+        "layer": "public",
+        "role_ids": [],
+        "condition": {
+          "op": "eq",
+          "ref": "actor.location",
+          "value": "exit"
+        },
+        "latch": false,
+        "membership_policy": "follow_current"
+      },
+      {
+        "id": "submit",
+        "label": "保存调查证据",
+        "layer": "faction",
+        "faction_id": "investigation",
+        "role_ids": [],
+        "condition": {
+          "op": "eq",
+          "ref": "world.submitted",
+          "value": true
+        },
+        "latch": false,
+        "membership_policy": "follow_current"
+      },
+      {
+        "id": "cover",
+        "label": "销毁原件并阻止副本提交",
+        "layer": "faction",
+        "faction_id": "cover",
+        "role_ids": [],
+        "condition": {
+          "op": "all",
+          "args": [
+            {
+              "op": "eq",
+              "ref": "world.destroyed",
+              "value": true
+            },
+            {
+              "op": "eq",
+              "ref": "world.submitted",
+              "value": false
+            }
+          ]
+        },
+        "latch": false,
+        "membership_policy": "follow_current"
+      }
+    ]
+  }
+}

@@ -609,7 +609,10 @@ class RoomClient extends ChangeNotifier {
     final r = await request(
       'POST',
       '/api/v2/rooms',
-      {'release_id': detail['release_id']},
+      {
+        'release_id': detail['release_id'],
+        'capabilities': ['password_v1', 'check_v1', 'world_projection_v2'],
+      },
       false,
       false,
       {'Idempotency-Key': uuid.v4()},
@@ -622,7 +625,10 @@ class RoomClient extends ChangeNotifier {
     final r = await request(
       'POST',
       '/api/v2/rooms/join',
-      {'invite_code': code.trim().toUpperCase()},
+      {
+        'invite_code': code.trim().toUpperCase(),
+        'capabilities': ['password_v1', 'check_v1', 'world_projection_v2'],
+      },
       false,
       false,
       {'Idempotency-Key': uuid.v4()},
@@ -1061,6 +1067,16 @@ class RoomClient extends ChangeNotifier {
   static String explain(Object e) {
     final code = e is ApiError ? e.code : '';
     return const {
+          'INPUT_INVALID': '答案格式不符合要求，这次没有消耗余力或次数。',
+          'QUOTE_EXPIRED': '确认窗口已过期，请重新打开互动获取最新条件。',
+          'QUOTE_STALE': '判定条件已变化，这次没有消耗余力，请重新确认。',
+          'QUOTE_USED': '这次确认已提交，请查看原操作结果。',
+          'ATTEMPT_LOCKED': '尝试次数已耗尽，等待剧情中的解锁事件。',
+          'TARGET_UNAVAILABLE': '当前无法进行这项互动，请返回场景查看可用操作。',
+          'AP_INSUFFICIENT': '当前余力不足，这次操作没有执行。',
+          'STEP_CLOSED': '本步已结束，请等待下一步重新确认。',
+          'READING_REQUIRED': '请先读完当前剧情。',
+          'UNSUPPORTED_CAPABILITY': '此故事需要新版互动功能，请刷新或升级应用。',
           'ROLE_TAKEN': '角色已被队友选择',
           'ROOM_NOT_READY': '等待三位成员在线并准备',
           'NOT_ALLOWED': '当前条件不允许此操作',

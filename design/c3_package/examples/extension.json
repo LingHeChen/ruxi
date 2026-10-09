@@ -1,0 +1,128 @@
+{
+  "profile_version": 1,
+  "suggested_content_version": 4,
+  "map_mode": "mixed",
+  "passages": [
+    {
+      "id": "duty_archive",
+      "a": "duty",
+      "b": "archive",
+      "barrier_id": "return_gate",
+      "ab": {
+        "enabled": true,
+        "cost": 1,
+        "discover_if": {
+          "op": "always"
+        },
+        "enter_if": {
+          "op": "always"
+        },
+        "arrival_events": [
+          "seal_return"
+        ]
+      },
+      "ba": {
+        "enabled": true,
+        "cost": 1,
+        "discover_if": {
+          "op": "always"
+        },
+        "enter_if": {
+          "op": "eq",
+          "ref": "return_gate",
+          "value": "open"
+        },
+        "arrival_events": []
+      }
+    },
+    {
+      "id": "archive_exit",
+      "a": "archive",
+      "b": "exit",
+      "barrier_id": null,
+      "ab": {
+        "enabled": true,
+        "cost": 1,
+        "discover_if": {
+          "op": "always"
+        },
+        "enter_if": {
+          "op": "always"
+        },
+        "arrival_events": []
+      },
+      "ba": null
+    }
+  ],
+  "interactions": [
+    {
+      "id": "safe_password",
+      "target_id": "safe",
+      "kind": "password",
+      "cost": 1,
+      "attempts": {
+        "scope": "room",
+        "max": 3,
+        "reset_event": "repair_reset"
+      },
+      "on_success": [
+        {
+          "op": "set_flag",
+          "ref": "safe_open",
+          "value": true
+        }
+      ],
+      "on_failure": [
+        {
+          "op": "leave_trace",
+          "ref": "failed_keypad"
+        }
+      ],
+      "audience": "actor",
+      "format": "pin",
+      "normalization": "exact",
+      "min_length": 4,
+      "max_length": 4,
+      "answer_secret_ref": "safe_code"
+    },
+    {
+      "id": "repair_power",
+      "target_id": "generator",
+      "kind": "check",
+      "cost": 1,
+      "attempts": {
+        "scope": "actor",
+        "max": 1,
+        "reset_event": null
+      },
+      "on_success": [
+        {
+          "op": "set_barrier",
+          "ref": "return_gate",
+          "value": "open"
+        }
+      ],
+      "on_failure": [
+        {
+          "op": "leave_trace",
+          "ref": "burn_mark"
+        }
+      ],
+      "audience": "actor",
+      "base_target": 50,
+      "modifiers": [
+        {
+          "label": "技师专长",
+          "when": {
+            "op": "eq",
+            "ref": "role",
+            "value": "technician"
+          },
+          "delta": 10,
+          "visibility": "actor"
+        }
+      ],
+      "formula": "1d100_lte"
+    }
+  ]
+}

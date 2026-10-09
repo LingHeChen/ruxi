@@ -61,6 +61,7 @@ defmodule Ruxi.C2.Engine do
       "random_key" => Base.encode64(Keyword.get(opts, :random_key, :crypto.strong_rand_bytes(32)))
     }
 
+    s = s |> Ruxi.C3.Interactions.init() |> Ruxi.C3.World.init(now) |> Ruxi.C3.Domain.init()
     s = events(s, "room_start", nil, now)
     m = Enum.find(story["media"], &(&1["id"] == "opening" and &1["audience"] == "public"))
     if m, do: cue(s, m, "all", nil, true, now), else: s
@@ -83,7 +84,10 @@ defmodule Ruxi.C2.Engine do
   end
 
   def command(s, role, type, body, id, now) do
-    hash = U.hash(%{"actor" => role, "type" => type, "body" => body})
+    hash =
+      if s["engine_version"] == 3,
+        do: Ruxi.C3.Interactions.fingerprint(%{"actor" => role, "type" => type, "body" => body}),
+        else: U.hash(%{"actor" => role, "type" => type, "body" => body})
 
     key = to_string(role) <> ":" <> to_string(id)
 
@@ -97,13 +101,59 @@ defmodule Ruxi.C2.Engine do
       nil ->
         try do
           ensure(Map.has_key?(s["actors"], role), "FORBIDDEN")
-          {next, result} = dispatch(s, role, type, body, now)
+
+          {next, result} =
+            dispatch(
+              s,
+              role,
+              type,
+              if(type == "interaction.submit", do: Map.put(body, "__command_id", id), else: body),
+              now
+            )
+
           result = Map.merge(%{"command_id" => id, "status" => "committed"}, result)
           {:ok, put_in(next, ["receipts", key], %{"hash" => hash, "result" => result}), result}
         catch
+          {:c3_frozen, frozen, code} -> {:error, code, suspend(frozen, now)}
           {:c2, code} -> {:error, code, if(code == "RULE_LOOP", do: suspend(s, now), else: s)}
         end
     end
+  end
+
+  defp dispatch(s, role, "interaction.submit", body, now) do
+    planning!(s, now)
+    ensure(not actor(s, role)["ended"], "STEP_CLOSED")
+
+    ensure(
+      Enum.all?(s["cues"], fn c ->
+        not (c["blocking"] and
+               (c["audience"] == [role] or (s["engine_version"] == 3 and role in c["audience"])) and
+               not acknowledged?(s, role, c["id"]))
+      end),
+      "READING_REQUIRED"
+    )
+
+    {s, a, cipher} = Ruxi.C3.Interactions.submit(s, role, body, now)
+
+    ensure(
+      a["cost"] <= actor(s, role)["ap_remaining"] - actor(s, role)["ap_reserved"],
+      "AP_INSUFFICIENT"
+    )
+
+    id =
+      Ecto.UUID.cast!(
+        :crypto.hash(:sha256, role <> ":" <> s["step_id"] <> ":" <> body["__command_id"])
+        |> binary_part(0, 16)
+      )
+
+    i = %{"id" => id, "action" => a, "answer_cipher" => cipher}
+
+    s =
+      s
+      |> put_in(["intents", role], i)
+      |> update_actor(role, &Map.put(&1, "ap_reserved", a["cost"]))
+
+    {maybe_resolve(s, now), %{"status" => "queued", "intent_id" => id}}
   end
 
   defp dispatch(s, role, "action.submit", body, now) do
@@ -112,7 +162,9 @@ defmodule Ruxi.C2.Engine do
 
     ensure(
       Enum.all?(s["cues"], fn c ->
-        not (c["blocking"] and c["audience"] == [role] and not acknowledged?(s, role, c["id"]))
+        not (c["blocking"] and
+               (c["audience"] == [role] or (s["engine_version"] == 3 and role in c["audience"])) and
+               not acknowledged?(s, role, c["id"]))
       end),
       "READING_REQUIRED"
     )
@@ -197,6 +249,8 @@ defmodule Ruxi.C2.Engine do
           Map.update!(a, "knowledge", fn xs -> Enum.uniq([c["id"] | xs]) end)
         end)
       )
+
+    s = Ruxi.C3.Domain.knowledge(s, c["id"], audience, role)
 
     s =
       if MapSet.new(audience) == MapSet.new(Map.keys(s["actors"])),
@@ -391,7 +445,7 @@ defmodule Ruxi.C2.Engine do
   defp invalidate_proposal(s, _, _), do: s
 
   defp action!(s, "move:" <> id, _) do
-    l = Content.index(s["content"], "links")[id]
+    l = Enum.find(Ruxi.C3.World.links(s), &(&1["id"] == id))
     ensure(l != nil, "FORBIDDEN")
 
     %{
@@ -406,7 +460,7 @@ defmodule Ruxi.C2.Engine do
       "effects" => [%{"op" => "move", "value" => l["to"]}],
       "failure" => [],
       "max_uses" => nil,
-      "required_participants" => 1
+      "required_participants" => l["required_participants"] || 1
     }
   end
 
@@ -422,7 +476,10 @@ defmodule Ruxi.C2.Engine do
   defp valid?(s, r, a, now) do
     member = actor(s, r)
     target = Content.index(s["content"], "objects")[a["target"]]
-    located = member["location"] == a["location"]
+    allowed_roles = get_in(s, ["content", "c3_settings", "action_roles", a["id"]])
+
+    located =
+      member["location"] == a["location"] and (is_nil(allowed_roles) or r in allowed_roles)
 
     known_target =
       if a["link"],
@@ -433,7 +490,10 @@ defmodule Ruxi.C2.Engine do
     uses = is_nil(a["max_uses"]) or Map.get(member["used"], a["id"], 0) < a["max_uses"]
     grants = Enum.all?(a["effects"], &(&1["op"] != "grant" or is_nil(s["ownership"][&1["ref"]])))
 
-    located and known_target and tag and uses and grants and condition(s, a["condition"], r, now) and
+    (is_nil(get_in(a, ["link", "direction"])) or Ruxi.C3.World.traversable?(s, a["link"], r, now)) and
+      Ruxi.C3.Interactions.valid_action?(s, r, a, now) and located and known_target and tag and
+      uses and
+      grants and condition(s, a["condition"], r, now) and
       (is_nil(a["display_condition"]) or condition(s, a["display_condition"], r, now))
   end
 
@@ -487,6 +547,7 @@ defmodule Ruxi.C2.Engine do
 
       {:ok, settle(s, now)}
     catch
+      {:c3_frozen, frozen, code} -> {:error, code, suspend(frozen, now)}
       {:c2, code} -> {:error, code, if(code == "RULE_LOOP", do: suspend(s, now), else: s)}
     end
   end
@@ -504,6 +565,17 @@ defmodule Ruxi.C2.Engine do
   end
 
   defp settle(s, now) do
+    try do
+      do_settle(s, now)
+    catch
+      {:c2, "RULE_LOOP"} ->
+        if s["engine_version"] == 3,
+          do: throw({:c3_frozen, s, "RULE_LOOP"}),
+          else: throw({:c2, "RULE_LOOP"})
+    end
+  end
+
+  defp do_settle(s, now) do
     ensure(not Enum.any?(s["settlements"], &(&1["step_id"] == s["step_id"])), "STEP_CLOSED")
     before = s
     order = order(s)
@@ -547,12 +619,26 @@ defmodule Ruxi.C2.Engine do
             if valid do
               subject = Enum.find(Enum.map(s["content"]["roles"], & &1["id"]), &(&1 in group))
 
-              roll =
-                if action["threshold"],
-                  do: roll(state, state["intents"][subject]["id"]),
-                  else: nil
+              {state, success, roll, action_effects} =
+                if action["interaction"] do
+                  Ruxi.C3.Interactions.execute(
+                    state,
+                    subject,
+                    action,
+                    state["intents"][subject],
+                    now
+                  )
+                else
+                  roll =
+                    if action["threshold"],
+                      do: roll(state, state["intents"][subject]["id"]),
+                      else: nil
 
-              success = is_nil(roll) or roll <= action["threshold"]
+                  success = is_nil(roll) or roll <= action["threshold"]
+
+                  {state, success, roll,
+                   if(success, do: action["effects"], else: action["failure"])}
+                end
 
               state =
                 Enum.reduce(group, state, fn role, acc ->
@@ -567,11 +653,14 @@ defmodule Ruxi.C2.Engine do
               state =
                 state
                 |> effects(
-                  if(success, do: action["effects"], else: action["failure"]),
+                  action_effects,
                   subject,
                   now
                 )
+                |> Ruxi.C3.World.arrival(action, group, now)
+                |> arrival_events(action, group, now)
                 |> events("action_end", subject, now)
+                |> Ruxi.C3.World.observe(now)
 
               entries =
                 Enum.map(
@@ -620,13 +709,14 @@ defmodule Ruxi.C2.Engine do
       "step" => before["step"],
       "order" => order,
       "results" => results,
-      "intents" => before["intents"],
+      "intents" =>
+        Map.new(before["intents"], fn {r, i} -> {r, Map.drop(i, ["answer_cipher"])} end),
       "world" => s["world"]
     }
 
     s = s |> Map.update!("settlements", &(&1 ++ [record])) |> Map.put("intents", %{})
     s = if s["status"] == "active", do: advance(s, now), else: s
-    expire_offers(s, now)
+    s |> expire_offers(now) |> Ruxi.C3.World.observe(now)
   end
 
   defp roll(s, id) do
@@ -677,7 +767,30 @@ defmodule Ruxi.C2.Engine do
     end
   end
 
+  defp arrival_events(s, a, roles, now) do
+    if s["engine_version"] == 3 and a["link"] do
+      s = Map.put(s, "last_arrival", %{"moved_roles" => roles, "location" => a["target"]})
+      events(s, if(length(roles) > 1, do: "group_arrival", else: "arrival"), hd(roles), now)
+    else
+      s
+    end
+  end
+
+  def apply_effects(s, es, r, now), do: effects(s, es, r, now)
+
   defp effects(s, es, r, now), do: Enum.reduce(es, s, &effect(&2, &1, r, now))
+
+  defp effect(s, %{"op" => "set_membership", "ref" => role, "value" => faction}, _, _),
+    do: put_in(s, ["actors", role, "faction"], faction)
+
+  defp effect(s, %{"op" => "set_barrier", "ref" => ref, "value" => v}, _, _),
+    do: put_in(s, ["barriers", ref], v)
+
+  defp effect(s, %{"op" => "reset_attempts", "ref" => ref}, _, _),
+    do:
+      Map.update!(s, "attempts", fn xs ->
+        xs |> Enum.reject(fn {k, _} -> String.starts_with?(k, ref <> ":") end) |> Map.new()
+      end)
 
   defp effect(s, %{"op" => "set", "ref" => "world." <> k, "value" => v}, _, _),
     do: put_in(s, ["world", k], v)
@@ -688,7 +801,13 @@ defmodule Ruxi.C2.Engine do
   defp effect(s, %{"op" => op, "ref" => ref, "audience" => audience}, r, _)
        when op in ~w(reveal discover) do
     field = if op == "reveal", do: "knowledge", else: "known_locations"
-    roles = if audience == "all", do: Map.keys(s["actors"]), else: [r]
+
+    roles =
+      cond do
+        audience == "all" -> Map.keys(s["actors"])
+        audience == "participants" -> s["last_arrival"]["moved_roles"]
+        true -> [r]
+      end
 
     s =
       Enum.reduce(
@@ -699,10 +818,15 @@ defmodule Ruxi.C2.Engine do
         end)
       )
 
+    s = if op == "reveal", do: Ruxi.C3.Domain.knowledge(s, ref, roles, r), else: s
+
     if op == "reveal" and audience == "all",
       do: Map.update!(s, "shared", &Enum.uniq([ref | &1])),
       else: s
   end
+
+  defp effect(s, %{"op" => "destroy", "ref" => item}, _, _),
+    do: update_in(s, ["ownership"], &Map.delete(&1, item))
 
   defp effect(s, %{"op" => "grant", "ref" => item}, r, _),
     do: put_in(s, ["ownership", item], %{"owner" => r, "version" => 1})
@@ -745,7 +869,11 @@ defmodule Ruxi.C2.Engine do
     })
   end
 
-  defp events(s, trigger, r, now), do: events(s, trigger, r, now, 0)
+  defp events(s, trigger, r, now) do
+    s = if trigger == "round_end", do: Ruxi.C3.Domain.tick(s, now), else: s
+    events(s, trigger, r, now, 0) |> Ruxi.C3.Domain.evaluate(now)
+  end
+
   defp events(_, _, _, _, n) when n >= 32, do: throw({:c2, "RULE_LOOP"})
 
   defp events(s, trigger, r, now, n) do
@@ -766,7 +894,12 @@ defmodule Ruxi.C2.Engine do
   end
 
   defp cue(s, m, audience, r, blocking, now) do
-    roles = if audience == "all", do: Map.keys(s["actors"]), else: [r]
+    roles =
+      cond do
+        audience == "all" -> Map.keys(s["actors"])
+        audience == "participants" -> s["last_arrival"]["moved_roles"]
+        true -> [r]
+      end
 
     ensure(
       m["audience"] == "public" or Enum.all?(roles, &(&1 in m["audience"])),
@@ -915,9 +1048,13 @@ defmodule Ruxi.C2.Engine do
         })
       end)
 
+    links = if s["engine_version"] == 3, do: Ruxi.C3.World.projected_links(s, r, now), else: links
+
     actions =
       Enum.filter(story["actions"], fn x ->
-        x["location"] == a["location"] and
+        (is_nil(get_in(story, ["c3_settings", "action_roles", x["id"]])) or
+           r in get_in(story, ["c3_settings", "action_roles", x["id"]])) and
+          x["location"] == a["location"] and
           (is_nil(x["display_condition"]) or condition(s, x["display_condition"], r, now))
       end)
       |> Enum.map(fn x ->
@@ -930,12 +1067,20 @@ defmodule Ruxi.C2.Engine do
 
     knowledge =
       Enum.filter(story["clues"], &(&1["id"] in a["knowledge"]))
-      |> Enum.map(&Map.take(&1, ~w(id label text shareable)))
+      |> Enum.map(fn clue ->
+        Map.take(clue, ~w(id label text shareable))
+        |> Map.merge(get_in(a, ["knowledge_records", clue["id"]]) || %{})
+      end)
 
     team =
       Enum.map(story["roles"], fn other ->
         m = actor(s, other["id"])
-        loc = if m["location"] in a["known_locations"], do: m["location"], else: nil
+
+        loc =
+          if m["location"] in a["known_locations"] and
+               (s["engine_version"] == 2 or m["location"] == a["location"]),
+             do: m["location"],
+             else: nil
 
         %{
           "role_id" => other["id"],
@@ -997,10 +1142,17 @@ defmodule Ruxi.C2.Engine do
       "self" =>
         Map.take(a, ~w(location ap_remaining ap_reserved ended))
         |> Map.put("role_id", r)
-        |> Map.put("goals", own["goals"] || []),
+        |> Map.put("goals", own["goals"] || [])
+        |> Map.put("faction", a["faction"])
+        |> Map.put("objectives", Ruxi.C3.Domain.objectives(s, r, now)),
       "map" => %{"locations" => locations, "links" => links},
       "actions" => actions,
+      "interactions" => Ruxi.C3.Interactions.project(s, r),
+      "interaction_results" =>
+        Enum.filter(s["interaction_results"] || [], &(&1["actor"] == r))
+        |> Enum.map(&Map.drop(&1, ["actor"])),
       "knowledge" => knowledge,
+      "npcs" => Ruxi.C3.Domain.project_npcs(s, r),
       "own_results" => Enum.take(action_history, -8),
       "action_history" => action_history,
       "own_intent" => if(s["intents"][r], do: Map.take(s["intents"][r], ~w(id)), else: nil),

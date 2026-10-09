@@ -19,6 +19,7 @@ import {
 } from "antd";
 import {
   ReactFlow,
+  useViewport,
   Background,
   Controls,
   MiniMap,
@@ -31,16 +32,35 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, type Json } from "../api";
 import { PageTitle, useAuth } from "../shared";
+import c3Story from "../../../../contracts/c3/story.schema.json";
+import c3Schema from "../../../../contracts/c3/extension.schema.json";
 import { C2Field, c2Schema, resolve, seed } from "../components/C2Field";
 function LocationNode({ data }: NodeProps) {
+  const { zoom } = useViewport();
   return (
     <div className="world-location-node">
       <Handle type="target" position={Position.Left} />
       <div className="location-node-title">
         <span className="location-symbol">⌖</span>
-        <strong>{String(data.label)}</strong>
-        <small>{String(data.count ?? 0)} 项内容</small>
+        <strong style={{ fontSize: Math.max(16, 14 / zoom) }}>
+          {String(data.label)}
+        </strong>
+        <small style={{ fontSize: Math.max(12, 12 / zoom) }}>
+          {String(data.count ?? 0)} 项内容
+        </small>
       </div>
+      <p
+        className="location-node-summary"
+        style={{ fontSize: Math.max(14, 12 / zoom) }}
+      >
+        {String(data.description ?? "")}
+      </p>
+      <span
+        className="location-node-visibility"
+        style={{ fontSize: Math.max(12, 12 / zoom) }}
+      >
+        {String(data.visibility ?? "")}
+      </span>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -63,6 +83,8 @@ function EntityNode({ data }: NodeProps) {
 }
 const nodeTypes = { location: LocationNode, entity: EntityNode };
 const groups: Record<string, string> = {
+  passages: "方向通路",
+  interactions: "密码与判定",
   locations: "地点",
   links: "通路",
   objects: "对象",
@@ -80,7 +102,7 @@ export function World() {
   return <WorldEditor key={id} />;
 }
 function WorldEditor() {
-  const { id } = useParams();
+  const { id, location, interaction } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { message, modal } = App.useApp();
@@ -94,6 +116,9 @@ function WorldEditor() {
   const [group, setGroup] = useState("locations");
   const [filter, setFilter] = useState("");
   const [report, setReport] = useState<Json>();
+  const [previewRole, setPreviewRole] = useState<string>();
+  const [previewFixture, setPreviewFixture] = useState("initial");
+  const [preview, setPreview] = useState<Json>();
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number }>
   >({});
@@ -101,6 +126,11 @@ function WorldEditor() {
   const [layoutDirty, setLayoutDirty] = useState(false);
   const version = useRef(0);
   const saveBusy = useRef(false);
+  const undoHistory = useRef<Json[]>([]);
+  const redoHistory = useRef<Json[]>([]);
+  useEffect(() => {
+    if (interaction) setSelection({ kind: "interactions", id: interaction });
+  }, [interaction]);
   const draft = useQuery({
     queryKey: ["c2-draft", id],
     queryFn: () => api.c2("GET", `/projects/${id}/draft`),
@@ -110,7 +140,11 @@ function WorldEditor() {
     queryFn: () => api.c2("GET", `/projects/${id}/layout`),
   });
   const localKey = `ruxi.c2.draft:${profile?.user_id}:${id}`;
-  const blocker = useBlocker(dirty || layoutDirty);
+  const blocker = useBlocker(
+    ({ nextLocation }) =>
+      (dirty || layoutDirty) &&
+      !nextLocation.pathname.startsWith(`/stories/${id}/world`),
+  );
   useEffect(() => {
     setStory(undefined);
     setSelection(undefined);
@@ -150,7 +184,14 @@ function WorldEditor() {
       setLayoutRevision(layout.data.layout_revision ?? layout.data.revision);
     }
   }, [layout.data]);
-  function edit(next: Json) {
+  function edit(next: Json, record = true) {
+    if (record && story) {
+      undoHistory.current = [
+        ...undoHistory.current.slice(-59),
+        structuredClone(story),
+      ];
+      redoHistory.current = [];
+    }
     setStory(next);
     setDirty(true);
     version.current++;
@@ -158,6 +199,69 @@ function WorldEditor() {
       localKey,
       JSON.stringify({ content: next, revision, saved_at: Date.now() }),
     );
+  }
+  function undo() {
+    const previous = undoHistory.current.pop();
+    if (previous && story) {
+      redoHistory.current.push(structuredClone(story));
+      edit(previous, false);
+    }
+  }
+  function redo() {
+    const next = redoHistory.current.pop();
+    if (next && story) {
+      undoHistory.current.push(structuredClone(story));
+      edit(next, false);
+    }
+  }
+  function removeSelected() {
+    if (!selection || !selected || !story) return;
+    const references: string[] = [];
+    const visit = (value: any, path: string) => {
+      if (
+        value === selection.id ||
+        (selection.kind === "passages" &&
+          (value === `${selection.id}_ab` || value === `${selection.id}_ba`))
+      )
+        references.push(path);
+      else if (Array.isArray(value))
+        value.forEach((x, i) => visit(x, `${path}/${i}`));
+      else if (value && typeof value === "object")
+        Object.entries(value).forEach(([k, v]) => {
+          if (k === selection.id) references.push(`${path}/${k}`);
+          visit(v, `${path}/${k}`);
+        });
+    };
+    const copy = structuredClone(story);
+    const values =
+      selection.kind === "passages" || selection.kind === "interactions"
+        ? copy.c3
+        : copy;
+    values[selection.kind] = values[selection.kind].filter(
+      (x: Json) => x.id !== selection.id,
+    );
+    visit(copy, "");
+    if (references.length) {
+      modal.info({
+        title: "先处理引用，再删除",
+        content: (
+          <div>
+            {references.slice(0, 20).map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+          </div>
+        ),
+      });
+      return;
+    }
+    modal.confirm({
+      title: `删除 ${selected.label ?? selected.id}？`,
+      content: "会保留在撤销记录中。已经发布的版本不受影响。",
+      onOk: () => {
+        edit(copy);
+        setSelection(undefined);
+      },
+    });
   }
   async function save() {
     if (!story || saveBusy.current || conflict) return;
@@ -207,7 +311,10 @@ function WorldEditor() {
   const { nodes, edges } = useMemo(() => {
     if (!story) return { nodes: [], edges: [] };
     const nodes: Node[] = [];
-    story.locations.forEach((l: Json, i: number) => {
+    const list = location
+      ? story.locations.filter((l: Json) => l.id === location)
+      : story.locations;
+    list.forEach((l: Json, i: number) => {
       const key = `locations:${l.id}`;
       const children = [
         ...(story.objects ?? [])
@@ -221,43 +328,49 @@ function WorldEditor() {
         id: key,
         type: "location",
         position: positions[key] ?? {
-          x: (i % 3) * 370,
-          y: Math.floor(i / 3) * 430,
+          x: (i % 3) * 340,
+          y: Math.floor(i / 3) * 230,
         },
-        data: { label: l.label, count: children.length },
+        data: {
+          label: l.label,
+          count: children.length,
+          description: l.description,
+          visibility: l.discovered ? "公开地点" : "需要发现",
+        },
         style: {
-          width: 310,
-          height: Math.max(180, 80 + children.length * 72),
+          width: location ? 310 : 270,
+          height: location ? Math.max(180, 80 + children.length * 72) : 154,
           background: "#f8faf5",
           border: "1px solid #cedacc",
           borderRadius: 12,
           padding: 0,
         },
       });
-      children.forEach(({ kind, item }, j) => {
-        const k = `${kind}:${item.id}`;
-        nodes.push({
-          id: k,
-          type: "entity",
-          parentId: key,
-          extent: "parent",
-          position: positions[k] ?? { x: 20, y: 66 + j * 72 },
-          data: {
-            kind,
-            title: item.label,
-            cost: item.cost,
-            label: `${groups[kind]} · ${item.label} ${item.cost === undefined ? "" : `/ ${item.cost} 点`}`,
-          },
-          style: {
-            width: 270,
-            borderColor: kind === "actions" ? "#769283" : "#bdaf99",
-            borderRadius: 9,
-            padding: 0,
-            border: "1px solid #dfe7dc",
-            background: "#fff",
-          },
+      if (location)
+        children.forEach(({ kind, item }, j) => {
+          const k = `${kind}:${item.id}`;
+          nodes.push({
+            id: k,
+            type: "entity",
+            parentId: key,
+            extent: "parent",
+            position: positions[k] ?? { x: 20, y: 66 + j * 72 },
+            data: {
+              kind,
+              title: item.label,
+              cost: item.cost,
+              label: `${groups[kind]} · ${item.label} ${item.cost === undefined ? "" : `/ ${item.cost} 点`}`,
+            },
+            style: {
+              width: 270,
+              borderColor: kind === "actions" ? "#769283" : "#bdaf99",
+              borderRadius: 9,
+              padding: 0,
+              border: "1px solid #dfe7dc",
+              background: "#fff",
+            },
+          });
         });
-      });
     });
     if (group === "events")
       (story.events ?? []).forEach((e: Json, i: number) =>
@@ -268,15 +381,27 @@ function WorldEditor() {
           style: { width: 240, borderColor: "#b8854b", background: "#fff8e9" },
         }),
       );
-    const edges: Edge[] = (story.links ?? []).map((l: Json) => ({
-      id: l.id,
-      source: `locations:${l.from}`,
-      target: `locations:${l.to}`,
-      label: `${l.label ?? "通路"} · ${l.cost} 点`,
-      markerEnd: { type: "arrowclosed" as any },
-    }));
+    const topology =
+      story.schema_version === 4
+        ? (story.c3?.passages ?? []).map((p: Json) => ({
+            id: p.id,
+            from: p.a,
+            to: p.b,
+            cost: p.ab.cost,
+            label: `${p.ab.cost} 点 → ${p.ba ? `← ${p.ba.cost} 点` : "单向"}`,
+          }))
+        : (story.links ?? []);
+    const edges: Edge[] = topology
+      .filter((l: Json) => !location)
+      .map((l: Json) => ({
+        id: l.id,
+        source: `locations:${l.from}`,
+        target: `locations:${l.to}`,
+        label: `${l.label ?? "通路"} · ${l.cost} 点`,
+        markerEnd: { type: "arrowclosed" as any },
+      }));
     return { nodes, edges };
-  }, [story, positions, group]);
+  }, [story, positions, group, location]);
   async function layoutSave() {
     try {
       const result = await api.c2(
@@ -293,16 +418,40 @@ function WorldEditor() {
   }
   function add() {
     if (!story) return;
-    const itemSchema = resolve(c2Schema.properties[group]).items;
+    const itemSchema = groupSchema(group);
     const item = seed(itemSchema);
     item.id = `${group.slice(0, -1)}_${crypto.randomUUID().slice(0, 8)}`;
     if ("location" in item) item.location = story.locations[0]?.id ?? "";
-    edit({ ...story, [group]: [...(story[group] ?? []), item] });
+    if (location && "location" in item) item.location = location;
+    updateCollection(group, [...collection(group), item]);
     setSelection({ kind: group, id: item.id });
+  }
+  function collection(kind: string): Json[] {
+    return (
+      (kind === "passages" || kind === "interactions"
+        ? story?.c3?.[kind]
+        : story?.[kind]) ?? []
+    );
+  }
+  function groupSchema(kind: string): Json {
+    return kind === "passages" || kind === "interactions"
+      ? (c3Schema.properties as Json)[kind].items
+      : resolve(
+          (story?.schema_version === 4 ? c3Story : c2Schema).properties[kind],
+          story?.schema_version === 4 ? c3Story : c2Schema,
+        ).items;
+  }
+  function updateCollection(kind: string, items: Json[]) {
+    if (!story) return;
+    edit(
+      kind === "passages" || kind === "interactions"
+        ? { ...story, c3: { ...story.c3, [kind]: items } }
+        : { ...story, [kind]: items },
+    );
   }
   const selected =
     selection &&
-    story?.[selection.kind]?.find((x: Json) => x.id === selection.id);
+    collection(selection.kind).find((x: Json) => x.id === selection.id);
   if (!story)
     return draft.isError ? (
       <Alert type="error" message={draft.error.message} />
@@ -315,7 +464,7 @@ function WorldEditor() {
         title={story.title}
         description="世界画布 · 地点、对象与行动共同构成可探索的故事"
         extra={
-          <Space>
+          <Space wrap>
             <Tag color={conflict ? "red" : dirty ? "gold" : "green"}>
               {conflict
                 ? "版本冲突"
@@ -325,6 +474,12 @@ function WorldEditor() {
                     ? "未保存"
                     : "已保存"}
             </Tag>
+            <Button disabled={!undoHistory.current.length} onClick={undo}>
+              撤销
+            </Button>
+            <Button disabled={!redoHistory.current.length} onClick={redo}>
+              重做
+            </Button>
             <Button onClick={() => navigate(`/stories/${id}/releases`)}>
               审核与发布
             </Button>
@@ -384,8 +539,156 @@ function WorldEditor() {
       <Space style={{ marginBottom: 16 }}>
         <Button onClick={() => setConfig("rules")}>回合与行动点规则</Button>
         <Button onClick={() => setConfig("initial")}>世界变量与初始物品</Button>
+        {story.schema_version === 4 && (
+          <Button onClick={() => setConfig("c3_settings")}>
+            阵营、目标与世界演化
+          </Button>
+        )}
       </Space>
-      <Tabs activeKey="world" items={[{ key: "world", label: "世界" }]} />
+      <Space className="world-breadcrumb" style={{ marginBottom: 16 }}>
+        <Button onClick={() => navigate(`/stories/${id}/world`)}>
+          世界地图
+        </Button>
+        {location && (
+          <Tag>
+            {story.locations.find((l: Json) => l.id === location)?.label ??
+              "地点已删除"}{" "}
+            · 场景编辑
+          </Tag>
+        )}
+        {!location && (
+          <Typography.Text type="secondary">
+            世界层只展示地点与通路。双击地点进入场景。
+          </Typography.Text>
+        )}
+        {story.schema_version === 3 && (
+          <Button
+            onClick={() => {
+              edit({
+                ...story,
+                schema_version: 4,
+                c3: {
+                  profile_version: 1,
+                  suggested_content_version: 4,
+                  map_mode: "mixed",
+                  passages: story.links.map((l: Json) => ({
+                    id: l.id,
+                    a: l.from,
+                    b: l.to,
+                    barrier_id: null,
+                    ab: {
+                      enabled: true,
+                      cost: l.cost,
+                      discover_if: { op: "always" },
+                      enter_if: { op: "always" },
+                      arrival_events: [],
+                    },
+                    ba: null,
+                  })),
+                  interactions: [],
+                },
+                secrets: {},
+                c3_settings: {
+                  barriers: {},
+                  arrival_rules: {},
+                  legacy_passage_conditions: Object.fromEntries(
+                    story.links.map((l: Json) => [
+                      `${l.id}_ab`,
+                      {
+                        enter: l.condition,
+                        discover:
+                          l.discovered === false
+                            ? { op: "any", args: [] }
+                            : (l.display_condition ?? { op: "all", args: [] }),
+                      },
+                    ]),
+                  ),
+                },
+              });
+            }}
+          >
+            创建 C3 草稿
+          </Button>
+        )}
+      </Space>
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Typography.Text>角色视角预览</Typography.Text>
+        <Select
+          aria-label="预览角色"
+          placeholder="选择角色"
+          value={previewRole}
+          style={{ width: 160 }}
+          options={story.roles.map((r: Json) => ({
+            value: r.id,
+            label: r.label,
+          }))}
+          onChange={setPreviewRole}
+        />
+        <Select
+          aria-label="预览快照"
+          value={previewFixture}
+          options={[
+            { value: "initial", label: "初始快照" },
+            { value: "blocked", label: "封路快照" },
+            { value: "repaired", label: "修复快照" },
+          ]}
+          onChange={setPreviewFixture}
+        />
+        <Button
+          disabled={!previewRole || dirty || conflict}
+          onClick={async () => {
+            try {
+              setPreview(
+                await api.c2("POST", `/projects/${id}/projection-preview`, {
+                  draft_revision: revision,
+                  role_id: previewRole,
+                  fixture_id: previewFixture,
+                }),
+              );
+            } catch (e) {
+              if (e instanceof Error) void message.error(e.message);
+            }
+          }}
+        >
+          查看授权投影
+        </Button>
+      </Space>
+      <Modal
+        open={!!preview}
+        title={`角色视角 · ${preview?.role_id ?? ""}`}
+        onCancel={() => setPreview(undefined)}
+        footer={<Button onClick={() => setPreview(undefined)}>返回编辑</Button>}
+      >
+        <Alert
+          message="独立预览，不修改草稿。此窗口仅显示服务器返回的该角色投影。"
+          type="info"
+        />
+        <Typography.Title level={5}>已知地点</Typography.Title>
+        <Space wrap>
+          {preview?.view.map.locations.map((l: Json) => (
+            <Tag key={l.id}>{l.label}</Tag>
+          ))}
+        </Space>
+        <Typography.Title level={5}>可见互动与行动</Typography.Title>
+        {[
+          ...(preview?.view.actions ?? []),
+          ...(preview?.view.interactions ?? []),
+        ].map((a: Json) => (
+          <p key={a.id}>
+            {a.label} · {a.cost} 点
+          </p>
+        ))}
+        <Typography.Title level={5}>已知线索</Typography.Title>
+        {preview?.view.knowledge.map((k: Json) => (
+          <p key={k.id}>
+            {k.label ?? "线索"}：{k.text}
+          </p>
+        ))}
+        <Typography.Title level={5}>个人目标</Typography.Title>
+        {preview?.view.self.goals.map((g: string) => (
+          <p key={g}>{g}</p>
+        ))}
+      </Modal>
       <Flex gap={16} className="c2-world-workspace">
         <Card
           size="small"
@@ -401,10 +704,16 @@ function WorldEditor() {
             style={{ width: "100%" }}
             value={group}
             onChange={setGroup}
-            options={Object.entries(groups).map(([value, label]) => ({
-              value,
-              label,
-            }))}
+            options={Object.entries(groups)
+              .filter(
+                ([key]) =>
+                  story.schema_version === 4 ||
+                  !["passages", "interactions"].includes(key),
+              )
+              .map(([value, label]) => ({
+                value,
+                label,
+              }))}
           />
           <Input.Search
             placeholder="搜索名称或标识"
@@ -413,7 +722,7 @@ function WorldEditor() {
             style={{ margin: "12px 0" }}
           />
           <List
-            dataSource={(story[group] ?? []).filter((x: Json) =>
+            dataSource={collection(group).filter((x: Json) =>
               `${x.label ?? ""} ${x.id}`.includes(filter),
             )}
             renderItem={(x: Json) => (
@@ -438,49 +747,143 @@ function WorldEditor() {
             overflow: "hidden",
           }}
         >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            fitView
-            onNodeClick={(_, node) => {
-              const [kind, ...rest] = node.id.split(":");
-              setSelection({ kind, id: rest.join(":") });
-            }}
-            onNodeDragStop={(_, node) => {
-              setPositions((p) => ({ ...p, [node.id]: node.position }));
-              setLayoutDirty(true);
-            }}
-            onNodesChange={(changes) => {
-              const moved = changes.filter(
-                (c) => c.type === "position" && c.position,
-              );
-              if (moved.length)
-                setPositions((p) => {
-                  const next = { ...p };
-                  for (const c of moved)
-                    if (c.type === "position" && c.position)
-                      next[c.id] = c.position;
-                  return next;
-                });
-            }}
-            nodesConnectable={false}
-            deleteKeyCode={null}
-          >
-            <Background color="#dad5c9" gap={24} />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
+          {location ? (
+            <div className="scene-object-grid">
+              {collection("objects")
+                .filter((o: Json) => o.location === location)
+                .map((o: Json) => (
+                  <Card
+                    key={o.id}
+                    title={o.label}
+                    extra={
+                      <Button
+                        onClick={() =>
+                          setSelection({ kind: "objects", id: o.id })
+                        }
+                      >
+                        对象 · {o.label}
+                      </Button>
+                    }
+                  >
+                    <Typography.Paragraph>
+                      {o.description ?? "场景对象"}
+                    </Typography.Paragraph>
+                    <Space wrap>
+                      {collection("actions")
+                        .filter((a: Json) => a.target === o.id)
+                        .map((a: Json) => (
+                          <Button
+                            key={a.id}
+                            onClick={() =>
+                              setSelection({ kind: "actions", id: a.id })
+                            }
+                          >
+                            {a.label} · {a.cost} 点
+                          </Button>
+                        ))}
+                      {collection("interactions")
+                        .filter((a: Json) => a.target_id === o.id)
+                        .map((a: Json) => (
+                          <Button
+                            key={a.id}
+                            onClick={() =>
+                              navigate(
+                                `/stories/${id}/world/${location}/interactions/${a.id}`,
+                              )
+                            }
+                          >
+                            {a.kind === "password" ? "密码输入" : "骰子判定"} ·{" "}
+                            {a.cost} 点
+                          </Button>
+                        ))}
+                    </Space>
+                  </Card>
+                ))}
+              <Card title="场景行动">
+                <Space wrap>
+                  {collection("actions")
+                    .filter((a: Json) => a.location === location && !a.target)
+                    .map((a: Json) => (
+                      <Button
+                        key={a.id}
+                        onClick={() =>
+                          setSelection({ kind: "actions", id: a.id })
+                        }
+                      >
+                        {a.label} · {a.cost} 点
+                      </Button>
+                    ))}
+                </Space>
+              </Card>
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              fitView
+              minZoom={0.75}
+              fitViewOptions={{ minZoom: 0.75, maxZoom: 1, padding: 0.15 }}
+              onEdgeClick={(_, edge) =>
+                setSelection({
+                  kind: story.schema_version === 4 ? "passages" : "links",
+                  id: edge.id,
+                })
+              }
+              onNodeDoubleClick={(_, node) => {
+                if (node.type === "location")
+                  navigate(`/stories/${id}/world/${node.id.slice(10)}`);
+              }}
+              onNodeClick={(_, node) => {
+                const [kind, ...rest] = node.id.split(":");
+                setSelection({ kind, id: rest.join(":") });
+              }}
+              onNodeDragStop={(_, node) => {
+                setPositions((p) => ({ ...p, [node.id]: node.position }));
+                setLayoutDirty(true);
+              }}
+              onNodesChange={(changes) => {
+                const moved = changes.filter(
+                  (c) => c.type === "position" && c.position,
+                );
+                if (moved.length)
+                  setPositions((p) => {
+                    const next = { ...p };
+                    for (const c of moved)
+                      if (c.type === "position" && c.position)
+                        next[c.id] = c.position;
+                    return next;
+                  });
+              }}
+              nodesConnectable={false}
+              deleteKeyCode={null}
+            >
+              <Background color="#dad5c9" gap={24} />
+              <Controls />
+              <MiniMap />
+            </ReactFlow>
+          )}
         </div>
       </Flex>
       <Drawer
-        title={config === "rules" ? "回合与行动点规则" : "世界变量与初始物品"}
+        title={
+          config === "rules"
+            ? "回合与行动点规则"
+            : config === "c3_settings"
+              ? "阵营、目标与世界演化"
+              : "世界变量与初始物品"
+        }
         open={!!config}
         onClose={() => setConfig(undefined)}
         width={460}
       >
         {config && (
           <C2Field
-            schema={c2Schema.properties[config]}
+            schema={
+              (story.schema_version === 4 ? c3Story : c2Schema).properties[
+                config
+              ]
+            }
+            root={story.schema_version === 4 ? c3Story : c2Schema}
             value={story[config]}
             change={(v) => edit({ ...story, [config]: v })}
           />
@@ -493,24 +896,67 @@ function WorldEditor() {
             : "属性"
         }
         open={!!selected}
-        onClose={() => setSelection(undefined)}
+        onClose={() => {
+          setSelection(undefined);
+          if (interaction) navigate(`/stories/${id}/world/${location}`);
+        }}
         width={460}
       >
+        {selected && (
+          <Button danger style={{ marginBottom: 16 }} onClick={removeSelected}>
+            删除实体
+          </Button>
+        )}
+        {selected && selection?.kind === "locations" && (
+          <Button
+            style={{ marginBottom: 16 }}
+            onClick={() => {
+              navigate(`/stories/${id}/world/${selection.id}`);
+              setSelection(undefined);
+            }}
+          >
+            进入场景编辑
+          </Button>
+        )}
+        {selected &&
+          selection?.kind === "interactions" &&
+          selected.kind === "password" && (
+            <Input.Password
+              aria-label="谜题答案（仅作者）"
+              placeholder="仅制作使用，不进入玩家包"
+              value={story.secrets?.[selected.answer_secret_ref]?.answer ?? ""}
+              onChange={(e) =>
+                edit({
+                  ...story,
+                  secrets: {
+                    ...story.secrets,
+                    [selected.answer_secret_ref]: {
+                      ...story.secrets?.[selected.answer_secret_ref],
+                      answer: e.target.value,
+                      aliases: [],
+                    },
+                  },
+                })
+              }
+              style={{ marginBottom: 16 }}
+            />
+          )}
         {selected && selection && (
           <C2Field
-            schema={resolve(c2Schema.properties[selection.kind]).items}
+            schema={groupSchema(selection.kind)}
+            root={story.schema_version === 4 ? c3Story : c2Schema}
             value={selected}
             change={(v) => {
               if (v.id !== selection.id) {
                 void message.warning("标识重命名需要同步引用，请保持标识不变");
                 v.id = selection.id;
               }
-              edit({
-                ...story,
-                [selection.kind]: story[selection.kind].map((x: Json) =>
+              updateCollection(
+                selection.kind,
+                collection(selection.kind).map((x: Json) =>
                   x.id === selection.id ? v : x,
                 ),
-              });
+              );
             }}
           />
         )}

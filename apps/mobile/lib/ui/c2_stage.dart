@@ -7,6 +7,7 @@ import '../data/c2_client.dart';
 import '../data/room_client.dart';
 import 'novel_widgets.dart';
 import 'game_inventory.dart';
+import 'interaction_dialog.dart';
 
 class C2Stage extends StatefulWidget {
   const C2Stage({
@@ -101,6 +102,10 @@ class _C2StageState extends State<C2Stage> {
     final knowledge = items('knowledge');
     if (!_seeded) {
       _results.addAll(results.map((r) => '${r['intent_id']}'));
+      _results.addAll(
+        items('interaction_results')
+            .map((r) => 'interaction:${r['resolution_id']}'),
+      );
       _knowledge.addAll(knowledge.map((k) => '${k['id']}'));
       _seeded = true;
     }
@@ -119,7 +124,31 @@ class _C2StageState extends State<C2Stage> {
         .toList();
     _knowledge.addAll(knowledge.map((k) => '${k['id']}'));
     _cues.addAll(freshCues.map((c) => '${c['id']}'));
+    for (final outcome in items('interaction_results')) {
+      if (_results.add('interaction:${outcome["resolution_id"]}')) {
+        final check = outcome["kind"] == "check";
+        enqueue(
+          NovelMessage(
+            title: check
+                ? '骰子判定 · ${outcome["success"] == true ? "成功" : "失败"}'
+                : '密码${outcome["success"] == true ? "正确" : "错误"}',
+            clue: freshKnowledge.isNotEmpty,
+            acknowledge: freshCues.map((c) => '${c['id']}').toList(),
+            text: [
+              '${check ? "点数 ${outcome["roll"]} / 目标 ${outcome["target"]}\n\n" : ""}本次尝试已结算，消耗 ${outcome["cost"]} 余力。剩余 ${outcome["attempts_remaining"]} 次尝试。',
+              ...freshCues.map((c) => '${c['summary'] ?? c['text'] ?? ''}'),
+              ...freshKnowledge.map((k) => '${k['text']}'),
+            ].join('\n\n'),
+          ),
+        );
+      }
+    }
     for (final result in freshResults) {
+      if ('${result["action_id"]}'.startsWith('interaction:') &&
+          result['status'] == 'resolved') {
+        _results.add('${result["intent_id"]}');
+        continue;
+      }
       _results.add('${result['intent_id']}');
       final invalid = result['status'] == 'invalidated';
       final success = result['success'] != false && !invalid;
@@ -291,6 +320,40 @@ class _C2StageState extends State<C2Stage> {
     });
     return client.error ??
         (client.pending != null ? '这次选择尚未确认，请返回场景查询操作结果。' : null);
+  }
+
+  bool _showAllActions = false;
+  Future<void> interact(Json interaction) async {
+    if (_presenting || client.busy || client.pending != null) return;
+    _presenting = true;
+    try {
+      await showInteraction(
+        context,
+        interaction,
+        () async => Map<String, dynamic>.from(
+          await client.request(
+            'POST',
+            '/rooms/${client.roomId}/interaction-quotes',
+            {
+              'interaction_id': interaction['id'],
+              'step_id': client.view?['room']['step_id'],
+            },
+          ),
+        ),
+        (q, answer) async {
+          await client.command('interaction.submit', {
+            'quote_id': q['quote_id'],
+            'kind': interaction['kind'],
+            'input': answer == null ? <String, dynamic>{} : {'answer': answer},
+          });
+          return client.error ??
+              (client.pending != null ? '提交结果待确认，请返回场景查询原操作。' : null);
+        },
+      );
+    } finally {
+      _presenting = false;
+      if (mounted) unawaited(present());
+    }
   }
 
   Future<void> send(
@@ -630,6 +693,24 @@ class _C2StageState extends State<C2Stage> {
                               ),
                             ),
                           ),
+                          IconButton(
+                            tooltip: '我的目标',
+                            icon: const Icon(Icons.flag_outlined),
+                            onPressed: () => unawaited(
+                              showNovelMessage(
+                                context,
+                                NovelMessage(
+                                  title: '我的身份与目标',
+                                  text:
+                                      '${self?['faction'] == null ? "" : "所属阵营：${self?['faction']}\n\n"}${(self?['goals'] as List? ?? []).join("\n\n")}\n\n${(self?['objectives'] as List? ?? []).map((o) => "${o['label']} · ${o['result'] == 'achieved'
+                                          ? '已达成'
+                                          : o['result'] == 'failed'
+                                          ? '未达成'
+                                          : '进行中'}").join("\n")}',
+                                ),
+                              ),
+                            ),
+                          ),
                           for (final panel in GamePanel.values)
                             IconButton(
                               onPressed: () => unawaited(openPanel(panel)),
@@ -936,7 +1017,27 @@ class _C2StageState extends State<C2Stage> {
                                       spacing: 12,
                                       runSpacing: 10,
                                       children: [
-                                        for (final a in visibleActions)
+                                        for (final i
+                                            in (_showAllActions
+                                                ? items('interactions')
+                                                : items('interactions')
+                                                      .take(3)))
+                                          NovelChoice(
+                                            label: i['label'],
+                                            cost: i['cost'],
+                                            enabled: !blocked,
+                                            onTap: () => unawaited(interact(i)),
+                                          ),
+                                        for (final a
+                                            in (_showAllActions
+                                                ? visibleActions
+                                                : visibleActions.take(
+                                                    (3 -
+                                                            items(
+                                                              'interactions',
+                                                            ).length)
+                                                        .clamp(0, 3),
+                                                  )))
                                           NovelChoice(
                                             label: a['label'],
                                             cost: a['cost'],
@@ -951,6 +1052,18 @@ class _C2StageState extends State<C2Stage> {
                                           ),
                                       ],
                                     ),
+                                    if (visibleActions.length +
+                                            items('interactions').length >
+                                        3)
+                                      TextButton(
+                                        onPressed: () => setState(
+                                          () => _showAllActions =
+                                              !_showAllActions,
+                                        ),
+                                        child: Text(
+                                          _showAllActions ? '收起其他行动' : '查看其他行动',
+                                        ),
+                                      ),
                                     const SizedBox(height: 14),
                                     Wrap(
                                       alignment: WrapAlignment.spaceBetween,

@@ -10,12 +10,18 @@ defmodule RuxiWeb.C2RoomChannel do
     try do
       Util.require!(
         Map.get(ctx, :c2) == true and topic == "room:#{ctx.room}:member:#{ctx.member}" and
-          is_map(p) and p["protocol_version"] == 2 and p["control_epoch"] == ctx.control_epoch,
+          is_map(p) and p["protocol_version"] in [2, 3] and
+          p["control_epoch"] == ctx.control_epoch,
         "NOT_ALLOWED"
       )
 
       Store.socket_valid!(ctx)
       {:ok, snapshot} = Store.snapshot(ctx, ctx.room)
+
+      Util.require!(
+        p["protocol_version"] == snapshot["protocol_version"],
+        "UNSUPPORTED_CAPABILITY"
+      )
 
       {:ok, %{"snapshot" => snapshot, "mode" => "snapshot"},
        assign(socket, :view_seq, snapshot["view_seq"])}
