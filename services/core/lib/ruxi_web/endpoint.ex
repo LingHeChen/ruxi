@@ -8,7 +8,15 @@ defmodule RuxiWeb.Endpoint do
 
   plug(CORSPlug,
     origin: &RuxiWeb.Endpoint.allowed_origins/0,
-    headers: ["authorization", "content-type", "x-device-id", "x-control-generation", "range"],
+    headers: [
+      "authorization",
+      "content-type",
+      "x-device-id",
+      "x-control-generation",
+      "range",
+      "idempotency-key",
+      "if-match"
+    ],
     expose: ["accept-ranges", "content-range", "content-length", "retry-after"]
   )
 
@@ -36,9 +44,15 @@ end
 defmodule RuxiWeb.Socket do
   use Phoenix.Socket
   channel("player_room:*", RuxiWeb.RoomChannel)
+  channel("room:*", RuxiWeb.C2RoomChannel)
 
   def connect(%{"ticket" => ticket}, socket, _) do
-    case Ruxi.Auth.consume_ticket(ticket) do
+    result =
+      if String.starts_with?(ticket, "c2."),
+        do: Ruxi.C2.Store.consume_ticket(ticket),
+        else: Ruxi.Auth.consume_ticket(ticket)
+
+    case result do
       {:ok, ctx} -> {:ok, assign(socket, :ctx, ctx)}
       _ -> :error
     end

@@ -42,6 +42,10 @@ defmodule RuxiWeb.Router do
     end
   end
 
+  match "/api/v2/*path" do
+    RuxiWeb.C2API.call(conn)
+  end
+
   match _ do
     try do
       data = dispatch(conn)

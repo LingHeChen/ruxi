@@ -1,0 +1,51 @@
+{
+  "command": [
+    "1",
+    "2",
+    "room:room_demo:member:member_guest",
+    "room.command",
+    {
+      "protocol_version": 2,
+      "command_id": "42d9c2c0-7d6b-4c6d-91ea-b18bf4d6fef0",
+      "control_epoch": 1,
+      "step_id": "r1s1",
+      "type": "action.submit",
+      "body": {
+        "action_id": "inspect",
+        "target_id": "dishes"
+      }
+    }
+  ],
+  "receipt": [
+    "1",
+    "2",
+    "room:room_demo:member:member_guest",
+    "phx_reply",
+    {
+      "status": "ok",
+      "response": {
+        "status": "queued",
+        "command_id": "42d9c2c0-7d6b-4c6d-91ea-b18bf4d6fef0",
+        "receipt_seq": 2
+      }
+    }
+  ],
+  "view": [
+    "1",
+    null,
+    "room:room_demo:member:member_guest",
+    "room.view",
+    {
+      "stream_id": "stream_guest",
+      "view_seq": 2,
+      "base_view_seq": 1,
+      "blocks": {
+        "budget": {
+          "ap_remaining": 3,
+          "ap_reserved": 1
+        }
+      },
+      "narrative_cues": []
+    }
+  ]
+}

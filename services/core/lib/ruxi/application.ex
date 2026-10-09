@@ -14,6 +14,7 @@ defmodule Ruxi.Application do
           {Registry, keys: :unique, name: Ruxi.RoomRegistry},
           {DynamicSupervisor, name: Ruxi.RoomSupervisor, strategy: :one_for_one},
           Ruxi.Dispatcher,
+          Ruxi.C2.Maintenance,
           {Oban, Application.fetch_env!(:ruxi, Oban)},
           RuxiWeb.Endpoint
         ],

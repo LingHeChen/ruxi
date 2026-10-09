@@ -27,6 +27,7 @@ class RouteClient extends CatalogClient {
     Json? body,
     bool private = false,
     bool retried = false,
+    Map<String, String> extraHeaders = const {},
   ]) async {
     if (path.startsWith('/v1/stories/')) return stories.last;
     return super.request(method, path, body, private, retried);

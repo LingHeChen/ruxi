@@ -1,0 +1,970 @@
+{
+  "baseline": "C2",
+  "date": "2026-10-09",
+  "versions": {
+    "jsonschema": "4.26.0",
+    "browser": "Chromium 153.0.8010.0"
+  },
+  "contract_checks": {
+    "checks": [
+      {
+        "name": "schema valid restaurant",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "reject invalid_bad_cost.json",
+        "status": "PASS",
+        "detail": "-1 is less than the minimum of 0\n\nFailed validating 'minimum' in schema['properties']['actions']['items']['properties']['cost']:\n    {'type': 'integer"
+      },
+      {
+        "name": "reject invalid_missing_location.json",
+        "status": "PASS",
+        "detail": "UNKNOWN_LOCATION:/roles/0/location"
+      },
+      {
+        "name": "reject invalid_unknown_ref.json",
+        "status": "PASS",
+        "detail": "UNKNOWN_STATE_REF"
+      },
+      {
+        "name": "preset route reaches safe ending",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "fourth round fallback",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "personal knowledge isolation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "invalid location does not charge",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free template alternative route",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "one owner and rotating priority",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "Phoenix envelope and payload",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "reject injected effects",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "deterministic replay five runs",
+        "status": "PASS",
+        "detail": ""
+      }
+    ],
+    "limitations": [
+      "参考引擎不包含数据库、WS、概率判定、AI、并发进程或媒体服务。"
+    ]
+  },
+  "browser_checks": {
+    "checks": [
+      {
+        "name": "preset queues without immediate effects",
+        "status": "PASS"
+      },
+      {
+        "name": "cancel retains AP",
+        "status": "PASS"
+      },
+      {
+        "name": "resolve deducts and reveals",
+        "status": "PASS"
+      },
+      {
+        "name": "map movement",
+        "status": "PASS"
+      },
+      {
+        "name": "round restores shared budget",
+        "status": "PASS"
+      },
+      {
+        "name": "preset path reaches ending",
+        "status": "PASS"
+      },
+      {
+        "name": "proposal does not charge before confirm",
+        "status": "PASS"
+      },
+      {
+        "name": "proposal cancellation",
+        "status": "PASS"
+      },
+      {
+        "name": "offline disables presets",
+        "status": "PASS"
+      },
+      {
+        "name": "reduce motion persisted",
+        "status": "PASS"
+      },
+      {
+        "name": "wide viewport no document overflow",
+        "status": "PASS"
+      },
+      {
+        "name": "mobile no document overflow",
+        "status": "PASS"
+      },
+      {
+        "name": "shared editor model updates",
+        "status": "PASS"
+      },
+      {
+        "name": "undo restores value",
+        "status": "PASS"
+      },
+      {
+        "name": "editor validation blocks invalid cost",
+        "status": "PASS"
+      },
+      {
+        "name": "role preview panel",
+        "status": "PASS"
+      },
+      {
+        "name": "no browser JS errors",
+        "status": "PASS"
+      }
+    ],
+    "errors": [],
+    "limitations": [
+      "本地模拟，不含真实WS、AI或视频",
+      "React Flow和Flutter实验文件未运行"
+    ]
+  },
+  "design_checks": [
+    {
+      "name": "twelve documents and sources",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D01 document references",
+      "status": "PASS",
+      "detail": "['D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08', 'D09', 'D10', 'D11', 'D12']"
+    },
+    {
+      "name": "D01 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D02 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D02 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D03 document references",
+      "status": "PASS",
+      "detail": "['D01']"
+    },
+    {
+      "name": "D03 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D04 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D04 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D05 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D05 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D06 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D06 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D07 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D07 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D08 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D08 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D09 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D09 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D10 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D10 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D11 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D11 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "D12 document references",
+      "status": "PASS",
+      "detail": "[]"
+    },
+    {
+      "name": "D12 substantive scope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "runtime.schema.json schema meta validation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "ai_output.schema.json schema meta validation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "story.schema.json schema meta validation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "changeset.schema.json schema meta validation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "protocol.schema.json schema meta validation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "OpenAPI unique operation ids",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /identities/guest path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /identities/recover path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /session/refresh path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /session/logout path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /session/socket-ticket path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /me path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "patch /me path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "delete /me path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /me/recovery-code path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /stories path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /games path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /me/feedback path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /studio/projects path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /stories/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /rooms path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /rooms/join path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /rooms/{id}/snapshot path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /rooms/{id}/commands/{command_id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /rooms/{id}/proposals path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /rooms/{id}/proposals path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "delete /rooms/{id}/proposals/{proposal_id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /rooms/{id}/media/{asset_id}/access path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /studio/projects/{id}/draft path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "put /studio/projects/{id}/draft path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "put /studio/projects/{id}/layout path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/validate path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/preview path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/reviews path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/releases path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/adaptations path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /tasks/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /tasks/{id}/cancel path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /tasks/{id}/retry path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /tasks/{id}/apply path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/assets/upload path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/assets/{id}/complete path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /admin/releases/{id}/withdraw path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /admin/releases/{id}/block path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /admin/diagnostics path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /feedback path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /analytics/batch path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /me/preferences path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "patch /me/preferences path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /studio/projects/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "patch /studio/projects/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /studio/assets/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "patch /studio/assets/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "get /studio/projects/{id}/export path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/archive path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /studio/projects/{id}/import path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /admin/reviews/{id}/decision path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "patch /admin/feedback/{id} path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /session/control path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "post /admin/session/code path parameters",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "player_mobile figure exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "player_wide figure exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "studio_wide figure exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "components figure exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "all QA mapped to capability",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "no obsolete fixed timing as current rule",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "no Flutter Web editor retained",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "layout_checks": [
+    {
+      "document": "D01",
+      "pages": 5,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 875
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 908
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 808
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 942
+        },
+        {
+          "page": 5,
+          "out_of_bounds": [],
+          "characters": 708
+        }
+      ]
+    },
+    {
+      "document": "D02",
+      "pages": 5,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 929
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 944
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1056
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 688
+        },
+        {
+          "page": 5,
+          "out_of_bounds": [],
+          "characters": 183
+        }
+      ]
+    },
+    {
+      "document": "D03",
+      "pages": 9,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 992
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 1001
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 703
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 871
+        },
+        {
+          "page": 5,
+          "out_of_bounds": [],
+          "characters": 430
+        },
+        {
+          "page": 6,
+          "out_of_bounds": [],
+          "characters": 86
+        },
+        {
+          "page": 7,
+          "out_of_bounds": [],
+          "characters": 73
+        },
+        {
+          "page": 8,
+          "out_of_bounds": [],
+          "characters": 77
+        },
+        {
+          "page": 9,
+          "out_of_bounds": [],
+          "characters": 69
+        }
+      ]
+    },
+    {
+      "document": "D04",
+      "pages": 4,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 1012
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 1203
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1118
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 135
+        }
+      ]
+    },
+    {
+      "document": "D05",
+      "pages": 4,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 1119
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 1356
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1015
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 1226
+        }
+      ]
+    },
+    {
+      "document": "D06",
+      "pages": 6,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 1235
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 1235
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1087
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 1197
+        },
+        {
+          "page": 5,
+          "out_of_bounds": [],
+          "characters": 1380
+        },
+        {
+          "page": 6,
+          "out_of_bounds": [],
+          "characters": 227
+        }
+      ]
+    },
+    {
+      "document": "D07",
+      "pages": 3,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 861
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 955
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1182
+        }
+      ]
+    },
+    {
+      "document": "D08",
+      "pages": 5,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 1089
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 988
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1122
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 1142
+        },
+        {
+          "page": 5,
+          "out_of_bounds": [],
+          "characters": 1013
+        }
+      ]
+    },
+    {
+      "document": "D09",
+      "pages": 3,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 950
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 935
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 838
+        }
+      ]
+    },
+    {
+      "document": "D10",
+      "pages": 2,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 872
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 1032
+        }
+      ]
+    },
+    {
+      "document": "D11",
+      "pages": 4,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 918
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 843
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 1008
+        },
+        {
+          "page": 4,
+          "out_of_bounds": [],
+          "characters": 546
+        }
+      ]
+    },
+    {
+      "document": "D12",
+      "pages": 3,
+      "checks": [
+        {
+          "page": 1,
+          "out_of_bounds": [],
+          "characters": 936
+        },
+        {
+          "page": 2,
+          "out_of_bounds": [],
+          "characters": 934
+        },
+        {
+          "page": 3,
+          "out_of_bounds": [],
+          "characters": 862
+        }
+      ]
+    }
+  ],
+  "not_run": [
+    "Flutter原生运行与真机视频",
+    "React Flow TSX编译与真实画布集成",
+    "Phoenix与PostgreSQL联调并发及故障恢复",
+    "在线模型判断和小说改编评估",
+    "生产部署负载安全与备份演练"
+  ]
+}

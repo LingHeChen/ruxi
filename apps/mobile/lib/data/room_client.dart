@@ -251,9 +251,11 @@ class RoomClient extends ChangeNotifier {
     Json? body,
     bool private = false,
     bool retried = false,
+    Map<String, String> extraHeaders = const {},
   ]) async {
     final headers = {
       'Content-Type': 'application/json',
+      ...extraHeaders,
       if (token.isNotEmpty) 'Authorization': 'Bearer $token',
       if (private) 'X-Device-ID': device,
       if (private) 'X-Control-Generation': '$generation',
@@ -280,11 +282,14 @@ class RoomClient extends ChangeNotifier {
         !path.startsWith('/v1/auth/') &&
         path != '/v1/me/password') {
       await refresh();
-      return request(method, path, body, private, true);
+      return request(method, path, body, private, true, extraHeaders);
     }
     if (response.statusCode >= 400) throw ApiError(data['error']['code']);
     if (data['meta']?['server_time'] != null) {
-      serverTime = DateTime.parse(data['meta']['server_time']);
+      final stamp = data['meta']['server_time'];
+      serverTime = stamp is int
+          ? DateTime.fromMillisecondsSinceEpoch(stamp, isUtc: true)
+          : DateTime.parse(stamp);
       // HTTP timestamps are useful before sync; they do not replace measured RTT samples.
       if (connection != 'live') {
         clockOffset = serverTime.difference(DateTime.now().toUtc());

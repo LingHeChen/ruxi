@@ -1,0 +1,30 @@
+# 1 系统边界
+Flutter负责玩家状态呈现、媒体和本地阅读。React与React Flow负责创作界面；画布节点映射领域ID，不能直接把ReactFlowJsonObject作为游戏包。Elixir Phoenix负责身份、房间、规则、授权投影、内容版本、事务和任务编排。Python负责AI判断、小说改编、素材处理；它不能直接写房间事实。
+持久化选PostgreSQL，媒体选兼容对象存储与CDN。房间进程是加速与串行化执行单元，数据库才是持久事实。初期可同机部署服务但保留进程和凭证隔离，不为假设的未来增加独立微服务。AI供应商差异在Python模型调用模块内隔离，业务只依赖D09结构化结果。
+架构、结算和改编流程的Mermaid源文件见 figures/architecture.mmd、action_sequence.mmd、adaptation.mmd。本设计不包含真实云资源开通或生产部署。
+# 2 房间执行与事务
+一个room_id同一时刻仅一个有效owner。数据库room_owners持有owner_epoch与租约；进程获取后所有写事务必须匹配epoch并锁room行。失去租约的旧进程即使仍运行也不能提交。集群选主只能改善可用性，不能替代数据库fencing。
+命令先鉴权、校验控制设备epoch和幂等键，再检查房间状态。提交意图只生成预留；步截止由带timer_generation的定时命令触发。一次结算事务读取并锁本步意图、按D02顺序验证、扣预算、执行效果、运行事件、更新快照、生成各成员视图和outbox，再commit。失败全部回滚；不能在事务中调用模型、CDN或慢外部服务。
+对每个成员单独维护连续view_seq，隐藏事件不产生可观察序号缺口。每次已提交的可见变更包含完整替换块或明确patch，并指向base_view_seq。回执可先于或晚于视图到达，客户端只根据视图应用世界变化；receipt_seq为本次提交对应的个人水位。没有可见变化的幂等回执可以引用当前水位。
+# 3 恢复 一致性与背压
+outbox事务后投递，重复投递由(view_stream_id,view_seq)去重。客户端断线以last_applied_seq恢复；仍在保留窗口内补发，否则HTTP获取授权快照并替换状态，再订阅后续视图。为防快照与订阅缝隙，join返回快照水位和会话流ID，服务端保留水位之后事件直至ack；队列过大直接要求重新快照。
+ws心跳每25s、连续两次未响应视为失联的建议值，与D02游戏掉线120s不同。客户端退避1、2、4、8、16、30s并加抖动；前台恢复立即尝试。每连接最多256条待发或1MiB，超限发resync_required后关闭。聊天独立限频，不能挤占规则命令；慢客户端不会阻塞同房其他人。
+灾难恢复更换recovery_epoch，撤销旧租约与会话票据，尚未结局的局先挂起。客户端旧pending只能查询结果，不能自动重新提交。D12规定恢复验证与擦除日志重放。
+# 4 AI与任务调度
+行动提案任务输入含actor、授权上下文、允许模板、版本和相关状态摘要。Python返回结构化候选，Elixir再次校验并生成proposal_id、成本、前提指纹与expires_at。确认时重新检查指纹和规则；模型响应迟到不能自行消费行动力。模型失败或8s超时回退预设操作。
+小说改编是持久作业：分章、实体消歧、时间线、地点图、可玩改编、DSL生成、校验、人工审阅。各阶段产物内容寻址，失败从成功检查点恢复。工作单由Elixir创建，worker以lease_token领用，完成必须匹配generation；重试不能覆盖人工锁定字段。长任务不依赖浏览器WS连接存活。
+任务服务凭证仅能读指定输入和写指定结果，不能获取玩家数据库写权限。内部调用使用短期服务身份及请求签名/私网TLS，具体密钥由部署系统注入，日志只记任务ID与错误类别。
+# 5 客户端与编辑器模块
+Flutter分成RoomSession、ViewStore、CommandTracker、ReadingQueue、MediaHost、AdaptiveShell。ViewStore在一次授权事件中原子更新，动画订阅状态变化而非持有业务写权限。ReadingQueue持有本地叙事游标，退出保留草稿和已读ID；租约接管后清理旧命令控制权但不清空可读历史。
+React工作台以领域store为源，画布selector派生节点和线；属性修改写领域patch，布局修改写editor_layout。保存采用revision乐观锁，冲突时进行三方比较；本轮不承诺多人实时共同编辑或CRDT。ReactFlow用于图交互，验证器不能依赖DOM或节点屏幕坐标。
+发布编译剥离editor_layout、来源中敏感原文与审核注释，输出私有执行包；玩家只取受权呈现数据，不能下载完整规则包猜秘密。
+# 6 安全与权限
+按用户、项目、房间成员和内容受众四层检查，服务端不信任前端role_id。文本输出通过普通文本/受限富文本渲染，拒绝脚本、可执行链接和原样HTML。上传校验真实媒体类型、大小与解码资源限制，阻断压缩炸弹；模型输入中的“忽略规则”视为故事文本而非系统指令。
+访问令牌短期，刷新令牌服务端存hash且轮换；游客恢复码高熵、单次轮换，不能以device_id找回。后台账号由部署管理员授予，提供一次性码认证和角色撤销。注销撤销会话并触发跨快照、任务、事件和对象保留处理，见D05。
+# 7 部署与质量
+Web静态站点、Phoenix、Python API/worker、PostgreSQL和对象存储为最小运行组成。任务并发与房间连接各自限额，AI积压优先拒绝新自由判断，保留正常游戏。CDN故障以授权文本摘要降级。数据库不可用时停止接受新动作，不能在内存继续宣布成功。
+目标环境为同区域RTT≤100ms、100个三人活跃房、100个有效命令每秒；具体机器配置必须在实测报告填写。目标不是已兑现SLA。客户端60Hz以UI/raster p95≤16.7ms及长帧比例共同评估；AI延迟和视频下载不混入规则回执统计。
+# 8 变更隔离与决策
+最昂贵的变化是内容格式、规则语义与房间存档，故通过D08版本和纯规则边界隔离；其成本是维护跨语言golden fixtures和迁移器。编辑器可更换布局或图组件而不改世界规则。AI供应商替换只影响模型输入输出适配，不改变可执行效果集合。
+不引入通用脚本执行、任意插件加载或自定义语言解释器。若后续确有无法表达的玩法，先增加有版本的条件/效果类型及验收，再考虑脚本沙箱；不能以“AI灵活”绕过约束。
+官方实现参考于2026年10月9日核对：React Flow Save and Restore https://reactflow.dev/examples/interaction/save-and-restore；Sub Flows https://reactflow.dev/learn/layouting/sub-flows；Phoenix Channels client https://phoenix.hexdocs.pm/writing_a_channels_client.html；Flutter adaptive https://docs.flutter.dev/ui/adaptive-responsive 。引用用于组件能力和协议事实，项目规则由本组定义。实施时锁定SDK版本后跑契约测试，不声称已验证所有版本。

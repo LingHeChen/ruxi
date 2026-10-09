@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "feasible",
+        "clarify",
+        "rejected"
+      ]
+    },
+    "mapped_action_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "template_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "target_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "integer",
+          "boolean"
+        ]
+      }
+    },
+    "reason_safe": {
+      "type": "string"
+    },
+    "risk_summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "mapped_action_id",
+    "template_id",
+    "target_id",
+    "slots",
+    "reason_safe",
+    "risk_summary"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

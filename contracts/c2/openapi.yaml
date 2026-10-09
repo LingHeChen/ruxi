@@ -1,0 +1,3666 @@
+openapi: 3.1.0
+info:
+  title: Ruxi C2 HTTP API
+  version: 2.0.0
+  description: 设计契约；动态授权视图及发布校验需服务端语义验证。
+servers:
+- url: https://api.example.invalid/api/v2
+paths:
+  /identities/guest:
+    post:
+      summary: 建立游客身份
+      operationId: post_identities_guest
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: &id001
+                    type: string
+                  access_token: *id001
+                  refresh_token: *id001
+                  recovery_code: *id001
+                required:
+                - user_id
+                - access_token
+                - refresh_token
+                - recovery_code
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: &id003
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code: &id002
+                        type: string
+                      safe_message: *id002
+                      retryable: &id009
+                        type: boolean
+                      trace_id: *id002
+                    required:
+                    - code
+                    - safe_message
+                    - retryable
+                    - trace_id
+                    additionalProperties: false
+                required:
+                - error
+                additionalProperties: false
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+  /identities/recover:
+    post:
+      summary: 恢复并轮换身份
+      operationId: post_identities_recover
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: *id001
+                  access_token: *id001
+                  refresh_token: *id001
+                  recovery_code: *id001
+                required:
+                - user_id
+                - access_token
+                - refresh_token
+                - recovery_code
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recovery_code: *id001
+              required:
+              - recovery_code
+              additionalProperties: false
+  /session/refresh:
+    post:
+      summary: refresh
+      operationId: post_session_refresh
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: *id001
+                  refresh_token: *id001
+                required:
+                - access_token
+                - refresh_token
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: *id001
+              required:
+              - refresh_token
+              additionalProperties: false
+  /session/logout:
+    post:
+      summary: logout
+      operationId: post_session_logout
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id001
+                required:
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+  /session/socket-ticket:
+    post:
+      summary: socket-ticket
+      operationId: post_session_socket_ticket
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket: *id001
+                  expires_at: &id004
+                    type: integer
+                required:
+                - ticket
+                - expires_at
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+  /me:
+    get:
+      summary: 个人资料
+      operationId: get_me
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema: &id005
+                type: object
+                properties:
+                  id: *id001
+                  nickname: *id001
+                  avatar_asset_id:
+                    type:
+                    - string
+                    - 'null'
+                  revision: *id004
+                required:
+                - id
+                - nickname
+                - avatar_asset_id
+                - revision
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters: []
+    patch:
+      summary: 更新资料
+      operationId: patch_me
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema: *id005
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname: *id001
+                avatar_asset_id:
+                  type:
+                  - string
+                  - 'null'
+              required: []
+              additionalProperties: false
+    delete:
+      summary: 注销
+      operationId: delete_me
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id001
+                required:
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+  /me/recovery-code:
+    post:
+      summary: 轮换恢复码
+      operationId: post_me_recovery_code
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recovery_code: *id001
+                required:
+                - recovery_code
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+  /stories:
+    get:
+      summary: 分页列表
+      operationId: get_stories
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - items
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security: []
+      parameters:
+      - name: cursor
+        in: query
+        schema: *id001
+      - name: query
+        in: query
+        schema: *id001
+      - name: seat_count
+        in: query
+        schema: *id001
+      - name: genre
+        in: query
+        schema: *id001
+  /games:
+    get:
+      summary: 分页列表
+      operationId: get_games
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - items
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cursor
+        in: query
+        schema: *id001
+      - name: query
+        in: query
+        schema: *id001
+      - name: seat_count
+        in: query
+        schema: *id001
+      - name: genre
+        in: query
+        schema: *id001
+  /me/feedback:
+    get:
+      summary: 分页列表
+      operationId: get_me_feedback
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - items
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cursor
+        in: query
+        schema: *id001
+      - name: query
+        in: query
+        schema: *id001
+      - name: seat_count
+        in: query
+        schema: *id001
+      - name: genre
+        in: query
+        schema: *id001
+  /studio/projects:
+    get:
+      summary: 分页列表
+      operationId: get_studio_projects
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - items
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cursor
+        in: query
+        schema: *id001
+      - name: query
+        in: query
+        schema: *id001
+      - name: seat_count
+        in: query
+        schema: *id001
+      - name: genre
+        in: query
+        schema: *id001
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+    post:
+      summary: 新建项目
+      operationId: post_studio_projects
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  revision: *id004
+                required:
+                - id
+                - revision
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: *id001
+                seat_count: *id004
+              required:
+              - title
+              - seat_count
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /stories/{id}:
+    get:
+      summary: 公开剧本详情
+      operationId: get_stories_id
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  title: *id001
+                  seat_count: *id004
+                  release_id: *id001
+                  summary: *id001
+                required:
+                - id
+                - title
+                - seat_count
+                - release_id
+                - summary
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /rooms:
+    post:
+      summary: 创建或加入房间
+      operationId: post_rooms
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id: *id001
+                  member_id: *id001
+                  status: *id001
+                required:
+                - room_id
+                - member_id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                release_id: *id001
+              required:
+              - release_id
+              additionalProperties: false
+  /rooms/join:
+    post:
+      summary: 创建或加入房间
+      operationId: post_rooms_join
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id: *id001
+                  member_id: *id001
+                  status: *id001
+                required:
+                - room_id
+                - member_id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invite_code: *id001
+              required:
+              - invite_code
+              additionalProperties: false
+  /rooms/{id}/snapshot:
+    get:
+      summary: 个人授权快照
+      operationId: get_rooms_id_snapshot
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stream_id: *id001
+                  view_seq: *id004
+                  state:
+                    type: object
+                required:
+                - stream_id
+                - view_seq
+                - state
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /rooms/{id}/commands/{command_id}:
+    get:
+      summary: 查询提交结果
+      operationId: get_rooms_id_commands_command_id
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    enum:
+                    - pending
+                    - queued
+                    - committed
+                    - rejected
+                  receipt_seq:
+                    type:
+                    - integer
+                    - 'null'
+                  error:
+                    type:
+                    - object
+                    - 'null'
+                required:
+                - status
+                - receipt_seq
+                - error
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: command_id
+        in: path
+        required: true
+        schema: *id001
+  /rooms/{id}/proposals:
+    post:
+      summary: 创建自由行动判断
+      operationId: post_rooms_id_proposals
+      responses:
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+        '202':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: *id001
+                  status: *id001
+                required:
+                - task_id
+                - status
+                additionalProperties: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  maxLength: 2000
+                client_context:
+                  type: object
+                  properties:
+                    location_id: *id001
+                  required:
+                  - location_id
+                  additionalProperties: false
+              required:
+              - text
+              - client_context
+              additionalProperties: false
+    get:
+      summary: 查询本人提案
+      operationId: get_rooms_id_proposals
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        proposal_id: *id001
+                        status: *id001
+                        display_text: *id001
+                        cost: *id004
+                        risk_text: *id001
+                        expires_at: *id004
+                        allowed_now:
+                          type: boolean
+                      required:
+                      - proposal_id
+                      - status
+                      - display_text
+                      - cost
+                      - risk_text
+                      - expires_at
+                      - allowed_now
+                      additionalProperties: false
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                required:
+                - items
+                - next_cursor
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /rooms/{id}/proposals/{proposal_id}:
+    delete:
+      summary: 取消未确认提案
+      operationId: delete_rooms_id_proposals_proposal_id
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id001
+                required:
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: proposal_id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+  /rooms/{id}/media/{asset_id}/access:
+    get:
+      summary: 授权媒体
+      operationId: get_rooms_id_media_asset_id_access
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: *id001
+                  expires_at: *id004
+                  summary: *id001
+                required:
+                - url
+                - expires_at
+                - summary
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: asset_id
+        in: path
+        required: true
+        schema: *id001
+  /studio/projects/{id}/draft:
+    get:
+      summary: 获取草稿
+      operationId: get_studio_projects_id_draft
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revision: *id004
+                  content:
+                    type: object
+                required:
+                - revision
+                - content
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+    put:
+      summary: 保存草稿
+      operationId: put_studio_projects_id_draft
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revision: *id004
+                required:
+                - revision
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: object
+                  description: 草稿可不完整；完整Schema用于校验和发布
+              required:
+              - content
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/layout:
+    put:
+      summary: 保存布局
+      operationId: put_studio_projects_id_layout
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  layout_revision: *id004
+                required:
+                - layout_revision
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nodes:
+                  type: array
+                  items:
+                    type: object
+                viewport:
+                  type: object
+                collapsed:
+                  type: array
+                  items: *id001
+              required:
+              - nodes
+              - viewport
+              - collapsed
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/validate:
+    post:
+      summary: validate
+      operationId: post_studio_projects_id_validate
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                  content_hash: *id001
+                required:
+                - id
+                - status
+                - content_hash
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_hash: *id001
+                revision: *id004
+              required:
+              - content_hash
+              - revision
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/preview:
+    post:
+      summary: preview
+      operationId: post_studio_projects_id_preview
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                  content_hash: *id001
+                required:
+                - id
+                - status
+                - content_hash
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_hash: *id001
+                revision: *id004
+              required:
+              - content_hash
+              - revision
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/reviews:
+    post:
+      summary: reviews
+      operationId: post_studio_projects_id_reviews
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                  content_hash: *id001
+                required:
+                - id
+                - status
+                - content_hash
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_hash: *id001
+                revision: *id004
+              required:
+              - content_hash
+              - revision
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/releases:
+    post:
+      summary: releases
+      operationId: post_studio_projects_id_releases
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                  content_hash: *id001
+                required:
+                - id
+                - status
+                - content_hash
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_hash: *id001
+                revision: *id004
+              required:
+              - content_hash
+              - revision
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/projects/{id}/adaptations:
+    post:
+      summary: 小说改编
+      operationId: post_studio_projects_id_adaptations
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: *id001
+                  status: *id001
+                required:
+                - task_id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source_asset_id: *id001
+                base_revision: *id004
+                mode:
+                  enum:
+                  - faithful
+                  - branching
+              required:
+              - source_asset_id
+              - base_revision
+              - mode
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /tasks/{id}:
+    get:
+      summary: 任务与产物
+      operationId: get_tasks_id
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                  stage: *id001
+                  generation: *id004
+                  output_ref:
+                    type:
+                    - string
+                    - 'null'
+                  error:
+                    type:
+                    - object
+                    - 'null'
+                required:
+                - id
+                - status
+                - stage
+                - generation
+                - output_ref
+                - error
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /tasks/{id}/cancel:
+    post:
+      summary: cancel
+      operationId: post_tasks_id_cancel
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /tasks/{id}/retry:
+    post:
+      summary: retry
+      operationId: post_tasks_id_retry
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /tasks/{id}/apply:
+    post:
+      summary: apply
+      operationId: post_tasks_id_apply
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                base_revision: *id004
+                operation_ids:
+                  type: array
+                  items: *id001
+              required:
+              - base_revision
+              - operation_ids
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/assets/upload:
+    post:
+      summary: 上传准备
+      operationId: post_studio_assets_upload
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asset_id: *id001
+                  upload_url: *id001
+                  expires_at: *id004
+                required:
+                - asset_id
+                - upload_url
+                - expires_at
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id: *id001
+                file_name: *id001
+                mime_type: *id001
+                size_bytes: *id004
+              required:
+              - project_id
+              - file_name
+              - mime_type
+              - size_bytes
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /studio/assets/{id}/complete:
+    post:
+      summary: 完成并转码
+      operationId: post_studio_assets_id_complete
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: *id001
+                  status: *id001
+                required:
+                - task_id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sha256: *id001
+              required:
+              - sha256
+              additionalProperties: false
+      description: 必须校验项目成员身份；作者/审核/发布权限按D07区分。
+  /admin/releases/{id}/withdraw:
+    post:
+      summary: withdraw
+      operationId: post_admin_releases_id_withdraw
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: *id001
+              required:
+              - reason
+              additionalProperties: false
+      description: 仅授予对应管理权限的后台身份；记录审计。
+  /admin/releases/{id}/block:
+    post:
+      summary: block
+      operationId: post_admin_releases_id_block
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: *id001
+              required:
+              - reason
+              additionalProperties: false
+      description: 仅授予对应管理权限的后台身份；记录审计。
+  /admin/diagnostics:
+    get:
+      summary: 脱敏诊断
+      operationId: get_admin_diagnostics
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                required:
+                - items
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters: []
+      description: 仅授予对应管理权限的后台身份；记录审计。
+  /feedback:
+    post:
+      summary: 提交反馈
+      operationId: post_feedback
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: *id001
+                  status: *id001
+                required:
+                - id
+                - status
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category: *id001
+                text: *id001
+                screenshot_asset_id:
+                  type:
+                  - string
+                  - 'null'
+              required:
+              - category
+              - text
+              additionalProperties: false
+  /analytics/batch:
+    post:
+      summary: 异步埋点
+      operationId: post_analytics_batch
+      responses:
+        '200':
+          description: 操作成功，异步操作返回任务状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: *id004
+                required:
+                - accepted
+                additionalProperties: false
+        '400':
+          description: 输入错误
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          description: 身份失效
+          content:
+            application/json:
+              schema: *id003
+        '403':
+          description: 无权限
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 状态或幂等冲突
+          content:
+            application/json:
+              schema: *id003
+        '422':
+          description: 校验失败
+          content:
+            application/json:
+              schema: *id003
+        '429':
+          description: 限频
+          content:
+            application/json:
+              schema: *id003
+        '503':
+          description: 服务暂不可用
+          content:
+            application/json:
+              schema: *id003
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    properties:
+                      event_id: *id001
+                      name: *id001
+                      timestamp: *id004
+                      attributes:
+                        type: object
+                    required:
+                    - event_id
+                    - name
+                    - timestamp
+                    - attributes
+                    additionalProperties: false
+              required:
+              - events
+              additionalProperties: false
+  /me/preferences:
+    get:
+      summary: 读取详情
+      operationId: get__me_preferences
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+    patch:
+      summary: 修改偏好或元数据，项目删除改归档
+      operationId: patch__me_preferences
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subtitle: &id006
+                  type: boolean
+                text_speed:
+                  enum:
+                  - slow
+                  - normal
+                  - fast
+                  - instant
+                music_volume:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                voice_volume:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                reduce_motion: *id006
+              required: []
+              additionalProperties: false
+  /studio/projects/{id}:
+    get:
+      summary: 读取详情
+      operationId: get__studio_projects_id
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+    patch:
+      summary: 修改偏好或元数据，项目删除改归档
+      operationId: patch__studio_projects_id
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: &id007
+                  type: string
+                description: *id007
+              required: []
+              additionalProperties: false
+  /studio/assets/{id}:
+    get:
+      summary: 读取详情
+      operationId: get__studio_assets_id
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+    patch:
+      summary: 修改偏好或元数据，项目删除改归档
+      operationId: patch__studio_assets_id
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: *id007
+                rights_note: *id007
+                summary: *id007
+              required: []
+              additionalProperties: false
+  /studio/projects/{id}/export:
+    get:
+      summary: 导出作者可访问项目包
+      operationId: get__studio_projects_id_export
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url: *id002
+                  expires_at: &id008
+                    type: integer
+                required:
+                - download_url
+                - expires_at
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+  /studio/projects/{id}/archive:
+    post:
+      summary: 归档项目，保留已发布引用
+      operationId: post__studio_projects_id_archive
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id002
+                required:
+                - status
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              required: []
+              additionalProperties: false
+  /studio/projects/{id}/import:
+    post:
+      summary: 导入内容候选，不直接发布
+      operationId: post__studio_projects_id_import
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: *id002
+                  status: *id002
+                required:
+                - task_id
+                - status
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset_id: *id002
+                source_format:
+                  enum:
+                  - json
+                  - txt
+                  - docx
+              required:
+              - asset_id
+              - source_format
+              additionalProperties: false
+  /admin/reviews/{id}/decision:
+    post:
+      summary: 审核决策绑定hash
+      operationId: post__admin_reviews_id_decision
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id002
+                required:
+                - status
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content_hash: *id002
+                decision:
+                  enum:
+                  - approve
+                  - reject
+                reason: *id002
+              required:
+              - content_hash
+              - decision
+              - reason
+              additionalProperties: false
+  /admin/feedback/{id}:
+    patch:
+      summary: 反馈处理
+      operationId: patch__admin_feedback_id
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id002
+      - name: If-Match
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: *id002
+                required:
+                - status
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: *id002
+                resolution: *id002
+              required:
+              - status
+              - resolution
+              additionalProperties: false
+  /session/control:
+    post:
+      summary: 显式设备接管
+      operationId: post__session_control
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  control_epoch: *id008
+                required:
+                - control_epoch
+                additionalProperties: false
+        '403':
+          description: 拒绝访问
+          content:
+            application/json:
+              schema: *id003
+        '409':
+          description: 冲突
+          content:
+            application/json:
+              schema: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                room_id: *id002
+                confirm_takeover: *id009
+              required:
+              - room_id
+              - confirm_takeover
+              additionalProperties: false
+  /admin/session/code:
+    post:
+      summary: 后台一次性码换会话
+      operationId: post_admin_session_code
+      security: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id007
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: *id007
+              required:
+              - code
+              additionalProperties: false
+      responses:
+        '200':
+          description: 后台会话
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: *id007
+                  refresh_token: *id007
+                  expires_at:
+                    type: integer
+                required:
+                - access_token
+                - refresh_token
+                - expires_at
+                additionalProperties: false
+        '401':
+          description: 无效或过期码
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

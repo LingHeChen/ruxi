@@ -1,0 +1,101 @@
+{
+  "type": "object",
+  "properties": {
+    "base_revision": {
+      "type": "integer"
+    },
+    "source_hash": {
+      "type": "string"
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "before_hash": {
+            "type": "string"
+          },
+          "after": {},
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "entity_id",
+          "field",
+          "before_hash",
+          "after",
+          "source_refs",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_id": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "explicit",
+              "inferred",
+              "adapted"
+            ]
+          },
+          "chapter_id": {
+            "type": "string"
+          },
+          "paragraph_start": {
+            "type": "integer"
+          },
+          "paragraph_end": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entity_id",
+          "classification",
+          "chapter_id",
+          "paragraph_start",
+          "paragraph_end"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "base_revision",
+    "source_hash",
+    "operations",
+    "provenance",
+    "warnings"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

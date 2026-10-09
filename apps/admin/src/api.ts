@@ -78,12 +78,14 @@ export class ApiClient {
     path: string,
     body?: Json,
     retried = false,
+    extraHeaders: Record<string, string> = {},
   ): Promise<T> {
     const response = await fetch(this.base + path, {
       method,
       headers: {
         "Content-Type": "application/json",
         ...(this.access ? { Authorization: `Bearer ${this.access}` } : {}),
+        ...extraHeaders,
       },
       body: method === "GET" ? undefined : JSON.stringify(body ?? {}),
       signal: AbortSignal.timeout(15000),
@@ -101,7 +103,7 @@ export class ApiClient {
         this.clear();
         throw error;
       }
-      return this.request<T>(method, path, body, true);
+      return this.request<T>(method, path, body, true, extraHeaders);
     }
     if (!response.ok) {
       if (response.status === 401 && !path.includes("/auth/")) this.clear();
@@ -111,6 +113,22 @@ export class ApiClient {
       );
     }
     return data.data as T;
+  }
+  c2<T = Json>(
+    method: string,
+    path: string,
+    body?: Json,
+    revision?: number,
+  ): Promise<T> {
+    const route = path.startsWith("/projects")
+      ? `/studio${path}`
+      : path.startsWith("/releases")
+        ? `/admin${path}`
+        : path;
+    return this.request<T>(method, `/api/v2${route}`, body, false, {
+      ...(method === "GET" ? {} : { "Idempotency-Key": crypto.randomUUID() }),
+      ...(revision === undefined ? {} : { "If-Match": String(revision) }),
+    });
   }
   private refresh() {
     return (this.refreshing ??= (async () => {

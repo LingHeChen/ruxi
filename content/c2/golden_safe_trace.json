@@ -1,0 +1,118 @@
+[
+  {
+    "round": 1,
+    "step": 1,
+    "order": [
+      "guest",
+      "doctor",
+      "reporter"
+    ],
+    "result": [
+      [
+        "guest",
+        "resolved"
+      ],
+      [
+        "doctor",
+        "passed"
+      ],
+      [
+        "reporter",
+        "passed"
+      ]
+    ],
+    "world": {
+      "door_open": false,
+      "power_off": false,
+      "noise": false
+    }
+  },
+  {
+    "round": 1,
+    "step": 2,
+    "order": [
+      "doctor",
+      "reporter",
+      "guest"
+    ],
+    "result": [
+      [
+        "guest",
+        "resolved"
+      ]
+    ],
+    "world": {
+      "door_open": false,
+      "power_off": false,
+      "noise": false
+    }
+  },
+  {
+    "round": 1,
+    "step": 3,
+    "order": [
+      "reporter",
+      "guest",
+      "doctor"
+    ],
+    "result": [
+      [
+        "guest",
+        "resolved"
+      ]
+    ],
+    "world": {
+      "door_open": true,
+      "power_off": false,
+      "noise": false
+    }
+  },
+  {
+    "round": 2,
+    "step": 1,
+    "order": [
+      "doctor",
+      "reporter",
+      "guest"
+    ],
+    "result": [
+      [
+        "doctor",
+        "passed"
+      ],
+      [
+        "reporter",
+        "passed"
+      ],
+      [
+        "guest",
+        "resolved"
+      ]
+    ],
+    "world": {
+      "door_open": true,
+      "power_off": false,
+      "noise": false
+    }
+  },
+  {
+    "round": 2,
+    "step": 2,
+    "order": [
+      "reporter",
+      "guest",
+      "doctor"
+    ],
+    "result": [
+      [
+        "guest",
+        "resolved"
+      ]
+    ],
+    "world": {
+      "door_open": true,
+      "power_off": true,
+      "noise": false
+    }
+  }
+]

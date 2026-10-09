@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant U as 玩家
+  participant E as 房间服务
+  participant A as AI 判断
+  participant D as 数据库
+  U->>E: 自定义行动文本
+  E->>A: 授权上下文与允许模板
+  A-->>E: 可行性与模板填槽
+  E-->>U: 成本 风险 有效期
+  U->>E: 确认提案
+  E->>D: 校验并预留行动点
+  E-->>U: 已排队
+  Note over E,D: 全员提交或步截止
+  E->>D: 按顺序结算效果和事件
+  D-->>E: 提交成功
+  E-->>U: 授权状态与叙事结果

@@ -1,0 +1,467 @@
+[
+  {
+    "name": "twelve documents and sources",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D01 document references",
+    "status": "PASS",
+    "detail": "['D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08', 'D09', 'D10', 'D11', 'D12']"
+  },
+  {
+    "name": "D01 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D02 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D02 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D03 document references",
+    "status": "PASS",
+    "detail": "['D01']"
+  },
+  {
+    "name": "D03 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D04 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D04 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D05 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D05 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D06 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D06 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D07 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D07 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D08 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D08 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D09 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D09 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D10 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D10 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D11 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D11 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "D12 document references",
+    "status": "PASS",
+    "detail": "[]"
+  },
+  {
+    "name": "D12 substantive scope",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "runtime.schema.json schema meta validation",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "ai_output.schema.json schema meta validation",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "story.schema.json schema meta validation",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "changeset.schema.json schema meta validation",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "protocol.schema.json schema meta validation",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "OpenAPI unique operation ids",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /identities/guest path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /identities/recover path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /session/refresh path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /session/logout path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /session/socket-ticket path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /me path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "patch /me path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "delete /me path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /me/recovery-code path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /stories path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /games path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /me/feedback path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /studio/projects path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /stories/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /rooms path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /rooms/join path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /rooms/{id}/snapshot path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /rooms/{id}/commands/{command_id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /rooms/{id}/proposals path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /rooms/{id}/proposals path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "delete /rooms/{id}/proposals/{proposal_id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /rooms/{id}/media/{asset_id}/access path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /studio/projects/{id}/draft path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "put /studio/projects/{id}/draft path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "put /studio/projects/{id}/layout path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/validate path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/preview path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/reviews path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/releases path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/adaptations path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /tasks/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /tasks/{id}/cancel path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /tasks/{id}/retry path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /tasks/{id}/apply path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/assets/upload path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/assets/{id}/complete path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /admin/releases/{id}/withdraw path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /admin/releases/{id}/block path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /admin/diagnostics path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /feedback path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /analytics/batch path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /me/preferences path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "patch /me/preferences path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /studio/projects/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "patch /studio/projects/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /studio/assets/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "patch /studio/assets/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "get /studio/projects/{id}/export path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/archive path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /studio/projects/{id}/import path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /admin/reviews/{id}/decision path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "patch /admin/feedback/{id} path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /session/control path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "post /admin/session/code path parameters",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "player_mobile figure exists",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "player_wide figure exists",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "studio_wide figure exists",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "components figure exists",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "all QA mapped to capability",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "no obsolete fixed timing as current rule",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "name": "no Flutter Web editor retained",
+    "status": "PASS",
+    "detail": ""
+  }
+]

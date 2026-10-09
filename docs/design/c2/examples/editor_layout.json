@@ -1,0 +1,36 @@
+{
+  "project_id": "restaurant",
+  "layout_revision": 1,
+  "nodes": [
+    {
+      "entity_id": "dining",
+      "position": {
+        "x": 0,
+        "y": 100
+      },
+      "parent_id": null
+    },
+    {
+      "entity_id": "hall",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "parent_id": null
+    },
+    {
+      "entity_id": "kitchen",
+      "position": {
+        "x": 600,
+        "y": 100
+      },
+      "parent_id": null
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  },
+  "collapsed": []
+}

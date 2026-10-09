@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'data/room_client.dart';
 import 'ui/media_sheet.dart';
 import 'ui/portal.dart';
+import 'ui/c2_stage.dart';
 
 const amber = Color(0xfff3ad47);
 const surface = Color(0xff1b2125);
@@ -61,6 +62,14 @@ GoRouter playerRouter({
 }) => GoRouter(
   initialLocation: initialLocation,
   routes: [
+    GoRoute(path: '/worlds', builder: (context, state) => const C2Stage()),
+    GoRoute(
+      path: '/world-rooms/:roomId',
+      builder: (context, state) => C2Stage(
+        key: ValueKey(state.pathParameters['roomId']),
+        roomId: state.pathParameters['roomId'],
+      ),
+    ),
     ShellRoute(
       builder: (context, state, child) => Home(
         key: const ValueKey('player-shell'),
@@ -340,6 +349,11 @@ class _HomeState extends State<Home> {
           ],
         ),
         actions: [
+          if (!inRoom && wide)
+            TextButton(
+              onPressed: () => context.go('/worlds'),
+              child: const Text('探索故事'),
+            ),
           if (!inRoom && wide) ...[
             for (final entry in {0: '首页', 1: '发现', 2: '房间', 3: '我的'}.entries)
               TextButton(
@@ -406,6 +420,12 @@ class _HomeState extends State<Home> {
       body: SafeArea(
         child: Column(
           children: [
+            if (!inRoom && !wide && widget.route != null)
+              TextButton.icon(
+                onPressed: () => context.go('/worlds'),
+                icon: const Icon(Icons.explore_outlined),
+                label: const Text('探索互动故事'),
+              ),
             if (client.status.isNotEmpty)
               Container(
                 width: double.infinity,

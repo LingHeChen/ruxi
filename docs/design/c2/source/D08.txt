@@ -1,0 +1,54 @@
+# 1 格式与权威
+规范采用JSON，schema_version固定3。JSON Schema使用draft 2020-12，文件contracts/story.schema.json。可读YAML以后可作为导入形式，但必须转换到同一JSON并验证；当前不维护另一套语义。文本小说不能直接作为运行脚本。编辑布局另存，不进入执行hash。
+顶层必需字段为schema_version、id、title、rules、roles、locations、links、objects、clues、actions、templates、events、initial和media；votes为可选字段，详见第10节。角色、地点、对象、线索、动作、模板、事件、素材ID分别类型内唯一；引用通过对应集合定位，不依据显示名称。发布编译输出规范化JSON与SHA256；hash算法对键排序、UTF-8、无额外空格、禁止NaN和浮点规则值，跨语言golden测试一致。
+# 2 核心字段
+|集合|字段与意义|约束|
+|rules|ap_per_round step_timeout_s proposal_ttl_s round_limit|正整数，预算1—10；时限15—300s|
+|roles|id label location knowledge[]|location有效，知识引用存在；人数2—4|
+|locations|id label description discovered|地点图与场景渲染分离|
+|links|id from to cost condition|单向边；双向以两条边表示|
+|objects|id label location tags[]|标签用于允许模板的目标匹配|
+|clues|id text shareable|内容默认不发给未知成员|
+|actions|id label location target cost condition effects failure threshold max_uses|target可空；无threshold表示必成功|
+|templates|与action相同结构，加intent与required_tag|只有作者显式允许的自由行动映射|
+|events|id trigger priority condition effects once|trigger为room_start/action_end/step_end/round_end|
+|initial|world inventory|世界变量初值与物品所属角色|
+|media|id kind uri audience summary|kind为image/video/audio/text；summary必须存在|
+附件Schema是机器字段类型与必填检查权威，本文解释运行含义。Schema不能证明引用、可达性或权限安全，必须再执行语义校验。
+# 3 条件表达式
+条件递归结构为{op:"all",args:[...] }、any、not，及eq/ne/gte/lte、has_knowledge、owns；比较使用ref和value，知识与所有权使用ref目标ID。允许ref只有world.<declared_key>、actor.location、actor.ap、clock.round；禁止动态路径、数组注入、函数、网络、系统时间和随机读取。未声明变量是发布错误，运行时异常挂起而非默认true。
+all空数组为true，any空数组为false；not恰好一个子表达式。eq使用类型严格比较，布尔不等于数字1。gte/lte仅用于整数；JSON null只能与null相等。短路不产生副作用。模型不能自行增加隐藏变量，世界变量声明来自initial.world。
+模板可进一步被业务能力限制，例如actor拥有fire_extinguisher才允许force_door，目标必须有breakable标签。schema validates shape不代表动作当前可执行；执行时仍查地点与权限。
+# 4 效果语义
+|op|字段|执行规则|
+|set|ref value|只写已声明world键，类型与初值一致|
+|move|value为location_id|移动当前actor；主动移动应走有效link|
+|reveal|ref为clue_id audience=self/all|给个人或全员知识，不撤销已知信息|
+|grant|ref为item/object_id|给当前actor，唯一物品已有主则动作失效|
+|end|value为ending_id|仅step_end/round_end事件可用；一次结算|
+效果按数组顺序执行，动作级原子提交。失败effects默认空数组但费用仍扣。move在普通作者动作中必须声明合法通路或显式事件传送机制，本轮Schema样例只用link生成移动，不开放随意跨地点动作。end优先级由事件排序定义，不能由字符串顺序猜结局。
+max_uses默认1，作用域每角色每局；需要全局一次的对象通过world状态条件实现。schema中明确写max_uses避免默认分歧。事件once=true只触发一次，发布验证拒绝会无限自激的组合；引擎仍有32次安全上限。
+# 5 移动与内建命令
+通路产生内建动作move:<link_id>，费用取link.cost，前置包括actor.location==from及link.condition，到达to。它不在actions重复存储，界面按可见地图生成候选。round.end、knowledge.share和item.offer属于引擎命令而非任意DSL效果，使用D02和D06约束。
+显示条件与执行条件可以扩展为display_condition，默认等于执行条件的安全公开投影；不能把未满足的秘密判断直接变成提示文本。附件最小样例使用condition和固定安全label，不演示所有显示策略。生产编译器必须提供条件依赖的安全标签，未配置则隐藏候选。
+# 6 解释顺序
+开局：初始化世界和角色→检查引用与版本→运行room_start→公共开场→planning。每步：锁意图→稳定角色顺序→重新验证→扣费和判定→动作效果→action_end→下一动作→step_end→若全员结束或步数达预算则clock.round推进的轮末处理。
+轮末条件在当前轮编号上评估，再决定结束或round+1并恢复行动点；round_limit=4表示第四轮结束必有兜底结局，不能第五轮才触发。结局事件在step_end优先处理已达成目标，round_end只在未结束时兜底。状态机不能依赖动画播放完成来决定规则成功。
+媒体cue和AI叙述由已提交事实派生，错误叙述不能回写世界。每次判定保存action_id、actor、inputs摘要、费用、roll与effects，便于重放；重放使用已记录roll而不是再抽。
+# 7 编辑布局与素材
+editor_layout示例含nodes的entity_id、position、parent_id，以及视口和折叠；布局文件不承载条件或成本。React Flow节点data只存entity_id和展示缓存，保存时不把缓存反向覆盖领域数据。物理地图移动距离与画布坐标无关系。
+media.uri在草稿可为占位，发布时必须解析到同项目不可变asset ID和校验hash。玩家URL由服务端签发，不把私有静态地址直接打包。文字模式可以使用kind=text和完整summary，使样例无需外部媒体可运行。
+# 8 验证 编译与迁移
+验证四层：JSON Schema→引用与类型→权限与有界规则→路径模拟和人工试玩。报告使用稳定错误码和JSON Pointer。有效样例restaurant.json及无效样例invalid_missing_location.json、invalid_bad_cost.json、invalid_unknown_ref.json随包交付；错误样例不能进入发布目录。
+C1转换只生成草稿并列出无法推断的地图、成本和事件；schema_version不可直接改数字冒充迁移。兼容读取器先看版本再选择解释器，未知版本拒绝。引擎的关键规则由独立golden traces验证，Python参考实现和Elixir正式实现应跑同一份样例。
+# 9 扩展边界
+本版规范支持地点式探索、分支事件、可选概率与有限模板。战斗网格、复杂经济、开放脚本和无限AI创造实体不在已确认需求中；增加这些内容应新建有版本的操作类型并同时设计存档兼容。不能因未支持任意行为而把所有自由行动退化成纯聊天，允许的模板必须确实能产生差异化结果。
+# 10 协作 投票与媒体扩展字段
+roles.goals为角色目标文本，仅向本人显示；默认空数组。actions/templates可选display_condition、required_participants及risk_text，默认分别为执行条件的安全投影、1和按结果模板生成的安全风险说明。required_participants>1时，所有协作者提交相同action_id与target_id；各自按cost预留，全部成员满足条件后按一次协同行动执行效果。主体为固定席位顺序最前者，拥有物品/知识条件按每个参与者分别检验，只有主体获得self效果；作者若需要全员知识使用all。协同组按本步轮换顺序最前参与者占一个结算位置，其他参与者不能另执行第二项动作。
+votes是可选数组，默认空。每条投票定义id、label、duration_s、options与default_option；option有id、label、condition、effects。start_vote效果只能来自step_end或round_end事件，冻结满足条件的候选和全员资格；default_option必须包含在冻结候选。投票效果禁止再start_vote，防止同一事件栈递归开窗。投票期间暂停行动步，结束后执行胜出效果再运行step_end结局检查。选项不能直接用end效果，终局仍由事件统一裁定。
+cue效果引用media ID、audience=self/all和blocking。self在动作及action_end中指发起角色；room_start、step_end、round_end没有隐式actor，不允许actor条件或self效果，需使用all或将私有叙事附着于具体行动。事件使用全局世界变量；不能根据“第一名角色”隐式裁定全队结局。全局blocking cue进入D02媒体屏障，非blocking仅进入个人阅读队列。
+Schema检验形状，额外语义规则须阻止未知vote/media ID、无默认投票项、全局actor引用和权限超出素材受众。离线参考引擎只覆盖附件餐厅用到的确定性子集；协作、投票、媒体cue仍为生产实现验收项，不能因样例通过就认为这些规则已运行验证。
+
+# 11 地点发现与已知地图
+locations.discovered表示开局时全员是否知道该地点，运行时每位成员维护known_locations。links.discovered可省略，默认true，但端点任一地点未知时不显示该通路；display_condition可进一步限制已知入口显示。discover效果的ref必须是地点ID，audience为self或all，给予对应成员地点知识；并不会自动打开通路，也不立即移动角色。玩家离开地点后保留已发现地图。
+新地点默认不显示名称、缩略图或通路锁定文案。地图发现需要被物品、对话或事件明确触发；AI不能凭叙述创建可进入地点。传送不是本轮开放的任意动作，若后续增加必须单独定义代价与权限。

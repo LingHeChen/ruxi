@@ -1,0 +1,58 @@
+# 1 版本 身份与传输
+HTTP根路径/api/v2，JSON UTF-8。应用protocol_version=2；内容schema_version=3。使用Phoenix Channels v2 JSON framing：[join_ref,ref,topic,event,payload]，连接/socket/websocket?vsn=2.0.0。传输vsn不等于业务protocol_version。Flutter需兼容Phoenix join/reply/heartbeat语义，不把裸WS消息当成可互换协议。
+普通HTTP采用Authorization Bearer访问令牌。WS先通过POST /session/socket-ticket获得30s单次票据，phx_join只订阅room:{room_id}:member:{member_id}授权流；服务端从身份推导member_id，客户端不能替换。刷新令牌放平台安全存储或Web HttpOnly Secure Cookie；不在URL、local日志或分析事件传恢复码。
+# 2 通用HTTP约定
+写操作支持Idempotency-Key，作用域为用户+操作+资源；重复同payload返回同结果，异参409 IDEMPOTENCY_CONFLICT。资源编辑使用If-Match revision，缺失428、冲突412并返回最新revision及可授权差异。游标列表含items、next_cursor，不用客户端传任意排序SQL。
+错误统一为error.code、safe_message、retryable、trace_id；详细秘密前置只记录受限诊断。401需刷新或回认证，403回权限说明，404对未授权资源也可统一隐藏，409业务冲突，422输入错误，429含Retry-After，503可重试但先查询不确定命令结果。
+|接口组|请求与结果|权限/幂等|
+|POST /identities/guest；POST /identities/recover|建号无device找回；恢复码换会话|建号/恢复均支持幂等，码单次使用|
+|POST /session/refresh /logout /socket-ticket|轮换refresh；撤销；取WS票据|logout幂等；ticket单次|
+|GET PATCH DELETE /me；POST /me/recovery-code|资料、安全注销、轮换码|PATCH If-Match，DELETE幂等|
+|GET /stories；GET /stories/{id}|cursor、query、人数与题材；公开详情|可游客浏览，隐藏发布包|
+|POST /rooms；POST /rooms/join|release_id或邀请码；room与成员摘要|认证后可调用，幂等|
+|GET /games；GET /rooms/{id}/snapshot|本人历史；授权快照与stream水位|仅成员，终态按保留期|
+|GET /rooms/{id}/commands/{command_id}|pending/committed/rejected及receipt_seq|原发起人；重连先查再决定|
+|POST GET /rooms/{id}/proposals|text、client_context；任务或提案|成员、限频、幂等；不扣点|
+|DELETE /rooms/{id}/proposals/{id}|取消未确认提案|本人，幂等|
+|GET /rooms/{id}/media/{asset_id}/access|短时URL及授权字幕摘要|成员与受众检查，禁止目录枚举|
+|GET POST /studio/projects；GET PUT /studio/projects/{id}/draft|项目与完整草稿；revision与校验|作者权限，写入幂等/If-Match|
+|PUT /studio/projects/{id}/layout|布局、layout_revision|独立If-Match，不能改游戏语义|
+|POST /studio/projects/{id}/validate /preview /reviews /releases|版本hash和操作参数；任务或产物ID|各角色权限，全部幂等|
+|POST /studio/projects/{id}/adaptations；GET /tasks/{id}；POST /tasks/{id}/cancel /retry /apply|源文件、改编选项、目标revision|作者，apply需If-Match及字段冲突检查|
+|POST /studio/assets/upload；POST /studio/assets/{id}/complete|大小类型校验与上传票据；触发处理|作者，同项目，幂等|
+|POST /admin/releases/{id}/withdraw /block；GET /admin/diagnostics|原因、影响范围；脱敏诊断|发布/运维角色，审计，幂等|
+|POST /feedback；GET /me/feedback|类别、描述、可选截图；状态|上传脱敏提示，本人可查|
+|POST /analytics/batch|事件数组≤50条且≤64KiB|限频，拒绝正文属性|
+contracts/openapi.yaml定义端点、基础请求和响应；复杂业务payload使用contracts/protocol.schema.json与D08中的内容Schema。本文的操作目录是完整语义清单，未经授权的占位API不得上线。
+# 3 WS命令
+room.command payload包含protocol_version、command_id、control_epoch、step_id、type和body。step_id对行动必需，生命周期命令可null。command_id由客户端UUID生成，在明确终局前保持稳定；重试不重新生成ID。
+|type|body主要字段|允许阶段|
+|role.select role.swap.request role.swap.accept role.swap.cancel|role_id；target_member_id；request_id|lobby；换角后双方取消准备|
+|member.ready room.start|ready布尔；空对象|lobby，全员准备才开局|
+|action.submit|action_id target_id或proposal_id，二者择一|planning，校验预算与最新上下文|
+|action.cancel round.end|intent_id；空对象|planning，锁定后不可取消|
+|knowledge.share|clue_id audience_member_ids|active且允许交流；本人已知|
+|item.offer item.accept item.reject item.cancel|item_id target_member_id；offer_id|active且同地，30s有效|
+|vote.cast|vote_id option_id|有效投票窗口|
+|media.complete|cue_id mode为watched或summary|对应媒体屏障，不能伪造解锁私有片段|
+|pause.request pause.confirm room.resume room.leave|request_id；同意标记；空对象|D02规定状态，离局确认由UI完成|
+|chat.send|channel text≤2000字符|房间成员，公共/授权受众|
+|view.ack|stream_id view_seq|仅确认已应用水位，不推动剧情|
+用户输入只能选择被授予的action/proposal ID，不接收任意effects。程序性内部tick、resolve、job.complete不向玩家开放。每成员普通游戏命令限10/s，chat每5s最多3条，自由提案每分钟最多6次；限额是可配置防误触基线，限流不扣点。
+# 4 回执与视图
+phx_reply是传输相关回执，业务result包含status=queued/committed/rejected、command_id、receipt_seq、error。queued表示意图排队，不是效果完成。服务端event room.view包含stream_id、view_seq、base_view_seq、blocks与narrative_cues，多个状态块原子应用。room.notice只提示连接/运维，不包含未经投影的世界事实。
+典型顺序：action.submit→queued回执与预留视图→步锁定→结算→action_resolved视图。可用点数=ap_remaining−ap_reserved，UI不能在queued后同时减少remaining又扣reserved。结算时清reserved并减少remaining。无效动作清reserved但remaining不变。
+客户端遇重复seq忽略、seq跳跃先暂停写入并补发；收到base不匹配禁止局部拼接。授权流epoch改变直接重新快照。回执先到只显示已提交；成功微交互在相应视图真正应用后播放一次。私有事件不向其他成员泄露seq或对象ID。
+# 5 提案与AI内部契约
+POST proposal返回202及task_id，ready时得到proposal_id、display_text、cost、risk_text、expires_at、allowed_now。玩家确认仅提交proposal_id。expires_at按服务器时钟检查，暂停不自动延长提案有效期；过期需重新判断，不自动扣费。状态变更使提案失效返回PROPOSAL_STALE，要求用户重新确认新报价。
+内部POST /internal/v2/jobs接收job_id、generation、kind、input_ref、lease_token、deadline_at。回调POST /internal/v2/jobs/{id}/complete必须带generation、lease_token、output_hash、output_ref。错误generation返回409 STALE_WORKER且不修改房间。输出Schema错误可有限修复一次；仍失败记任务失败并降级。
+# 6 超时 重试与兼容
+提交2s未回执显示等待，8s仍未知则显示“正在确认结果”并查询commands。没有回执不能推断失败后用新ID重做。HTTP GET可指数退避重试；POST只在同Idempotency-Key下重试。单次free proposal超时8s后UI可选择预设，迟到的ready仍须人工确认且可能已过期。
+错误码包括UNAUTHORIZED、FORBIDDEN、ROOM_SUSPENDED、STEP_CLOSED、AP_INSUFFICIENT、CONDITION_CHANGED、PROPOSAL_EXPIRED、PROPOSAL_STALE、IDEMPOTENCY_CONFLICT、REVISION_CONFLICT、STALE_CONTROL、STALE_WORKER、RULE_LOOP、RATE_LIMITED、RESYNC_REQUIRED、MEDIA_UNAVAILABLE。safe_message不得包含秘密属性；是否允许重试由状态决定。
+C1客户端收到UNSUPPORTED_PROTOCOL后显示升级，不自动连C2房。C1房的旧端点保留至迁移窗口结束；服务端以room引擎版本路由。D12管理兼容矩阵与撤回策略。协议测试必须用真实Phoenix framing，不能只验证payload JSON。
+# 7 补充操作与鉴权参数
+room.invite.rotate仅房主在lobby执行，撤销旧码并返回新邀请；room.close仅房主在lobby执行，通知成员并关闭大厅。POST /session/control要求本人会话及confirm_takeover=true，返回递增control_epoch并撤销旧设备写权。恢复后第一步查询原command结果，不自动重发未知动作。
+GET/PATCH /me/preferences读写显示偏好；GET/PATCH /studio/projects/{id}及/assets/{id}读取并更新项目/素材元数据；项目archive只归档，export只导出本人有权内容，import创建候选任务。POST /admin/reviews/{id}/decision必须带候选content_hash、approve/reject与原因；PATCH /admin/feedback/{id}记录处理状态和结果。附加端点与OpenAPI保持同名。
+建议身份参数：玩家access有效15min、refresh绝对有效30天且每次轮换；后台会话最长8h、一次性登录码5min有效、单次消费；游客恢复码长期有效至轮换或注销，服务端只存hash。刷新接口以refresh本身认证，不要求尚未过期的access。Cookie认证写请求须有同源与CSRF检查。错误凭证限频，文案不区分账号是否存在。
+后台POST /admin/session/code由已获得管理员签发码的用户换后台会话；签发码不对游客开放，部署CLI按admin_roles创建。授权撤销对每次请求生效，不能只在登录时检查一次。
+协议输出类型在contracts/runtime.schema.json定义snapshot、view及receipt的必要字段。dynamic world view仍按受众投影，不能借additionalProperties把整份服务器状态透传。提案模型输出与改编patch分别见ai_output.schema.json、changeset.schema.json。

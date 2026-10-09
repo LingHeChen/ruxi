@@ -1,0 +1,13 @@
+id,kind,scope,needed,state,fallback
+bg_dining,image,public,yes,placeholder,地点描述
+bg_hall,image,public,yes,placeholder,地点描述
+bg_kitchen,image,public,yes,placeholder,地点描述
+portrait_guest,image,public,yes,not_produced,姓名与对白
+portrait_doctor,image,public,yes,not_produced,姓名与对白
+portrait_reporter,image,public,yes,not_produced,姓名与对白
+portrait_waiter,image,public,yes,not_produced,姓名与对白
+icon_dishes,image,authorized,yes,placeholder,物品名称
+icon_fire_extinguisher,image,authorized,yes,placeholder,物品名称
+icon_power_box,image,authorized,yes,placeholder,物品名称
+safe,text,public,yes,ready,结局正文
+evacuated,text,public,yes,ready,结局正文

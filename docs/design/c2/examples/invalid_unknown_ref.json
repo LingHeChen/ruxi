@@ -1,0 +1,398 @@
+{
+  "schema_version": 3,
+  "id": "restaurant",
+  "title": "停电之前",
+  "rules": {
+    "ap_per_round": 3,
+    "step_timeout_s": 45,
+    "proposal_ttl_s": 60,
+    "round_limit": 4
+  },
+  "roles": [
+    {
+      "id": "guest",
+      "label": "旅客",
+      "location": "dining",
+      "knowledge": []
+    },
+    {
+      "id": "doctor",
+      "label": "医生",
+      "location": "dining",
+      "knowledge": []
+    },
+    {
+      "id": "reporter",
+      "label": "记者",
+      "location": "dining",
+      "knowledge": []
+    }
+  ],
+  "locations": [
+    {
+      "id": "dining",
+      "label": "餐厅",
+      "description": "雨声掩盖了灯管的嗡鸣。",
+      "discovered": true
+    },
+    {
+      "id": "hall",
+      "label": "走廊",
+      "description": "后厨门上的指示灯忽明忽暗。",
+      "discovered": true
+    },
+    {
+      "id": "kitchen",
+      "label": "后厨",
+      "description": "电源箱旁有焦糊味。",
+      "discovered": true
+    }
+  ],
+  "links": [
+    {
+      "id": "dining_hall",
+      "from": "dining",
+      "to": "hall",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      }
+    },
+    {
+      "id": "hall_dining",
+      "from": "hall",
+      "to": "dining",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      }
+    },
+    {
+      "id": "hall_kitchen",
+      "from": "hall",
+      "to": "kitchen",
+      "cost": 1,
+      "condition": {
+        "op": "eq",
+        "ref": "world.door_open",
+        "value": true
+      }
+    },
+    {
+      "id": "kitchen_hall",
+      "from": "kitchen",
+      "to": "hall",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      }
+    }
+  ],
+  "objects": [
+    {
+      "id": "dishes",
+      "label": "餐具",
+      "location": "dining",
+      "tags": [
+        "inspectable"
+      ]
+    },
+    {
+      "id": "waiter",
+      "label": "服务员",
+      "location": "dining",
+      "tags": [
+        "npc"
+      ]
+    },
+    {
+      "id": "fire_extinguisher",
+      "label": "灭火器",
+      "location": "hall",
+      "tags": [
+        "tool"
+      ]
+    },
+    {
+      "id": "door",
+      "label": "后厨门",
+      "location": "hall",
+      "tags": [
+        "breakable"
+      ]
+    },
+    {
+      "id": "power_box",
+      "label": "电源箱",
+      "location": "kitchen",
+      "tags": [
+        "switch"
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "stain",
+      "text": "餐具边缘有焦黑粉末，像从通风口落下。",
+      "shareable": true
+    },
+    {
+      "id": "access",
+      "text": "服务员允许检查后厨，门禁为0427。",
+      "shareable": true
+    }
+  ],
+  "actions": [
+    {
+      "id": "inspect",
+      "label": "检查餐具",
+      "location": "dining",
+      "target": "dishes",
+      "cost": 1,
+      "condition": {
+        "op": "eq",
+        "ref": "world.undeclared",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "stain",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    },
+    {
+      "id": "meal",
+      "label": "用餐",
+      "location": "dining",
+      "target": null,
+      "cost": 2,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "access",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    },
+    {
+      "id": "ask",
+      "label": "询问服务员",
+      "location": "dining",
+      "target": "waiter",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "access",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    },
+    {
+      "id": "take_tool",
+      "label": "取下灭火器",
+      "location": "hall",
+      "target": "fire_extinguisher",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "grant",
+          "ref": "fire_extinguisher"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    },
+    {
+      "id": "unlock",
+      "label": "输入门禁",
+      "location": "hall",
+      "target": "door",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "access"
+          },
+          {
+            "op": "eq",
+            "ref": "world.door_open",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.door_open",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    },
+    {
+      "id": "switch_off",
+      "label": "关闭故障电源",
+      "location": "kitchen",
+      "target": "power_box",
+      "cost": 1,
+      "condition": {
+        "op": "eq",
+        "ref": "world.power_off",
+        "value": false
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.power_off",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1
+    }
+  ],
+  "templates": [
+    {
+      "id": "force_door",
+      "label": "用灭火器破门",
+      "location": "hall",
+      "target": "door",
+      "cost": 2,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "owns",
+            "ref": "fire_extinguisher"
+          },
+          {
+            "op": "eq",
+            "ref": "world.door_open",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.door_open",
+          "value": true
+        },
+        {
+          "op": "set",
+          "ref": "world.noise",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "intent": "使用工具破坏目标",
+      "required_tag": "breakable"
+    }
+  ],
+  "events": [
+    {
+      "id": "safe_ending",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "eq",
+        "ref": "world.power_off",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "safe"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "timeout",
+      "trigger": "round_end",
+      "priority": 100,
+      "condition": {
+        "op": "gte",
+        "ref": "clock.round",
+        "value": 4
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "evacuated"
+        }
+      ],
+      "once": true
+    }
+  ],
+  "initial": {
+    "world": {
+      "door_open": false,
+      "power_off": false,
+      "noise": false
+    },
+    "inventory": {
+      "guest": [],
+      "doctor": [],
+      "reporter": []
+    }
+  },
+  "media": [
+    {
+      "id": "opening",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "三位客人发现餐厅电力异常。可以调查、用餐或与服务员交谈。"
+    },
+    {
+      "id": "safe",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "电源被及时关闭，餐厅排除了危险。"
+    },
+    {
+      "id": "evacuated",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "警报响起，所有人离开餐厅。谜团暂未解开。"
+    }
+  ]
+}

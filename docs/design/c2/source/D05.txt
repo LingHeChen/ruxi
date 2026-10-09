@@ -1,0 +1,42 @@
+# 1 数据层次与标识
+内容定义、编辑布局、发布版本、运行实例和玩家投影分层持久化。UUID用于在线实体，DSL内部ID为稳定小写字母数字下划线且项目内唯一；重命名显示名称不改ID。时间统一UTC毫秒整数，客户端格式化为本地时区；时长字段以_s或_ms显式区分。整数行动点不使用浮点数。
+数据库表的物理字段以 contracts/data_dictionary.csv 为补充，线上字段以D06为准。关系约束优先于只在JSON中存引用；DSL包可用JSONB保存，运行关键余额、成员身份、幂等和版本引用有独立列与唯一约束。数据库迁移由Ecto维护，附件SQL是约束参考而非已执行生产迁移。
+# 2 实体与约束
+|实体|关键字段|约束与索引|
+|users sessions recovery_tokens|id status nickname token_hash expires_at|token_hash唯一；明文码不落日志|
+|projects memberships|id owner_id revision archived_at；user_id role|项目成员复合唯一，rev递增|
+|drafts layouts|project_id revision content layout_revision|内容与布局分开版本，保存带If-Match|
+|releases assets|id project_id schema_version content_hash status；sha256 audience|hash内容寻址，发布不可修改，资源不能越项目引用|
+|rooms|id release_id status phase round step owner_epoch timer_generation|release FK，截止和剩余时间分别存储|
+|room_members|room_id user_id role_id seat_index control_epoch|房内user与role分别唯一；角色人数匹配版本|
+|actor_states|room_id member_id location_id ap_remaining ap_reserved ended|0≤reserved≤remaining≤预算；复合FK禁止跨房|
+|intents proposals|id room_id member_id step_id action_id status cost expires_at|每成员每步至多一条有效意图；提案确认一次|
+|world_states knowledge ownership|room_id revision flags；member_id clue_id；item_id owner_id|知识去重；唯一物品单一所有者|
+|commands|room_id member_id command_id payload_hash result|复合唯一；同键异参拒绝|
+|view_events outbox|room_id member_id stream_id seq base_seq payload|流内seq唯一连续；outbox有投递状态|
+|snapshots settlements|room_id server_revision schema_version payload；ending_id|结局每房唯一；snapshot含版本与校验hash|
+|tasks task_attempts|id kind status generation lease_token input_hash output_ref|幂等键+generation隔离旧worker|
+|reviews audit_logs feedback|hash decision actor timestamp；scope action result|审核绑定hash，审计追加且受限读取|
+# 3 状态机
+房间status: lobby→active→suspended→active，active→ending→finished，lobby/suspended→abandoned；ending不会因掉线回到suspended。room.phase只在active下使用opening/planning/resolving/presentation；ending作为status，不重复表示活动阶段。体验与物理状态使用同一含义，不再把ending放入active的phase。
+intent: queued→locked→resolved/invalidated；queued可cancelled或replaced。proposal: pending→ready/clarify/rejected/failed，ready→confirmed/expired/cancelled；confirmed并不等于动作执行成功。task: queued→running→succeeded/failed/cancelled，失败重试新attempt而非覆盖旧证据。
+release: draft不在releases表正式发布集合，验证产物可为candidate；candidate→reviewed→published，published→withdrawn或blocked。withdrawn仅撤新房指针；blocked按安全处置影响活动房间。旧房读取锁定的release内容，不跟随project current_release_id变化。
+# 4 原子边界
+提交意图事务：验证控制epoch和阶段→锁actor_state→释放同一步旧预留→检查新成本→写intent与reserved→写command结果及本人视图→outbox。失败恢复旧意图及预留，不能先删旧动作再发现新动作无效。
+结算事务：owner fencing→锁room及本步意图→稳定顺序执行→扣remaining并清reserved→写世界与知识→处理事件→写结局/新步→快照增量和授权视图→回执/outbox。每步单次结算使用(room_id,step_id)唯一键。独立聊天不锁大世界JSON，独立流水限频；聊天不会增加玩家可见世界版本。
+交付接受事务同时锁offer与物品所有权，检查同地、到期、角色；更新owner并结算offer状态。提供物品保留索引防同一物品多个pending offer。确认提案仅能引用所属成员及相同release；过期或场景变更返回错误而非调整成本。
+# 5 读模型与隐私
+按成员构造投影，公共数据与本人数据合并后再编码。隐藏实体不发送占位名称、计数、ID或内部条件。view_seq是每成员专属计数，不暴露整房server_revision；提案前提用服务端内部指纹，不提供秘密状态hash供枚举。
+日志和分析数据保存命令类型、耗时、错误码及不可逆匿名标识，不保存自由输入正文、私有线索、tokens或模型全量上下文。支持人员使用受控trace，默认不能读取聊天正文。素材URL授权检查与受众投影一致，URL过期不等于已下载内容可被远程收回。
+# 6 保留 清理与注销
+建议基线：suspended可恢复24h；已结束复盘180天；聊天和AI输入/输出正文7天；原始小说与草稿在项目存续期保留，作者删除后进入30天恢复窗；安全审计180天。均为产品配置与待上线确认的保留政策，不宣称法律规定。
+命令幂等结果和恢复事件至少覆盖活动/挂起全生命周期加终态24h；之后可清正文但保留不可重复执行墓碑。清理只能推进连续补发下界，不造成中段序列孔洞。仍被合法存档引用的版本和素材不能随项目归档直接删除。
+注销先撤销会话、关闭个人编辑权限并挂起参与中的未结局房；其他成员保留共同结果的必要事实，个人身份去关联，个人自由输入等可识别正文删除。备份中使用独立擦除清单在恢复时再次执行。并行清理有generation和状态检查，不能把已恢复的active局当过期删掉。
+# 7 索引 容量与备份
+主要索引：rooms(status,updated_at)、members(user_id,room_id)、view_events(member_id,stream_id,seq)、outbox(status,next_retry_at)、tasks(status,next_run_at)、releases(project_id,created_at)。私有投影写放大与成员数相关，2—4席可直接存投影事件；扩展到大房间前实测，不能按连接数推导存储成本。
+每次结算写事件和增量状态，周期快照建议每10步及挂起/结局时生成；恢复按snapshot revision重放后续持久事实，校验内容hash。备份目标RPO≤5min、RTO≤60min，需演练证明。对象存储清单与数据库引用一同校验，不能只恢复关系表。
+# 8 迁移
+C1既有发布包只能转换为候选草稿，旧阶段映射为事件和媒体屏障；地图缺失需作者补地点，行动成本需审阅，不可静默猜测。C1活动房继续由旧引擎/协议维护至结束或明确停用，不能中途换语义。离线迁移器输出源hash、目标hash、字段映射、未决项及可复现日志，D12规定切换门槛。
+# 9 补充关系约束
+member_locations(room_id,member_id,location_id,discovered_at)保存各成员已发现地点，复合唯一；knowledge保存内容知识，二者不互相替代。media_barriers与votes按房间关联，ballots每投票每成员唯一；step_settlements每房每步唯一。tasks包含kind、status、generation、input_ref、input_hash、output_ref、cancel_requested、created_at、updated_at；task_attempts保留task_id、attempt_no、lease_token_hash、started_at、finished_at、error_code和usage，attempt_no在task内唯一。
+所有含room_id和member_id的子表使用指向room_members(room_id,id)的复合外键，避免跨房引用；发布定义内部ID通过编译校验而非全局数据库ID混用。JSONB字段必须按对应Schema与版本验证，不能作为跳过数据约束的通道。

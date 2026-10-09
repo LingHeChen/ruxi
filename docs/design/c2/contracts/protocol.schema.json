@@ -1,0 +1,1127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "role.select"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "role_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "role_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "role.swap.request"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "target_member_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "target_member_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "role.swap.accept"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "request_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "role.swap.cancel"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "request_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "member.ready"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "ready": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ready"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "room.start"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "action.submit"
+        },
+        "body": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "action_id",
+                "target_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "proposal_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "proposal_id"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "action.cancel"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "intent_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "intent_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "round.end"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "knowledge.share"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "clue_id": {
+              "type": "string"
+            },
+            "audience_member_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "clue_id",
+            "audience_member_ids"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "item.offer"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "item_id": {
+              "type": "string"
+            },
+            "target_member_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_id",
+            "target_member_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "item.accept"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "offer_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "offer_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "item.reject"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "offer_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "offer_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "item.cancel"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "offer_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "offer_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "vote.cast"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "vote_id": {
+              "type": "string"
+            },
+            "option_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "vote_id",
+            "option_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "media.complete"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "cue_id": {
+              "type": "string"
+            },
+            "mode": {
+              "enum": [
+                "watched",
+                "summary"
+              ]
+            }
+          },
+          "required": [
+            "cue_id",
+            "mode"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "pause.request"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "pause.confirm"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "agree": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "request_id",
+            "agree"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "room.resume"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "room.leave"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "chat.send"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "channel": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "channel",
+            "text"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "view.ack"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "stream_id": {
+              "type": "string"
+            },
+            "view_seq": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "stream_id",
+            "view_seq"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "room.invite.rotate"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 2
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "control_epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "step_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "room.close"
+        },
+        "body": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol_version",
+        "command_id",
+        "control_epoch",
+        "step_id",
+        "type",
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

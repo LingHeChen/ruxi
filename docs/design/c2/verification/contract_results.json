@@ -1,0 +1,72 @@
+{
+  "checks": [
+    {
+      "name": "schema valid restaurant",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "reject invalid_bad_cost.json",
+      "status": "PASS",
+      "detail": "-1 is less than the minimum of 0\n\nFailed validating 'minimum' in schema['properties']['actions']['items']['properties']['cost']:\n    {'type': 'integer"
+    },
+    {
+      "name": "reject invalid_missing_location.json",
+      "status": "PASS",
+      "detail": "UNKNOWN_LOCATION:/roles/0/location"
+    },
+    {
+      "name": "reject invalid_unknown_ref.json",
+      "status": "PASS",
+      "detail": "UNKNOWN_STATE_REF"
+    },
+    {
+      "name": "preset route reaches safe ending",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "fourth round fallback",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "personal knowledge isolation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "invalid location does not charge",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "free template alternative route",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "one owner and rotating priority",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Phoenix envelope and payload",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "reject injected effects",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deterministic replay five runs",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "limitations": [
+    "参考引擎不包含数据库、WS、概率判定、AI、并发进程或媒体服务。"
+  ]
+}

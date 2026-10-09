@@ -39,10 +39,21 @@ import { api, type Role } from "./api";
 import { roleNames, useAuth } from "./shared";
 import { Dashboard, Stories, Users, Reports } from "./pages/Directories";
 import { Assets } from "./pages/Assets";
+import { Releases } from "./pages/Releases";
+import { Projects } from "./pages/Projects";
+const World = lazy(() =>
+  import("./pages/World").then((m) => ({ default: m.World })),
+);
 const Editor = lazy(() =>
   import("./pages/Editor").then((module) => ({ default: module.Editor })),
 );
 const sections = [
+  {
+    key: "/studio/projects",
+    label: "创作项目",
+    icon: <EditOutlined />,
+    role: "editor",
+  },
   { key: "/dashboard", label: "工作概览", icon: <AppstoreOutlined /> },
   {
     key: "/stories",
@@ -323,6 +334,16 @@ export function AdminApp() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route element={<Guard role="editor" />}>
+            <Route path="studio/:id/releases" element={<Releases />} />
+            <Route path="studio/projects" element={<Projects />} />
+            <Route
+              path="studio/:id/world"
+              element={
+                <Suspense fallback={<Spin />}>
+                  <World />
+                </Suspense>
+              }
+            />
             <Route path="stories" element={<Stories />} />
             <Route
               path="editor"

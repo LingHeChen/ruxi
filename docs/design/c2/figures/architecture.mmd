@@ -1,0 +1,9 @@
+flowchart TD
+  F[Flutter 玩家端] -->|HTTP 与 WS| E[Elixir 房间与规则]
+  R[React Flow 工作台] -->|草稿与发布| E
+  E --> D[(PostgreSQL)]
+  E -->|受限任务| P[Python AI 与改编]
+  P -->|结构化结果| E
+  E -->|授权资源| M[对象存储与 CDN]
+  F -->|媒体下载| M
+  R -->|上传与绑定| M

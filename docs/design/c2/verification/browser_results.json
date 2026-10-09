@@ -1,0 +1,77 @@
+{
+  "checks": [
+    {
+      "name": "preset queues without immediate effects",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel retains AP",
+      "status": "PASS"
+    },
+    {
+      "name": "resolve deducts and reveals",
+      "status": "PASS"
+    },
+    {
+      "name": "map movement",
+      "status": "PASS"
+    },
+    {
+      "name": "round restores shared budget",
+      "status": "PASS"
+    },
+    {
+      "name": "preset path reaches ending",
+      "status": "PASS"
+    },
+    {
+      "name": "proposal does not charge before confirm",
+      "status": "PASS"
+    },
+    {
+      "name": "proposal cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "offline disables presets",
+      "status": "PASS"
+    },
+    {
+      "name": "reduce motion persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "wide viewport no document overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile no document overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "shared editor model updates",
+      "status": "PASS"
+    },
+    {
+      "name": "undo restores value",
+      "status": "PASS"
+    },
+    {
+      "name": "editor validation blocks invalid cost",
+      "status": "PASS"
+    },
+    {
+      "name": "role preview panel",
+      "status": "PASS"
+    },
+    {
+      "name": "no browser JS errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "本地模拟，不含真实WS、AI或视频",
+    "React Flow和Flutter实验文件未运行"
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "view": {
+      "type": "object",
+      "properties": {
+        "stream_id": {
+          "type": "string"
+        },
+        "view_seq": {
+          "type": "integer"
+        },
+        "base_view_seq": {
+          "type": "integer"
+        },
+        "blocks": {
+          "type": "object"
+        },
+        "narrative_cues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "text",
+                  "image",
+                  "video",
+                  "audio"
+                ]
+              },
+              "text": {
+                "type": "string"
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "blocking"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "stream_id",
+        "view_seq",
+        "base_view_seq",
+        "blocks",
+        "narrative_cues"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "stream_id": {
+          "type": "string"
+        },
+        "view_seq": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "room": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "phase": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "round": {
+                  "type": "integer"
+                },
+                "step": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "phase",
+                "round",
+                "step"
+              ],
+              "additionalProperties": false
+            },
+            "self": {
+              "type": "object",
+              "properties": {
+                "member_id": {
+                  "type": "string"
+                },
+                "role_id": {
+                  "type": "string"
+                },
+                "location_id": {
+                  "type": "string"
+                },
+                "ap_remaining": {
+                  "type": "integer"
+                },
+                "ap_reserved": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "member_id",
+                "role_id",
+                "location_id",
+                "ap_remaining",
+                "ap_reserved"
+              ],
+              "additionalProperties": false
+            },
+            "known": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inventory": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "available_actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "safe_reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "cost",
+                  "enabled",
+                  "safe_reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "room",
+            "self",
+            "known",
+            "inventory",
+            "available_actions"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "stream_id",
+        "view_seq",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "queued",
+            "committed",
+            "rejected"
+          ]
+        },
+        "command_id": {
+          "type": "string"
+        },
+        "receipt_seq": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "command_id",
+        "receipt_seq"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/view"
+    },
+    {
+      "$ref": "#/$defs/snapshot"
+    },
+    {
+      "$ref": "#/$defs/receipt"
+    }
+  ]
+}

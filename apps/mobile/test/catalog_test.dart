@@ -39,6 +39,7 @@ class CatalogClient extends RoomClient {
     Json? body,
     bool private = false,
     bool retried = false,
+    Map<String, String> extraHeaders = const {},
   ]) async {
     lastSearch = path;
     final q = Uri.parse(path).queryParameters;
@@ -65,6 +66,7 @@ class ExpiredLogoutClient extends RoomClient {
     Json? body,
     bool private = false,
     bool retried = false,
+    Map<String, String> extraHeaders = const {},
   ]) async => throw ApiError('UNAUTHORIZED');
   @override
   Future<void> clearIdentity() async {

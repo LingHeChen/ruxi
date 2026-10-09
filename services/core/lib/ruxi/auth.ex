@@ -113,7 +113,11 @@ defmodule Ruxi.Auth do
         [Util.hash(token || "")]
       )
 
-    Util.require!((row && !row["revoked"]) and row["expires_at"] > Util.now(), "UNAUTHORIZED")
+    Util.require!(
+      row != nil and not row["revoked"] and row["expires_at"] > Util.now(),
+      "UNAUTHORIZED"
+    )
+
     Util.require!(row["audience"] == audience, "NOT_ALLOWED")
     Util.require!(row["user_status"] == "active", "UNAUTHORIZED")
 
