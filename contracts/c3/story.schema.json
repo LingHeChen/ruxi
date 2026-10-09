@@ -1460,6 +1460,21 @@
             "max"
           ],
           "additionalProperties": false
+        },
+        "min_players": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "team_decisions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "coalesce_actions": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

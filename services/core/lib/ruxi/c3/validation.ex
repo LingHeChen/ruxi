@@ -32,10 +32,21 @@ defmodule Ruxi.C3.Validation do
     role_ids = Map.keys(Content.index(s, "roles"))
 
     extra =
-      Enum.flat_map(get_in(s, ["c3_settings", "objectives"]) || [], fn o ->
-        Content.validate_condition(s, o["condition"]) ++
-          check(Enum.all?(o["role_ids"], &(&1 in role_ids)), "/c3_settings/objectives")
-      end)
+      check(
+        (get_in(s, ["c3_settings", "min_players"]) || length(role_ids)) <= length(role_ids),
+        "/c3_settings/min_players"
+      ) ++
+        check(
+          Enum.all?(
+            get_in(s, ["c3_settings", "team_decisions"]) || [],
+            &Map.has_key?(Content.index(s, "actions"), &1)
+          ),
+          "/c3_settings/team_decisions"
+        ) ++
+        Enum.flat_map(get_in(s, ["c3_settings", "objectives"]) || [], fn o ->
+          Content.validate_condition(s, o["condition"]) ++
+            check(Enum.all?(o["role_ids"], &(&1 in role_ids)), "/c3_settings/objectives")
+        end)
 
     extra =
       extra ++

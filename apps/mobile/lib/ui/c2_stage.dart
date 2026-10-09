@@ -1089,13 +1089,22 @@ class _C2StageState extends State<C2Stage> {
                                       TextButton(
                                         onPressed:
                                             client.busy ||
+                                                items('members').length <
+                                                    (v['min_players'] ??
+                                                        v['seat_count'] ??
+                                                        items('roles')
+                                                            .length) ||
                                                 !items('members').every(
                                                   (m) => m['ready'] == true,
                                                 )
                                             ? null
                                             : () =>
                                                   unawaited(send('room.start')),
-                                        child: const Text('全员就绪，开始故事'),
+                                        child: Text(
+                                          v['min_players'] == 1
+                                              ? '当前玩家就绪，开始故事'
+                                              : '全员就绪，开始故事',
+                                        ),
                                       ),
                                   ],
                                   if (active) ...[

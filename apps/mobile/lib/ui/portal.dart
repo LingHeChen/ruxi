@@ -19,6 +19,12 @@ const difficulties = {
   'advanced': '深度推理',
 };
 
+String _playerRange(Json story) {
+  final max = story['seat_count'] ?? 1;
+  final min = story['min_players'] ?? max;
+  return min == max ? '$max' : '$min～$max';
+}
+
 class Portal extends StatefulWidget {
   const Portal({
     super.key,
@@ -347,7 +353,7 @@ class _PortalState extends State<Portal> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    '${story['seat_count'] == 1 ? '单人游玩' : "${story['seat_count']} 人协作"}  /  ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
+                    '${story['seat_count'] == 1 ? '单人游玩' : "${_playerRange(story)} 人协作"}  /  ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
                     style: const TextStyle(color: _muted),
                   ),
                   const SizedBox(height: 24),
@@ -490,7 +496,7 @@ class _PortalState extends State<Portal> {
                 Text(
                   story['seat_count'] == 1
                       ? '单人\n故事'
-                      : '${story['seat_count']}\n人协作',
+                      : '${_playerRange(story)}\n人协作',
                   textAlign: TextAlign.right,
                   style: const TextStyle(fontSize: 18, color: Colors.white70),
                 ),
@@ -987,7 +993,7 @@ class _PortalState extends State<Portal> {
               ),
               const SizedBox(height: 12),
               Text(
-                '${story['seat_count']} 名角色 · 私人房间 · ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟',
+                '${_playerRange(story)} ${story['min_players'] != null && story['min_players'] != story['seat_count'] ? '人游玩' : '名角色'} · 私人房间 · ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟',
                 style: const TextStyle(color: _muted),
               ),
               const Divider(height: 40),
@@ -1015,7 +1021,9 @@ class _PortalState extends State<Portal> {
               Text(
                 story['seat_count'] == 1
                     ? '创建单人故事，选择角色后点击走进故事。阅读、回看线索不消耗余力；可按自己的节奏调查和询问NPC。'
-                    : '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。',
+                    : (story['min_players'] == 1
+                          ? '支持1～${story['seat_count']}人。可独自创建并选择任意角色，也可邀请朋友加入；当前玩家选好角色并准备后，房主即可开始，无需凑满。主线证据同步到团队手记，结局需要全员一致选择。'
+                          : '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。'),
                 style: const TextStyle(color: _muted, height: 1.8),
               ),
               const SizedBox(height: 28),

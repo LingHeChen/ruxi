@@ -86,6 +86,8 @@ defmodule Ruxi.C2.Store do
         "story_id" => DB.str(p["id"]),
         "release_id" => DB.str(p["current_release_id"]),
         "seat_count" => length(p["content"]["roles"]),
+        "min_players" =>
+          get_in(p, ["content", "c3_settings", "min_players"]) || length(p["content"]["roles"]),
         "schema_version" => p["content"]["schema_version"],
         "protocol_version" => if(p["content"]["schema_version"] == 4, do: 3, else: 2),
         "roles" => Enum.map(p["content"]["roles"], &Map.take(&1, ~w(id label))),
@@ -266,6 +268,9 @@ defmodule Ruxi.C2.Store do
             else: nil
           ),
         "seat_count" => length(state["content"]["roles"]),
+        "min_players" =>
+          get_in(state, ["content", "c3_settings", "min_players"]) ||
+            length(state["content"]["roles"]),
         "role_swap" => state["swap"]
       })
     else
@@ -458,14 +463,17 @@ defmodule Ruxi.C2.Store do
         rows = members(rid)
 
         Util.require!(
-          r["host_user_id"] == DB.uuid(ctx.user) and length(rows) == length(s["content"]["roles"]) and
+          r["host_user_id"] == DB.uuid(ctx.user) and
+            length(rows) >=
+              (get_in(s, ["content", "c3_settings", "min_players"]) ||
+                 length(s["content"]["roles"])) and length(rows) <= length(s["content"]["roles"]) and
             Enum.all?(rows, &(&1["ready"] and &1["role_id"] != nil)) and
             r["release_status"] == "published",
           "NOT_ALLOWED"
         )
 
         DB.query("UPDATE c2_rooms SET invite_hash=NULL,invite_cipher=NULL WHERE id=$1", [r["id"]])
-        {Engine.initial(s["content"], now), result}
+        {Engine.initial(s["content"], now, active_roles: Enum.map(rows, & &1["role_id"])), result}
 
       "room.invite.rotate" ->
         Util.require!(r["host_user_id"] == DB.uuid(ctx.user), "FORBIDDEN")

@@ -1,7 +1,7 @@
 {
   "blocks": {
     "acknowledged_cues": [
-      "9ecbbfe0-051c-48a9-aedd-0f9b64b2fe2f"
+      "77f56de1-6ab8-4cfe-b639-542ab0b5af67"
     ],
     "action_history": [],
     "actions": [
@@ -32,7 +32,7 @@
         "label": "停止追查，等待天亮离岛",
         "remaining_uses": 1,
         "required_participants": 1,
-        "risk_text": "确认将结束本次故事；返回可继续调查。停止追查，等待天亮离岛。",
+        "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。停止追查，等待天亮离岛。",
         "target": null
       }
     ],
@@ -40,7 +40,19 @@
     "interaction_results": [],
     "interactions": [],
     "inventory": [],
-    "knowledge": [],
+    "knowledge": [
+      {
+        "acquired_tick": 0,
+        "category": "observed",
+        "id": "brief_reporter",
+        "image_uri": "assets/stories/tide_hotel/evidence-tape.png",
+        "label": "徐闻 · 声音记者 · 私人行前笔记",
+        "provenance": [],
+        "shareable": true,
+        "source": "开场已知",
+        "text": "你带来江临的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。"
+      }
+    ],
     "map": {
       "links": [
         {
@@ -132,11 +144,11 @@
     "narrative_cues": [
       {
         "blocking": true,
-        "id": "9ecbbfe0-051c-48a9-aedd-0f9b64b2fe2f",
+        "id": "77f56de1-6ab8-4cfe-b639-542ab0b5af67",
         "image_uri": "assets/stories/tide_hotel/lobby-v2.png",
         "kind": "image",
         "media_id": "opening",
-        "text": "你叫徐闻，给一家地方电台做声音纪录。今晚，你带着录音笔来到潮汐旅馆，赴作家江临的约。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的林素说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。"
+        "text": "你们因各自的调查来到潮汐旅馆，赴作家江临的约。声音记者、档案研究员、救援志愿者和纪实摄影师，可由1～4人自由选择任意角色；独自到访也能完成全部调查。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的林素说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。先回看自己的行前笔记；多人可以分头探索，主线发现会同步到团队手记，私人笔记可自行分享。每个调查步等待同伴提交行动或结束回合；所有人在场并阅读完叙事后再继续。结局选择需要全员回到同一地点，选择同一个方案；意见不同时不会擅自结束故事。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。"
       }
     ],
     "npcs": [
@@ -164,7 +176,7 @@
       "round": 1,
       "status": "active",
       "step": 1,
-      "step_id": "0d47ce83-4b29-485a-9a95-6afa802390b5"
+      "step_id": "0df0a7a9-1609-41be-9c52-19ce202e327a"
     },
     "self": {
       "ap_remaining": 6,
@@ -172,22 +184,21 @@
       "ended": false,
       "faction": null,
       "goals": [
-        "查明江临失踪与第九声钟响的关系。",
-        "区分证词与实证，重建十五年前的救援时间线。",
-        "决定怎样保存证据，以及怎样让活着的人开口。"
+        "确认江临安全，核对今晚与旧案的两条时间线。",
+        "与同伴交换调查发现，保存证据并共同决定交接方式。"
       ],
       "location": "lobby",
       "objectives": [
         {
           "id": "find_jiang",
           "label": "确认江临此刻安全",
-          "layer": "personal",
+          "layer": "public",
           "result": "in_progress"
         },
         {
           "id": "keep_records",
           "label": "保存旧案互证副本",
-          "layer": "personal",
+          "layer": "public",
           "result": "in_progress"
         }
       ],

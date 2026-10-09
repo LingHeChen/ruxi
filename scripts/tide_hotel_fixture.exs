@@ -1,5 +1,5 @@
 alias Ruxi.C2.Engine
-s = File.read!("../../content/c3/tide_hotel/story.json") |> Jason.decode!() |> Engine.initial(0)
+s = File.read!("../../content/c3/tide_hotel/story.json") |> Jason.decode!() |> Engine.initial(0, active_roles: ["reporter"])
 
 s =
   Enum.reduce(s["cues"], s, fn c, a ->

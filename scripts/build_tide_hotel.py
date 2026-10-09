@@ -1,4 +1,4 @@
-"""Build the authored single-player mystery. No AI runtime or remote dependency."""
+"""Build the authored 1–4-player mystery. No AI runtime or remote dependency."""
 import json
 import hashlib
 from pathlib import Path
@@ -236,7 +236,37 @@ for id,ref,img,text in [('cabinet_success','cabinet_open','evidence-registry','�
  s['events'].append({'id':id,'trigger':'action_end','priority':30,'once':True,'condition':flag(ref),'effects':[{'op':'cue','ref':id,'audience':'all','blocking':True}]})
 for a in s['actions']:
  if a['id'] in ('publish_truth','seal_handover','accuse_murder','leave_early'): a['risk_text']='确认将结束本次故事；返回可继续调查。'+a['label']+'。'
-media('cover','单人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局','cover')
+# Flexible attendance: every selected role can investigate the complete case.
+role_specs=[('reporter','徐闻 · 声音记者','你带来江临的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。','evidence-tape'),('archivist','沈砚 · 地方档案研究员','你正整理2008年的海难目录，发现港务副本没有注明原始记录的保存地点。先寻找原件，再比较副本。','evidence-registry'),('volunteer','许澄 · 救援志愿者','你在避风站协助值守，知道后山仍有一条通往避风站的步行小径。交通中断不代表所有离岛方式都消失。','evidence-rope'),('photographer','陆遥 · 纪实摄影师','你为江临的采访拍摄现场。照片应保留位置、拍摄时刻与原始文件；不凭一张破损照片推定毁证。','evidence-photo')]
+s['roles']=[]
+s['initial']['inventory']={}
+for rid,label,brief,img in role_specs:
+ cid='brief_'+rid
+ clue(cid,label+' · 私人行前笔记',brief,img)
+ s['clues'][-1]['shareable']=True
+ s['roles'].append({'id':rid,'label':label,'location':'lobby','knowledge':[cid],'goals':['确认江临安全，核对今晚与旧案的两条时间线。','与同伴交换调查发现，保存证据并共同决定交接方式。']})
+ s['initial']['inventory'][rid]=[]
+s['c3_settings']['min_players']=1
+s['c3_settings']['coalesce_actions']=True
+s['c3_settings']['team_decisions']=['publish_truth','seal_handover','accuse_murder','leave_early']
+for a in s['actions']:
+ if a['id'] in s['c3_settings']['team_decisions']:
+  a['risk_text']='单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。'+a['label']+'。'
+for c in s['clues']: c['shareable']=True
+# Main evidence is recorded in the team notebook; private briefs are opt-in shares.
+for a in s['actions']:
+ marker='done_'+a['id']
+ s['initial']['world'][marker]=False
+ a['condition']=allof(a['condition'],flag(marker,False))
+ a['display_condition']=a['condition']
+ a['effects'].append(setflag(marker))
+ for e in a['effects']:
+  if e['op']=='reveal': e['audience']='all'
+for o in s['c3_settings']['objectives']:
+ o['layer']='public';o['role_ids']=[]
+opening=next(m for m in s['media'] if m['id']=='opening')
+opening['summary']=opening['summary'].replace('你叫徐闻，给一家地方电台做声音纪录。今晚，你带着录音笔来到潮汐旅馆，赴作家江临的约。','你们因各自的调查来到潮汐旅馆，赴作家江临的约。声音记者、档案研究员、救援志愿者和纪实摄影师，可由1～4人自由选择任意角色；独自到访也能完成全部调查。').replace('开场先问林素','先回看自己的行前笔记；多人可以分头探索，主线发现会同步到团队手记，私人笔记可自行分享。每个调查步等待同伴提交行动或结束回合；所有人在场并阅读完叙事后再继续。结局选择需要全员回到同一地点，选择同一个方案；意见不同时不会擅自结束故事。开场先问林素')
+media('cover','1～4人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局','cover')
 manifest={f'assets/stories/tide_hotel/{file.name}':hashlib.sha256(file.read_bytes()).hexdigest() for file in (ROOT/'apps/mobile/assets/stories/tide_hotel').glob('*.png')}
 for m in s['media']:
  if m['kind']=='image':

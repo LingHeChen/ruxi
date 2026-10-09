@@ -13,11 +13,48 @@
       "id": "reporter",
       "label": "徐闻 · 声音记者",
       "location": "lobby",
-      "knowledge": [],
+      "knowledge": [
+        "brief_reporter"
+      ],
       "goals": [
-        "查明江临失踪与第九声钟响的关系。",
-        "区分证词与实证，重建十五年前的救援时间线。",
-        "决定怎样保存证据，以及怎样让活着的人开口。"
+        "确认江临安全，核对今晚与旧案的两条时间线。",
+        "与同伴交换调查发现，保存证据并共同决定交接方式。"
+      ]
+    },
+    {
+      "id": "archivist",
+      "label": "沈砚 · 地方档案研究员",
+      "location": "lobby",
+      "knowledge": [
+        "brief_archivist"
+      ],
+      "goals": [
+        "确认江临安全，核对今晚与旧案的两条时间线。",
+        "与同伴交换调查发现，保存证据并共同决定交接方式。"
+      ]
+    },
+    {
+      "id": "volunteer",
+      "label": "许澄 · 救援志愿者",
+      "location": "lobby",
+      "knowledge": [
+        "brief_volunteer"
+      ],
+      "goals": [
+        "确认江临安全，核对今晚与旧案的两条时间线。",
+        "与同伴交换调查发现，保存证据并共同决定交接方式。"
+      ]
+    },
+    {
+      "id": "photographer",
+      "label": "陆遥 · 纪实摄影师",
+      "location": "lobby",
+      "knowledge": [
+        "brief_photographer"
+      ],
+      "goals": [
+        "确认江临安全，核对今晚与旧案的两条时间线。",
+        "与同伴交换调查发现，保存证据并共同决定交接方式。"
       ]
     }
   ],
@@ -135,139 +172,163 @@
       "id": "receipt",
       "label": "未退的房费",
       "text": "江临在23:05支付房费，收据后写着“采访结束后，从后山走”。没有退房记录。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "key",
       "label": "209钥匙",
       "text": "林素交出的209钥匙。她明确同意查看房间；不是偷取。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "clock",
       "label": "停钟与隐藏音箱",
       "text": "摆钟停在21:17，钟内没有上紧发条，却藏着音箱。第九声的尾音和前八声完全相同，是同一采样重复。停钟不是失踪发生时间。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "footprints",
       "label": "脚印与轮痕",
       "text": "湿脚印从楼梯走向209；清洁车干轮痕覆盖脚印边缘。有人在雨停的短暂间隙推过车。脚印不是从窗外爬入。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "schedule",
       "label": "旅馆供电时间表",
       "text": "控制柜断电登记为22:55。摆钟21:17就已停。它们是两件不同的事。赵朔23:12收到报修短信，早于你23:40听见钟声。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "recording",
       "label": "预录的第九声",
       "text": "磁带试音段里，第九声后能听见江临说“如果我临时不在，不要用这声钟来给任何人定罪”。这是一段给采访对象的保护安排。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "draft",
       "label": "未完成的采访稿",
       "text": "江临追查的是2008年9月21日的渡船事故。稿纸提出：落水者被送回岸上后，为何仍在海难名单里？它没有直接写谁杀了谁。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "photo",
       "label": "缺角的旧合照",
       "text": "照片上有年轻的何泊、林素、丁远和赵世衡。丁远是林素的丈夫，2016年病逝。缺角来自折叠磨损，不是有人刮去第五张脸。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "medical",
       "label": "先救回、后失联",
       "text": "原始护理页：2008年9月21日，赵世衡于22:10被送到船屋，意识清醒，可自己说姓名；22:35被一名港务人员带走。陈雾当年是随师实习，记录签字属于她的老师。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "meds",
       "label": "药物不是失踪证据",
       "text": "江临取的是处理旧伤的抗生素，封口完整的镇静药没有减少。瓶子本身不能证明有人下药。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "wire",
       "label": "人为切断的控制线",
       "text": "控制线有平整剪口，不是水浸故障。剪口高度适合站在门口操作，工具不是赵朔专用；何时剪断要与短信及电表共同判断。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "register",
       "label": "两份不同的名单",
       "text": "旅馆登记簿保留“赵世衡，救回岸上”的第一笔；送交港务的副本被改成“海上失联”。原件封存日期：9月21日，柜门便条写“按月日”。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "rescue",
       "label": "迟到的救援命令",
       "text": "港务原始页：22:10救回、22:35带离、23:05丁远命令暂停搜寻。备注提到船屋后间上锁。事故发生后人仍活着，后续拘留与延误需单独调查。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "letter",
       "label": "林素没有寄出的信",
       "text": "未寄信里，林素写自己改了救援副本，以保护丈夫丁远。她知道赵世衡曾活着上岸。信承认掩盖，没有承认今晚杀害江临。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "rope",
       "label": "最近切断的船绳",
       "text": "绳索是为拖出淤沙中的小艇才切开，残留纤维仍卡在绞盘。它不是绑人的绳索。船屋后墙的小门通往避风小径。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "witness",
       "label": "江临走的是后山",
       "text": "何泊亲眼看到江临23:25披防水外套走向后山，左腿跛但能行走。何泊帮他取了外套，没有看见他到达山上。证词证明离开方式，不能单独证明此刻安全。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "contact",
       "label": "安全确认",
       "text": "避风站有线电话接通。江临本人核对你与他约定的采访口令，说明他在护林员处；同意提交录音与档案副本，要求不要公开护士的个人病历。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "lin_first",
       "label": "林素的第一份证词",
       "text": "林素说23:20送热水时江临仍在房中，23:40听见钟声才发现他不在。她隐瞒22:55曾去机房，也把送热水时间提前了。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "lin_confess",
       "label": "林素承认掩盖",
       "text": "面对护理页、名单与未寄信，林素承认2008年改名单；今晚剪电是想让江临停止播放旧录音。她在22:55离开机房，与报修日志相符。她愿意把原始材料交出，但要求先确认江临安全。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "chen_first",
       "label": "陈雾的第一份证词",
       "text": "陈雾22:40给江临处理旧伤，23:15接到他提出的告别电话。她没有进209房间。她要求先区分真实药物记录和关于“下药”的想象。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "zhao_first",
       "label": "赵朔的第一份证词",
       "text": "赵朔23:12收到报修短信，23:18进入地下机房；林素说自己从没去过机房。赵朔的父亲赵世衡在2008年事故中“失联”，官方解释一直没有改变。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "he_first",
       "label": "何泊的第一份证词",
       "text": "何泊说今晚潮位不允许大船离港，但后山小径可行。他不愿说替谁拿了外套，希望先看江临是否留了同意披露行踪的说明。",
-      "shareable": false
+      "shareable": true
     },
     {
       "id": "reconstruction",
       "label": "两条时间线",
       "text": "今晚：21:17停钟，22:40处理旧伤，22:55人为断电，23:12报修，23:25江临走后山，23:40预录钟响。旧案：22:10赵世衡活着上岸，22:35被带走，23:05救援暂停。今晚的失踪是避险，旧案的掩盖是真实存在。",
-      "shareable": false
+      "shareable": true
+    },
+    {
+      "id": "brief_reporter",
+      "label": "徐闻 · 声音记者 · 私人行前笔记",
+      "text": "你带来江临的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。",
+      "shareable": true
+    },
+    {
+      "id": "brief_archivist",
+      "label": "沈砚 · 地方档案研究员 · 私人行前笔记",
+      "text": "你正整理2008年的海难目录，发现港务副本没有注明原始记录的保存地点。先寻找原件，再比较副本。",
+      "shareable": true
+    },
+    {
+      "id": "brief_volunteer",
+      "label": "许澄 · 救援志愿者 · 私人行前笔记",
+      "text": "你在避风站协助值守，知道后山仍有一条通往避风站的步行小径。交通中断不代表所有离岛方式都消失。",
+      "shareable": true
+    },
+    {
+      "id": "brief_photographer",
+      "label": "陆遥 · 纪实摄影师 · 私人行前笔记",
+      "text": "你为江临的采访拍摄现场。照片应保留位置、拍摄时刻与原始文件；不凭一张破损照片推定毁证。",
+      "shareable": true
     }
   ],
   "actions": [
@@ -279,23 +340,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_read_receipt",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_read_receipt",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "receipt",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_read_receipt",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_read_receipt",
+          "value": true
         }
       ],
       "failure": [],
@@ -312,28 +398,53 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_lin",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_lin",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "lin_first",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "reveal",
           "ref": "key",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_talk_lin",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_talk_lin",
+          "value": true
         }
       ],
       "failure": [],
@@ -352,8 +463,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "lin_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "lin_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_ask_lin_family",
+            "value": false
           }
         ]
       },
@@ -361,8 +482,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "lin_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "lin_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_ask_lin_family",
+            "value": false
           }
         ]
       },
@@ -370,13 +501,18 @@
         {
           "op": "reveal",
           "ref": "photo",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_ask_lin_family",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_ask_lin_family",
+          "value": true
         }
       ],
       "failure": [],
@@ -393,23 +529,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_clock",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_clock",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "clock",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_clock",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_clock",
+          "value": true
         }
       ],
       "failure": [],
@@ -428,8 +589,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "clock"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "clock"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_listen_window",
+            "value": false
           }
         ]
       },
@@ -437,8 +608,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "clock"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "clock"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_listen_window",
+            "value": false
           }
         ]
       },
@@ -448,6 +629,11 @@
           "ref": "echo_listen_window",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_listen_window",
+          "value": true
         }
       ],
       "failure": [],
@@ -464,23 +650,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_tracks",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_tracks",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "footprints",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_tracks",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_tracks",
+          "value": true
         }
       ],
       "failure": [],
@@ -497,23 +708,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_luggage",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_luggage",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "draft",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_luggage",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_luggage",
+          "value": true
         }
       ],
       "failure": [],
@@ -530,17 +766,37 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_play_tape",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_play_tape",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "recording",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "grant",
@@ -551,6 +807,11 @@
           "ref": "echo_play_tape",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_play_tape",
+          "value": true
         }
       ],
       "failure": [],
@@ -567,23 +828,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_chen",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_chen",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "chen_first",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_talk_chen",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_talk_chen",
+          "value": true
         }
       ],
       "failure": [],
@@ -602,8 +888,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_medicine",
+            "value": false
           }
         ]
       },
@@ -611,8 +907,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_medicine",
+            "value": false
           }
         ]
       },
@@ -620,13 +926,18 @@
         {
           "op": "reveal",
           "ref": "meds",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_medicine",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_medicine",
+          "value": true
         }
       ],
       "failure": [],
@@ -645,12 +956,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "draft"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "draft"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "eq",
+            "ref": "world.done_ask_chen_oldcase",
+            "value": false
           }
         ]
       },
@@ -658,12 +979,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "draft"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "draft"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "eq",
+            "ref": "world.done_ask_chen_oldcase",
+            "value": false
           }
         ]
       },
@@ -671,13 +1002,18 @@
         {
           "op": "reveal",
           "ref": "medical",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_ask_chen_oldcase",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_ask_chen_oldcase",
+          "value": true
         }
       ],
       "failure": [],
@@ -696,12 +1032,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "eq",
+            "ref": "world.done_ask_chen_call",
+            "value": false
           }
         ]
       },
@@ -709,12 +1055,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "chen_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "chen_first"
+            "op": "eq",
+            "ref": "world.done_ask_chen_call",
+            "value": false
           }
         ]
       },
@@ -724,6 +1080,11 @@
           "ref": "echo_ask_chen_call",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_ask_chen_call",
+          "value": true
         }
       ],
       "failure": [],
@@ -740,23 +1101,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_zhao",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_zhao",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "zhao_first",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_talk_zhao",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_talk_zhao",
+          "value": true
         }
       ],
       "failure": [],
@@ -775,8 +1161,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "zhao_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "zhao_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_wire",
+            "value": false
           }
         ]
       },
@@ -784,8 +1180,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "zhao_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "zhao_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_wire",
+            "value": false
           }
         ]
       },
@@ -793,18 +1199,23 @@
         {
           "op": "reveal",
           "ref": "wire",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "reveal",
           "ref": "schedule",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_wire",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_wire",
+          "value": true
         }
       ],
       "failure": [],
@@ -823,8 +1234,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "wire"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "wire"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_manual_log",
+            "value": false
           }
         ]
       },
@@ -832,8 +1253,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "wire"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "wire"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_manual_log",
+            "value": false
           }
         ]
       },
@@ -846,13 +1277,18 @@
         {
           "op": "reveal",
           "ref": "schedule",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_manual_log",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_manual_log",
+          "value": true
         }
       ],
       "failure": [],
@@ -871,12 +1307,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "zhao_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "zhao_first"
+            "op": "eq",
+            "ref": "world.done_tell_zhao_medical",
+            "value": false
           }
         ]
       },
@@ -884,12 +1330,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "zhao_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "zhao_first"
+            "op": "eq",
+            "ref": "world.done_tell_zhao_medical",
+            "value": false
           }
         ]
       },
@@ -899,6 +1355,11 @@
           "ref": "echo_tell_zhao_medical",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_tell_zhao_medical",
+          "value": true
         }
       ],
       "failure": [],
@@ -915,23 +1376,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_read_register",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_read_register",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "register",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_read_register",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_read_register",
+          "value": true
         }
       ],
       "failure": [],
@@ -950,12 +1436,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "register"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": false
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.cabinet_open",
+            "ref": "world.done_bypass_cabinet",
             "value": false
           }
         ]
@@ -964,12 +1460,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "register"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": false
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.cabinet_open",
+            "ref": "world.done_bypass_cabinet",
             "value": false
           }
         ]
@@ -985,6 +1491,11 @@
           "ref": "echo_bypass_cabinet",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_bypass_cabinet",
+          "value": true
         }
       ],
       "failure": [],
@@ -1003,9 +1514,19 @@
         "op": "all",
         "args": [
           {
+            "op": "all",
+            "args": [
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": true
+              }
+            ]
+          },
+          {
             "op": "eq",
-            "ref": "world.cabinet_open",
-            "value": true
+            "ref": "world.done_read_rescue",
+            "value": false
           }
         ]
       },
@@ -1013,9 +1534,19 @@
         "op": "all",
         "args": [
           {
+            "op": "all",
+            "args": [
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": true
+              }
+            ]
+          },
+          {
             "op": "eq",
-            "ref": "world.cabinet_open",
-            "value": true
+            "ref": "world.done_read_rescue",
+            "value": false
           }
         ]
       },
@@ -1023,13 +1554,18 @@
         {
           "op": "reveal",
           "ref": "rescue",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_read_rescue",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_read_rescue",
+          "value": true
         }
       ],
       "failure": [],
@@ -1048,9 +1584,19 @@
         "op": "all",
         "args": [
           {
+            "op": "all",
+            "args": [
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": true
+              }
+            ]
+          },
+          {
             "op": "eq",
-            "ref": "world.cabinet_open",
-            "value": true
+            "ref": "world.done_read_unsent_letter",
+            "value": false
           }
         ]
       },
@@ -1058,9 +1604,19 @@
         "op": "all",
         "args": [
           {
+            "op": "all",
+            "args": [
+              {
+                "op": "eq",
+                "ref": "world.cabinet_open",
+                "value": true
+              }
+            ]
+          },
+          {
             "op": "eq",
-            "ref": "world.cabinet_open",
-            "value": true
+            "ref": "world.done_read_unsent_letter",
+            "value": false
           }
         ]
       },
@@ -1068,13 +1624,18 @@
         {
           "op": "reveal",
           "ref": "letter",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_read_unsent_letter",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_read_unsent_letter",
+          "value": true
         }
       ],
       "failure": [],
@@ -1093,20 +1654,30 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "register"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "eq",
+            "ref": "world.done_copy_evidence",
+            "value": false
           }
         ]
       },
@@ -1114,20 +1685,30 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "register"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "eq",
+            "ref": "world.done_copy_evidence",
+            "value": false
           }
         ]
       },
@@ -1146,6 +1727,11 @@
           "ref": "echo_copy_evidence",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_copy_evidence",
+          "value": true
         }
       ],
       "failure": [],
@@ -1162,23 +1748,48 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_he",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_talk_he",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
           "op": "reveal",
           "ref": "he_first",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_talk_he",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_talk_he",
+          "value": true
         }
       ],
       "failure": [],
@@ -1197,8 +1808,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_rope",
+            "value": false
           }
         ]
       },
@@ -1206,8 +1827,18 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_inspect_rope",
+            "value": false
           }
         ]
       },
@@ -1215,13 +1846,18 @@
         {
           "op": "reveal",
           "ref": "rope",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_rope",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_inspect_rope",
+          "value": true
         }
       ],
       "failure": [],
@@ -1240,12 +1876,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "eq",
+            "ref": "world.done_ask_he_departure",
+            "value": false
           }
         ]
       },
@@ -1253,12 +1899,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "recording"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "eq",
+            "ref": "world.done_ask_he_departure",
+            "value": false
           }
         ]
       },
@@ -1266,13 +1922,18 @@
         {
           "op": "reveal",
           "ref": "witness",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_ask_he_departure",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_ask_he_departure",
+          "value": true
         }
       ],
       "failure": [],
@@ -1291,16 +1952,26 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "eq",
+            "ref": "world.done_ask_he_rescue",
+            "value": false
           }
         ]
       },
@@ -1308,16 +1979,26 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "he_first"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "he_first"
+            "op": "eq",
+            "ref": "world.done_ask_he_rescue",
+            "value": false
           }
         ]
       },
@@ -1327,6 +2008,11 @@
           "ref": "echo_ask_he_rescue",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_ask_he_rescue",
+          "value": true
         }
       ],
       "failure": [],
@@ -1345,12 +2031,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "witness"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "witness"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rope"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "rope"
+            "op": "eq",
+            "ref": "world.done_call_station",
+            "value": false
           }
         ]
       },
@@ -1358,12 +2054,22 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "witness"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "witness"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rope"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "rope"
+            "op": "eq",
+            "ref": "world.done_call_station",
+            "value": false
           }
         ]
       },
@@ -1371,7 +2077,7 @@
         {
           "op": "reveal",
           "ref": "contact",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "set",
@@ -1383,6 +2089,11 @@
           "ref": "echo_call_station",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_call_station",
+          "value": true
         }
       ],
       "failure": [],
@@ -1401,20 +2112,30 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "letter"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "wire"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "register"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "letter"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "wire"
+            "op": "eq",
+            "ref": "world.done_confront_lin",
+            "value": false
           }
         ]
       },
@@ -1422,20 +2143,30 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "medical"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "register"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "letter"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "wire"
+              }
+            ]
           },
           {
-            "op": "has_knowledge",
-            "ref": "register"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "letter"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "wire"
+            "op": "eq",
+            "ref": "world.done_confront_lin",
+            "value": false
           }
         ]
       },
@@ -1443,13 +2174,18 @@
         {
           "op": "reveal",
           "ref": "lin_confess",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_confront_lin",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_confront_lin",
+          "value": true
         }
       ],
       "failure": [],
@@ -1468,37 +2204,47 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "clock"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "schedule"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "recording"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "medical"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "lin_confess"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "contact"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "clock"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "schedule"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "lin_confess"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "contact"
+              },
+              {
+                "op": "eq",
+                "ref": "world.copied",
+                "value": true
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.copied",
-            "value": true
+            "ref": "world.done_reconstruct",
+            "value": false
           }
         ]
       },
@@ -1506,37 +2252,47 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "clock"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "schedule"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "recording"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "medical"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "rescue"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "lin_confess"
-          },
-          {
-            "op": "has_knowledge",
-            "ref": "contact"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "clock"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "schedule"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "recording"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "medical"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "rescue"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "lin_confess"
+              },
+              {
+                "op": "has_knowledge",
+                "ref": "contact"
+              },
+              {
+                "op": "eq",
+                "ref": "world.copied",
+                "value": true
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.copied",
-            "value": true
+            "ref": "world.done_reconstruct",
+            "value": false
           }
         ]
       },
@@ -1544,13 +2300,18 @@
         {
           "op": "reveal",
           "ref": "reconstruction",
-          "audience": "self"
+          "audience": "all"
         },
         {
           "op": "cue",
           "ref": "echo_reconstruct",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_reconstruct",
+          "value": true
         }
       ],
       "failure": [],
@@ -1569,13 +2330,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_publish_truth",
+            "value": false
           }
         ]
       },
@@ -1583,13 +2354,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_publish_truth",
+            "value": false
           }
         ]
       },
@@ -1604,12 +2385,17 @@
           "ref": "echo_publish_truth",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_publish_truth",
+          "value": true
         }
       ],
       "failure": [],
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "确认将结束本次故事；返回可继续调查。提交原件，播出核实后的调查。",
+      "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。提交原件，播出核实后的调查。",
       "threshold": null
     },
     {
@@ -1622,13 +2408,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_seal_handover",
+            "value": false
           }
         ]
       },
@@ -1636,13 +2432,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_seal_handover",
+            "value": false
           }
         ]
       },
@@ -1657,12 +2463,17 @@
           "ref": "echo_seal_handover",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_seal_handover",
+          "value": true
         }
       ],
       "failure": [],
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "确认将结束本次故事；返回可继续调查。先封存交接，约定七日内核实跟进。",
+      "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。先封存交接，约定七日内核实跟进。",
       "threshold": null
     },
     {
@@ -1675,13 +2486,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_accuse_murder",
+            "value": false
           }
         ]
       },
@@ -1689,13 +2510,23 @@
         "op": "all",
         "args": [
           {
-            "op": "has_knowledge",
-            "ref": "reconstruction"
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "reconstruction"
+              },
+              {
+                "op": "eq",
+                "ref": "world.decision",
+                "value": ""
+              }
+            ]
           },
           {
             "op": "eq",
-            "ref": "world.decision",
-            "value": ""
+            "ref": "world.done_accuse_murder",
+            "value": false
           }
         ]
       },
@@ -1710,12 +2541,17 @@
           "ref": "echo_accuse_murder",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_accuse_murder",
+          "value": true
         }
       ],
       "failure": [],
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "确认将结束本次故事；返回可继续调查。把林素直接指为今夜的杀人者。",
+      "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。把林素直接指为今夜的杀人者。",
       "threshold": null
     },
     {
@@ -1726,11 +2562,31 @@
       "cost": 1,
       "condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_leave_early",
+            "value": false
+          }
+        ]
       },
       "display_condition": {
         "op": "all",
-        "args": []
+        "args": [
+          {
+            "op": "all",
+            "args": []
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_leave_early",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
@@ -1743,12 +2599,17 @@
           "ref": "echo_leave_early",
           "audience": "all",
           "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_leave_early",
+          "value": true
         }
       ],
       "failure": [],
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "确认将结束本次故事；返回可继续调查。停止追查，等待天亮离岛。",
+      "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。停止追查，等待天亮离岛。",
       "threshold": null
     }
   ],
@@ -1905,10 +2766,45 @@
       "decision": "",
       "copied": false,
       "protected": false,
-      "blackout_seen": false
+      "blackout_seen": false,
+      "done_read_receipt": false,
+      "done_talk_lin": false,
+      "done_ask_lin_family": false,
+      "done_inspect_clock": false,
+      "done_listen_window": false,
+      "done_inspect_tracks": false,
+      "done_inspect_luggage": false,
+      "done_play_tape": false,
+      "done_talk_chen": false,
+      "done_inspect_medicine": false,
+      "done_ask_chen_oldcase": false,
+      "done_ask_chen_call": false,
+      "done_talk_zhao": false,
+      "done_inspect_wire": false,
+      "done_manual_log": false,
+      "done_tell_zhao_medical": false,
+      "done_read_register": false,
+      "done_bypass_cabinet": false,
+      "done_read_rescue": false,
+      "done_read_unsent_letter": false,
+      "done_copy_evidence": false,
+      "done_talk_he": false,
+      "done_inspect_rope": false,
+      "done_ask_he_departure": false,
+      "done_ask_he_rescue": false,
+      "done_call_station": false,
+      "done_confront_lin": false,
+      "done_reconstruct": false,
+      "done_publish_truth": false,
+      "done_seal_handover": false,
+      "done_accuse_murder": false,
+      "done_leave_early": false
     },
     "inventory": {
-      "reporter": []
+      "reporter": [],
+      "archivist": [],
+      "volunteer": [],
+      "photographer": []
     }
   },
   "media": [
@@ -2261,7 +3157,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lobby-v2.png",
       "audience": "public",
-      "summary": "你叫徐闻，给一家地方电台做声音纪录。今晚，你带着录音笔来到潮汐旅馆，赴作家江临的约。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的林素说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。",
+      "summary": "你们因各自的调查来到潮汐旅馆，赴作家江临的约。声音记者、档案研究员、救援志愿者和纪实摄影师，可由1～4人自由选择任意角色；独自到访也能完成全部调查。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的林素说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。先回看自己的行前笔记；多人可以分头探索，主线发现会同步到团队手记，私人笔记可自行分享。每个调查步等待同伴提交行动或结束回合；所有人在场并阅读完叙事后再继续。结局选择需要全员回到同一地点，选择同一个方案；意见不同时不会擅自结束故事。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。",
       "sha256": "21a55f8cb401378569ba0096c0284b791241424b3676efe630ae422f6b9ced46"
     },
     {
@@ -2585,11 +3481,43 @@
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
+      "id": "clue_brief_reporter",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": "public",
+      "summary": "你带来江临的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "clue_brief_archivist",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": "public",
+      "summary": "你正整理2008年的海难目录，发现港务副本没有注明原始记录的保存地点。先寻找原件，再比较副本。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "clue_brief_volunteer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": "public",
+      "summary": "你在避风站协助值守，知道后山仍有一条通往避风站的步行小径。交通中断不代表所有离岛方式都消失。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "clue_brief_photographer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": "public",
+      "summary": "你为江临的采访拍摄现场。照片应保留位置、拍摄时刻与原始文件；不凭一张破损照片推定毁证。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
       "id": "cover",
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cover.png",
       "audience": "public",
-      "summary": "单人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局",
+      "summary": "1～4人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局",
       "sha256": "9c11450d2ebbca1a9689e97bf2c3d2a058ac9a50025d7a69fa846f2cb1be901d"
     }
   ],
@@ -2907,10 +3835,8 @@
       {
         "id": "find_jiang",
         "label": "确认江临此刻安全",
-        "layer": "personal",
-        "role_ids": [
-          "reporter"
-        ],
+        "layer": "public",
+        "role_ids": [],
         "condition": {
           "op": "eq",
           "ref": "world.protected",
@@ -2922,10 +3848,8 @@
       {
         "id": "keep_records",
         "label": "保存旧案互证副本",
-        "layer": "personal",
-        "role_ids": [
-          "reporter"
-        ],
+        "layer": "public",
+        "role_ids": [],
         "condition": {
           "op": "eq",
           "ref": "world.copied",
@@ -2934,6 +3858,14 @@
         "latch": true,
         "membership_policy": "follow_current"
       }
+    ],
+    "min_players": 1,
+    "coalesce_actions": true,
+    "team_decisions": [
+      "publish_truth",
+      "seal_handover",
+      "accuse_murder",
+      "leave_early"
     ]
   }
 }

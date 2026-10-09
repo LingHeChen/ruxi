@@ -9,19 +9,45 @@ defmodule Ruxi.TideHotelTest do
       File.read!(Path.expand("../../../content/c3/tide_hotel/story.json", __DIR__))
       |> Jason.decode!()
 
-  def ack(s),
-    do:
-      Enum.reduce(s["cues"], s, fn c, acc ->
-        if c["id"] in (acc["cue_acks"]["reporter"] || []),
-          do: acc,
-          else: command(acc, "media.complete", %{"cue_id" => c["id"], "mode" => "summary"}, false)
+  def ack(s) do
+    Enum.reduce(Map.keys(s["actors"]), s, fn role, acc ->
+      Enum.reduce(acc["cues"], acc, fn c, current ->
+        if role in c["audience"] and c["id"] not in (current["cue_acks"][role] || []) do
+          {:ok, next, _} =
+            Engine.command(
+              current,
+              role,
+              "media.complete",
+              %{"cue_id" => c["id"], "mode" => "summary"},
+              Util.id(),
+              1
+            )
+
+          next
+        else
+          current
+        end
       end)
+    end)
+  end
 
   def command(s, type, body, read \\ true) do
-    case Engine.command(s, "reporter", type, Map.put(body, "step_id", s["step_id"]), Util.id(), 1) do
-      {:ok, next, _} -> if read, do: ack(next), else: next
-      other -> flunk("#{type} #{inspect(body)}: #{inspect(other, limit: 4)}")
-    end
+    next =
+      Enum.reduce(Map.keys(s["actors"]), s, fn role, acc ->
+        case Engine.command(
+               acc,
+               role,
+               type,
+               Map.put(body, "step_id", acc["step_id"]),
+               Util.id(),
+               1
+             ) do
+          {:ok, next, _} -> next
+          other -> flunk("#{type} #{inspect(body)}: #{inspect(other, limit: 4)}")
+        end
+      end)
+
+    if read, do: ack(next), else: next
   end
 
   def act(s, id) do
@@ -29,18 +55,30 @@ defmodule Ruxi.TideHotelTest do
     cost = if a, do: a["cost"], else: 1
 
     s =
-      if s["actors"]["reporter"]["ap_remaining"] < cost, do: command(s, "round.end", %{}), else: s
+      if s["actors"][hd(Map.keys(s["actors"]))]["ap_remaining"] < cost,
+        do: command(s, "round.end", %{}),
+        else: s
 
     command(s, "action.submit", %{"action_id" => id, "target_id" => nil})
   end
 
   def goto(s, dest) do
-    if s["actors"]["reporter"]["location"] == dest,
+    if s["actors"][hd(Map.keys(s["actors"]))]["location"] == dest,
       do: s,
       else:
         (
-          links = World.links(s) |> Enum.filter(&World.traversable?(s, &1, "reporter", 1))
-          ids = path(links, [{s["actors"]["reporter"]["location"], []}], MapSet.new(), dest)
+          links =
+            World.links(s)
+            |> Enum.filter(&World.traversable?(s, &1, hd(Map.keys(s["actors"])), 1))
+
+          ids =
+            path(
+              links,
+              [{s["actors"][hd(Map.keys(s["actors"]))]["location"], []}],
+              MapSet.new(),
+              dest
+            )
+
           assert ids != nil, "No route to #{dest}"
           Enum.reduce(ids, s, fn id, acc -> act(acc, "move:" <> id) end)
         )
@@ -68,8 +106,8 @@ defmodule Ruxi.TideHotelTest do
 
   def route(s, loc, ids), do: Enum.reduce(ids, goto(s, loc), &act(&2, &1))
 
-  def prepared do
-    Engine.initial(story(), 0)
+  def prepared(role \\ "reporter") do
+    Engine.initial(story(), 0, active_roles: [role])
     |> ack()
     |> route("lobby", ~w(read_receipt talk_lin ask_lin_family))
     |> route("lounge", ~w(inspect_clock listen_window))
@@ -91,7 +129,12 @@ defmodule Ruxi.TideHotelTest do
   test "illustrated NPC content validates without unknown-scene or secret leakage" do
     content = story()
     assert Content.validate(content)["valid"]
-    v = Engine.initial(content, 0) |> ack() |> Engine.project("reporter", 1)
+
+    v =
+      Engine.initial(content, 0, active_roles: ["reporter"])
+      |> ack()
+      |> Engine.project("reporter", 1)
+
     assert Enum.map(v["npcs"], & &1["id"]) == ["lin"]
     assert Enum.all?(v["map"]["locations"], & &1["image_uri"])
     refute Jason.encode!(v) =~ "scene_archive"
@@ -123,7 +166,9 @@ defmodule Ruxi.TideHotelTest do
              )
     end
 
-    assert (Engine.initial(story(), 0) |> ack() |> act("leave_early"))["ending"] == "unanswered"
+    assert (Engine.initial(story(), 0, active_roles: ["reporter"])
+            |> ack()
+            |> act("leave_early"))["ending"] == "unanswered"
   end
 
   test "exhausted passwords keep guaranteed route and correct PIN opens cabinet" do
@@ -178,7 +223,8 @@ defmodule Ruxi.TideHotelTest do
 
   test "exhausted investigation budget uses incomplete ending" do
     s =
-      Enum.reduce(1..24, Engine.initial(story(), 0) |> ack(), fn _, acc ->
+      Enum.reduce(1..24, Engine.initial(story(), 0, active_roles: ["reporter"]) |> ack(), fn _,
+                                                                                             acc ->
         command(acc, "round.end", %{})
       end)
 
@@ -191,5 +237,137 @@ defmodule Ruxi.TideHotelTest do
     refute Ruxi.C3.Art.publishable?(Map.put(image, "uri", "https://example.com/spoof.png"))
     refute Ruxi.C3.Art.publishable?(Map.put(image, "sha256", String.duplicate("0", 64)))
     refute Ruxi.C3.Art.publishable?(Map.delete(image, "sha256"))
+  end
+
+  test "two, three and four players complete the shared investigation with unanimous endings" do
+    roles = ~w(reporter archivist volunteer photographer)
+
+    for count <- 2..4 do
+      s = Engine.initial(story(), 0, active_roles: Enum.take(roles, count)) |> ack()
+      assert map_size(s["actors"]) == count
+
+      s =
+        s
+        |> route("lobby", ~w(read_receipt talk_lin ask_lin_family))
+        |> route("lounge", ~w(inspect_clock listen_window))
+        |> route("corridor", ~w(inspect_tracks))
+        |> route("room209", ~w(inspect_luggage play_tape))
+        |> route("infirmary", ~w(talk_chen inspect_medicine ask_chen_oldcase ask_chen_call))
+        |> route("generator", ~w(talk_zhao inspect_wire manual_log tell_zhao_medical))
+        |> route("archive", ~w(read_register bypass_cabinet))
+        |> solved()
+        |> act("publish_truth")
+
+      assert s["ending"] == "shore_names"
+
+      for role <- Enum.take(roles, count) do
+        v = Engine.project(s, role, 1)
+        assert Enum.any?(v["knowledge"], &(&1["id"] == "contact"))
+        assert Enum.all?(v["self"]["objectives"], &(&1["result"] == "achieved"))
+      end
+
+      assert Enum.count(s["cues"], &(&1["media_id"] == "echo_talk_lin")) == 1
+    end
+  end
+
+  test "any of the four roles can play alone without absent actors or private brief leakage" do
+    for role <- ~w(reporter archivist volunteer photographer) do
+      s = Engine.initial(story(), 0, active_roles: [role]) |> ack()
+      assert Map.keys(s["actors"]) == [role]
+      v = Engine.project(s, role, 1)
+      assert Enum.map(v["knowledge"], & &1["id"]) == ["brief_" <> role]
+
+      assert (s |> command("action.submit", %{"action_id" => "leave_early"}))["ending"] ==
+               "unanswered"
+
+      assert (prepared(role)
+              |> act("bypass_cabinet")
+              |> solved()
+              |> act("publish_truth"))["ending"] == "shore_names"
+    end
+  end
+
+  test "one player cannot end another player's investigation without agreement" do
+    s = Engine.initial(story(), 0, active_roles: ~w(reporter archivist)) |> ack()
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "reporter",
+        "action.submit",
+        %{"action_id" => "leave_early", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    assert s["ending"] == nil
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "archivist",
+        "action.submit",
+        %{"action_id" => "talk_lin", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    assert s["ending"] == nil
+    assert s["world"]["decision"] == ""
+  end
+
+  test "players can split between scenes and receive each other's main evidence" do
+    s = Engine.initial(story(), 0, active_roles: ~w(reporter archivist)) |> ack()
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "reporter",
+        "action.submit",
+        %{"action_id" => "move:lobby_lounge_ab", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "archivist",
+        "action.submit",
+        %{"action_id" => "move:lobby_infirmary_ab", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    s = ack(s)
+    assert s["actors"]["reporter"]["location"] == "lounge"
+    assert s["actors"]["archivist"]["location"] == "infirmary"
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "reporter",
+        "action.submit",
+        %{"action_id" => "inspect_clock", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    {:ok, s, _} =
+      Engine.command(
+        s,
+        "archivist",
+        "action.submit",
+        %{"action_id" => "talk_chen", "step_id" => s["step_id"]},
+        Util.id(),
+        1
+      )
+
+    s = ack(s)
+
+    for role <- ~w(reporter archivist) do
+      assert "clock" in s["actors"][role]["knowledge"]
+      assert "chen_first" in s["actors"][role]["knowledge"]
+    end
   end
 end

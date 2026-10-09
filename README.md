@@ -6,7 +6,7 @@
 
 C3 核心互动开发进度、真实联调证据与尚未完成的验收见 [C3 开发记录](docs/C3_DEVELOPMENT.md)。当前支持密码输入、服务端骰子判定、方向通路与角色地图、分层工作台和三人样例《雨夜档案馆》；尚未达到 C3 全部验收门槛。
 
-新增单人悬疑《潮汐旅馆：第九声钟响》：预计30～60分钟、八个场景、四位可回访NPC、32项预设互动与五个结局，26张采用的生成图片覆盖场景、人物、证物和关键剧情。见 [内容说明](content/c3/tide_hotel/README.md) 与 [验证记录](docs/TIDE_HOTEL_ACCEPTANCE.md)。
+新增1～4人悬疑《潮汐旅馆：第九声钟响》：预计30～60分钟、八个场景、四位可回访NPC、32项预设互动与五个结局，26张采用的生成图片覆盖场景、人物、证物和关键剧情。见 [内容说明](content/c3/tide_hotel/README.md) 与 [验证记录](docs/TIDE_HOTEL_ACCEPTANCE.md)。
 
 核心设计与取舍见 [架构说明](docs/ARCHITECTURE.md)，制作和恢复流程见 [运行手册](docs/OPERATIONS.md)。
 

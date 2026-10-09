@@ -5,6 +5,23 @@ defmodule Ruxi.C2.Engine do
 
   def initial(story, now, opts \\ []) do
     Content.compile!(story)
+    original_hash = U.hash(story)
+    selected = Keyword.get(opts, :active_roles, Enum.map(story["roles"], & &1["id"]))
+    story = Map.update!(story, "roles", &Enum.filter(&1, fn r -> r["id"] in selected end))
+
+    story =
+      put_in(story, ["initial", "inventory"], Map.take(story["initial"]["inventory"], selected))
+
+    decisions = get_in(story, ["c3_settings", "team_decisions"]) || []
+
+    story =
+      Map.update!(story, "actions", fn actions ->
+        Enum.map(actions, fn a ->
+          if a["id"] in decisions,
+            do: Map.put(a, "required_participants", length(selected)),
+            else: a
+        end)
+      end)
 
     actors =
       Map.new(story["roles"], fn r ->
@@ -35,7 +52,7 @@ defmodule Ruxi.C2.Engine do
       "engine_version" => 2,
       "protocol_version" => 2,
       "content" => story,
-      "content_hash" => U.hash(story),
+      "content_hash" => original_hash,
       "status" => "active",
       "phase" => "planning",
       "round" => 1,
@@ -613,7 +630,13 @@ defmodule Ruxi.C2.Engine do
                   i["action"]["target"] == action["target"] && other not in processed
               end)
 
-            group = if (action["required_participants"] || 1) > 1, do: group, else: [r]
+            group =
+              if (action["required_participants"] || 1) > 1 or
+                   (get_in(state, ["content", "c3_settings", "coalesce_actions"]) == true and
+                      not String.starts_with?(action["id"], "move:") and
+                      is_nil(action["interaction"])),
+                 do: group,
+                 else: [r]
 
             valid =
               length(group) >= (action["required_participants"] || 1) and
