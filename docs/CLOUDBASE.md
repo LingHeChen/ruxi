@@ -46,4 +46,7 @@ DeepSeek 密钥仅注入 Worker，不能进入前端构建物、仓库或日志�
 
 ## Web 路径路由
 
-2026-10-09 两套 Flutter Web 使用路径 URL。托管必须将前端导航请求回退到各自应用的 `index.html`，保留原始 URL；真实 JS、字体、CanvasKit、素材请求正常匹配文件，缺失静态资源应返回 404。特别注意后台 `/assets` 是页面地址，不能因同名 Flutter 资源目录而跳转到目录列表。本地 `scripts/serve_web.py` 已验证；此项尚未配置到云端，不代表 CloudBase 部署完成。
+2026-10-09 玩家 Flutter Web 与 React 管理后台使用路径 URL。托管必须将前端导航请求回退到各自应用的 `index.html`，保留原始 URL；真实 JS、字体、CanvasKit、素材请求正常匹配文件，缺失静态资源应返回 404。特别注意后台 `/assets` 是页面地址，不能因同名 Flutter 资源目录而跳转到目录列表。本地 `scripts/serve_web.py` 已验证；此项尚未配置到云端，不代表 CloudBase 部署完成。
+
+
+管理后台已迁移到 `apps/admin`（React + TypeScript + Vite + Ant Design + React Flow）。使用 Node.js 24 执行 `npm ci && npm run build`，静态产物为 `apps/admin/dist`；构建前设置 `VITE_API_BASE` 为 HTTPS Core 地址。后台 `/editor/:versionId`、`/stories`、`/assets` 等导航路径必须回退到 `index.html`，真实 `/assets/*.js` 与 CSS 文件正常提供、缺失资源保持 404。后台不使用 Next.js 服务，不新增 Node 后端。Elixir/Python 云托管与独立 `ruxi` PostgreSQL schema 的部署安排保持不变。上述为可部署产物说明，本次没有执行 CloudBase 部署。

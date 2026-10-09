@@ -101,3 +101,19 @@ jobs:
           channel: stable
       - run: flutter pub get && flutter analyze && flutter test && flutter build web
         working-directory: apps/${{ matrix.app }}
+
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci && npm run typecheck && npm test && npm run build
+        working-directory: apps/admin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruxi-admin-static
+          path: apps/admin/dist

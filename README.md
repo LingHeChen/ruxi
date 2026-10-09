@@ -1,6 +1,6 @@
 # 入戏 Ruxi
 
-根据 `Ruxi_Design_Documents_C1.zip` 实现的协作互动剧平台。Flutter Android/iOS 玩家端、Flutter Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
+根据 `Ruxi_Design_Documents_C1.zip` 实现的协作互动剧平台。Flutter Android/iOS 玩家端、React + Ant Design Web 制作台、Phoenix Channels 权威房间服务、PostgreSQL 持久状态和 Python Worker。
 
 已实现《末班车的第七位乘客》的三人玩法闭环。已补充八段原创程序化动效开发视频、字幕与同视角摘要，并接入授权播放器。制作端上传、转码、首帧、字幕、AI 建议和发布流程已接通，备份恢复与进程崩溃演练已通过。真机、浏览器和云端上线验收仍需执行，详见 [实现与验收状态](docs/IMPLEMENTATION_STATUS.md)。
 
@@ -22,7 +22,8 @@
 ## 目录
 
 - `apps/mobile`：玩家端和 Web 开发预览；私有视图、顺序同步、命令查证、手机 SQLite 缓存、Keychain/Keystore 凭证。
-- `apps/creator`：制作后台；独立管理员登录、版本草稿、校验、审核、发布门槛。
+- `apps/admin`：React + TypeScript + Vite + Ant Design 管理后台；React Flow 剧情画布、管理员登录、内容制作与审核发布。
+- `apps/creator`：迁移前 Flutter 制作台，保留作为回归参考。
 - `services/core`：Elixir/Phoenix/Ecto；事务命令、幂等回执、成员投影、outbox、计时和媒体授权。
 - `services/worker`：FastAPI/HTTPX 任务领取、租约心跳与完成重试；模板、DeepSeek 和兼容服务适配器。
 - `contracts`：OpenAPI 3.1 JSON、WS/Worker JSON Schema 和正反例 fixtures。
@@ -31,7 +32,7 @@
 
 ## 启动
 
-需要 Flutter 3.47/Dart 3.13、Elixir 1.19/OTP 28、PostgreSQL 17、Python 3.12 和 uv。依赖通过 lockfile 固定。
+需要 Flutter 3.47/Dart 3.13、Elixir 1.19/OTP 28、PostgreSQL 17、Python 3.12、Node.js 24 和 uv。依赖通过 lockfile 固定。
 
 启动本地 PostgreSQL（或 Docker）：
 
@@ -78,13 +79,16 @@ Web 账号和游客会话按标签页保存，首次打开可匿名浏览首页�
 ```sh
 cd services/core
 mix run --no-start priv/repo/admin_code.exs 33333333-3333-4333-8333-333333333333 editor reviewer publisher
-cd ../../apps/creator
-flutter run -d chrome --web-port 8081
+cd ../../apps/admin
+npm ci
+npm run dev
 ```
 
-在制作台选择「使用一次性登录码」，输入 CLI 返回的登录码。也可先在玩家端注册账号，然后把上述命令的 UUID 换成该账号名，为其分配角色；以后直接用账号密码登录后台。普通注册账号不会自动获得后台权限。
+在 http://localhost:8081 选择「一次性登录码」，输入 CLI 返回的登录码。也可先在玩家端注册账号，然后把上述命令的 UUID 换成该账号名，为其分配角色；以后直接用账号密码登录后台。普通注册账号不会自动获得后台权限。
 
-先基于样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。可上传自有授权视频，自动转码并预览首帧，附加字幕后绑定草稿；AI 建议需人工确认。样片媒体已就绪，创建草稿后可验证、审核并发布；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
+后台采用路径路由，支持直接打开 `/editor/:versionId`，登录后返回原页面。内容工作室提供角色／行动／线索关系画布、节点属性与完整内容表单，节点布局不进入剧情数据；支持撤销、重做和离开前未保存提醒。剧目表展开后可查看各版本，已发布内容通过「复制为新草稿」继续修改。生产构建运行 `npm run build`，部署 `apps/admin/dist`，需配置 SPA 导航回退及 `VITE_API_BASE`（构建时设置），后端必须允许后台域名的 CORS。
+
+先基于三人样片创建草稿，再编辑和验证。修改后旧审核失效；已发布版本不可编辑。可上传自有授权视频，自动转码并预览首帧，附加字幕后绑定草稿；AI 建议需人工确认。样片媒体已就绪，创建草稿后可验证、审核并发布；媒体缺失/摘要不匹配时拒绝发布。初始免费样片是明确的开发 fixture，不能据此宣称已完成最终素材制作。
 
 可选运行 Python Worker：
 
