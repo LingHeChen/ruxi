@@ -8,6 +8,12 @@ defmodule Ruxi.SceneVoice.Coordinator do
   def socket_connected(ctx, reference) do
     DB.transaction(fn ->
       {r, m} = Communication.context!(ctx, ctx.room, true)
+      old = participation(r, m)
+
+      # A replacement page must not reuse a lease whose old page can still send
+      # a late client_state:left. Retire that generation before restoring it.
+      if old && old["socket_ref"] && old["socket_ref"] != reference && lease(r, m),
+        do: retire_for(r, m)
 
       DB.query(
         "INSERT INTO c2_voice_participation(room_id,member_id,device_id,control_epoch,socket_ref) VALUES($1,$2,$3,$4,$5) ON CONFLICT(room_id,member_id) DO UPDATE SET socket_ref=$5",
@@ -554,11 +560,14 @@ defmodule Ruxi.SceneVoice.Coordinator do
 
       fenced =
         Enum.all?(cs, fn channel ->
-          result = gateway().retire(channel["rtc_room_id"])
+          Code.ensure_loaded!(gateway())
 
-          result == :fenced ||
-            (function_exported?(gateway(), :expiry_fenced?, 1) &&
-               gateway().expiry_fenced?(channel))
+          if function_exported?(gateway(), :expiry_fenced?, 1) &&
+               gateway().expiry_fenced?(channel) do
+            true
+          else
+            gateway().retire(channel["rtc_room_id"]) == :fenced
+          end
         end)
 
       DB.transaction(fn ->

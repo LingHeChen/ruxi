@@ -11,6 +11,7 @@ import 'package:ruxi/ui/scene_communication_panel.dart';
 
 class FakeIdentity extends RoomClient {
   final sent = <Json>[];
+  final voiceRequests = <Json>[];
   Json voice = {
     'voice_seq': 1,
     'voice_revision': 1,
@@ -39,6 +40,7 @@ class FakeIdentity extends RoomClient {
       sent.add(body!);
       return {'message_id': 'one'};
     }
+    if (body?['action'] != null) voiceRequests.add(body!);
     if (body?['action'] == 'participation') {
       voice = {
         ...voice,
@@ -202,6 +204,123 @@ void main() {
     id.dispose();
     await tester.pump();
   });
+  testWidgets(
+    'reload restores the server participation choice after retirement',
+    (tester) async {
+      final (c, client, id, rtc) = fixture();
+      id.voice = {
+        ...id.voice,
+        'participation': 'on',
+        'status': 'switching',
+        'reason': 'RETIRING',
+      };
+      await c.refresh();
+      expect(c.sceneConsent, isTrue);
+      expect(rtc.joins, 0);
+      id.voice = {
+        ...id.voice,
+        'voice_seq': 2,
+        'status': 'connecting',
+        'reason': null,
+        'generation': 1,
+      };
+      await c.refresh();
+      await tester.pump();
+      expect(rtc.joins, 1);
+      rtc.callback!({'type': 'connected'});
+      await tester.pump();
+      expect(c.connected, isTrue);
+      expect(c.mic, isFalse);
+      c.dispose();
+      client.dispose();
+      id.dispose();
+      await tester.pump();
+    },
+  );
+  testWidgets(
+    'returning from background automatically restores listening only',
+    (tester) async {
+      final (c, client, id, rtc) = fixture();
+      id.voice = {
+        ...id.voice,
+        'participation': 'on',
+        'status': 'connecting',
+        'generation': 1,
+      };
+      await c.refresh();
+      await tester.pump();
+      rtc.callback!({'type': 'connected'});
+      await tester.pump();
+      c.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await tester.pump();
+      expect(c.grant, isNull);
+      // The server may still report the earlier connected lease while recovering.
+      id.voice = {...id.voice, 'voice_seq': 2, 'status': 'connected'};
+      c.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(rtc.joins, 2);
+      rtc.callback!({'type': 'connected'});
+      await tester.pump();
+      expect(c.connected, isTrue);
+      expect(c.mic, isFalse);
+      c.dispose();
+      client.dispose();
+      id.dispose();
+      await tester.pump();
+    },
+  );
+  testWidgets('lobby preference does not initiate a voice connection', (
+    tester,
+  ) async {
+    final (c, client, id, rtc) = fixture();
+    id.voice = {
+      ...id.voice,
+      'participation': 'on',
+      'status': 'waiting',
+      'reason': 'LOBBY',
+    };
+    await c.refresh();
+    await tester.pump();
+    expect(c.sceneConsent, isFalse);
+    expect(rtc.joins, 0);
+    c.dispose();
+    client.dispose();
+    id.dispose();
+    await tester.pump();
+  });
+  testWidgets(
+    'reconnect button keeps participation; cancellation is a separate action',
+    (tester) async {
+      final (c, client, id, _) = fixture();
+      id.voice = {
+        ...id.voice,
+        'participation': 'on',
+        'status': 'switching',
+        'reason': 'RETIRING',
+      };
+      await c.refresh();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(body: SceneCommunicationPanel(controller: c)),
+        ),
+      );
+      await tester.tap(find.text('场景语音'));
+      await tester.pump();
+      await tester.tap(find.text('重新连接 · 默认仅收听'));
+      await tester.pump();
+      expect(id.voiceRequests.last['action'], 'participation');
+      expect(id.voiceRequests.last['body']['enabled'], isTrue);
+      await tester.tap(find.text('取消语音参与'));
+      await tester.pump();
+      expect(id.voiceRequests.last['body']['enabled'], isFalse);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+      client.dispose();
+      id.dispose();
+      await tester.pump();
+    },
+  );
   for (final width in [390.0, 768.0, 1440.0]) {
     testWidgets('communication panel remains usable at $width and 200% text', (
       tester,

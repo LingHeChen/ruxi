@@ -265,4 +265,35 @@ defmodule Ruxi.SceneCommunicationTest do
                "voice"
              )
   end
+
+  test "replacement socket retires old lease and late old disconnect cannot break recovery", s do
+    g = join_pair(s)
+    ctx = hd(s.people)
+    {r, m} = Communication.context!(ctx, s.id)
+
+    old =
+      DB.one("SELECT socket_ref FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2", [
+        r["id"],
+        m["id"]
+      ])["socket_ref"]
+
+    connected = Map.merge(ctx, %{room: s.id, member: DB.str(m["id"])})
+    fresh = Util.id()
+    assert {:ok, _} = Voice.socket_connected(connected, fresh)
+    assert Voice.pending(r) != nil
+    assert {:ok, _} = Voice.socket_disconnected(connected, old)
+
+    assert DB.one(
+             "SELECT socket_ref FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2",
+             [r["id"], m["id"]]
+           )["socket_ref"] == fresh
+
+    Voice.recover(s.id)
+    Store.tick(s.id)
+    assert Communication.voice(ctx, s.id)["participation"] == "on"
+    assert Communication.voice(ctx, s.id)["reason"] == nil
+    {_p, {:ok, restored}} = request(s, ctx, "grant", %{})
+    assert restored["generation"] > g["generation"]
+    refute restored["lease_id"] == g["lease_id"]
+  end
 end

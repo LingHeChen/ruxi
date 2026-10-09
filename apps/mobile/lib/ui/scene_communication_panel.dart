@@ -330,7 +330,7 @@ class _PanelState extends State<SceneCommunicationPanel> {
       'FENCE_NOT_VERIFIED': '语音隔离验证尚未完成，暂不开放连接。',
       'RESTRICTED': '你在这个房间的语音已被限制。',
       'SUSPENDED': '游戏已暂停，语音同步暂停。',
-      'RETIRING': '正在安全切换频道，请稍候。',
+      'RETIRING': '旧连接正在退出。完成频道隔离后自动恢复收听，最长约 150 秒；麦克风保持关闭。',
     }[reason];
     final on = state?['participation'] == 'on';
     return ListView(
@@ -348,6 +348,10 @@ class _PanelState extends State<SceneCommunicationPanel> {
               child: Text(
                 c.connected
                     ? (c.mic ? '麦克风已开启' : '已连接 · 仅收听')
+                    : reason == 'RETIRING'
+                    ? '等待连接恢复'
+                    : c.joining
+                    ? '正在连接'
                     : on
                     ? '等待同场景同伴'
                     : '尚未加入',
@@ -433,17 +437,23 @@ class _PanelState extends State<SceneCommunicationPanel> {
             child: OutlinedButton(
               onPressed: c.joining
                   ? null
-                  : () => unawaited(
-                      c.participation(on && c.sceneConsent ? false : true),
-                    ),
+                  : () =>
+                        unawaited(c.participation(c.connected ? false : true)),
               child: Text(
-                on && c.sceneConsent
+                c.connected
                     ? '退出语音'
+                    : on && reason != 'LOBBY'
+                    ? '重新连接 · 默认仅收听'
                     : on && reason == 'LOBBY'
                     ? '已选择参与 · 开场后确认加入'
                     : '加入语音 · 默认仅收听',
               ),
             ),
+          ),
+        if (on && !c.connected)
+          TextButton(
+            onPressed: () => unawaited(c.participation(false)),
+            child: const Text('取消语音参与'),
           ),
         const SizedBox(height: 18),
         SwitchListTile(

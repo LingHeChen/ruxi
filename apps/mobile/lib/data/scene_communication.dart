@@ -125,13 +125,18 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
       if (voice == null || nextVoice['voice_seq'] >= voice!['voice_seq']) {
         voice = nextVoice;
       }
+      // The authenticated server retains the room participation choice across
+      // reloads; no token or story state is restored from browser storage.
+      if (voice!['participation'] == 'on' && voice!['reason'] != 'LOBBY') {
+        sceneConsent = true;
+      }
       if (grant != null &&
           (voice!['generation'] != grant!['generation'] ||
               !['connecting', 'connected'].contains(voice!['status']))) {
         await stop();
       }
       if (voice!['participation'] == 'on' &&
-          voice!['status'] == 'connecting' &&
+          ['connecting', 'connected'].contains(voice!['status']) &&
           grant == null &&
           !joining &&
           foreground &&
@@ -255,10 +260,13 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> participation(bool enabled) async {
-    if (enabled && client.view?['room']?['status'] == 'active') {
+    if (enabled && voice?['reason'] != 'LOBBY') {
       sceneConsent = true;
     }
-    if (!enabled) await stop();
+    if (!enabled) {
+      sceneConsent = false;
+      await stop();
+    }
     error = null;
     try {
       await request('participation', {'enabled': enabled});
