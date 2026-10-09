@@ -58,6 +58,33 @@ class InteractiveIdentity extends StageIdentity {
 
 void main() {
   testWidgets(
+    'inline rescue acknowledges reading before submitting exactly once',
+    (tester) async {
+      final identity = RescueIdentity();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: playerTheme(),
+          home: C2Stage(
+            roomId: 'room',
+            identity: identity,
+            autoInitialize: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final choice = find.text('◇ 先抢救投递簿 · 2 余力');
+      await tester.ensureVisible(choice);
+      await tester.tap(choice);
+      await tester.pumpAndSettle();
+      expect(identity.commands, ['media.complete', 'action.submit']);
+      expect(find.byType(NovelReader), findsNothing);
+      expect(find.text('确认选择 →'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      identity.dispose();
+    },
+  );
+  testWidgets(
     'action presents acquired clue once and next round fades then closes',
     (tester) async {
       final identity = InteractiveIdentity();
@@ -133,4 +160,52 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+}
+
+class RescueIdentity extends StageIdentity {
+  final commands = <String>[];
+  bool acknowledged = false;
+  @override
+  Future<dynamic> request(
+    String method,
+    String path, [
+    Json? body,
+    bool private = false,
+    bool retried = false,
+    Map<String, String> extraHeaders = const {},
+  ]) async {
+    if (method == 'POST') {
+      commands.add(body!['type'] as String);
+      if (body['type'] == 'media.complete') acknowledged = true;
+      return {'status': 'accepted'};
+    }
+    final snapshot = await super.request(
+      method,
+      path,
+      body,
+      private,
+      retried,
+      extraHeaders,
+    );
+    final v = snapshot['blocks'];
+    v['narrative_cues'] = [
+      {
+        'id': 'rescue-cue',
+        'media_id': 'echo_inspect_damage',
+        'summary': '雨水将漫过桌面。你只能先保护一件东西。',
+      },
+    ];
+    v['acknowledged_cues'] = acknowledged ? ['rescue-cue'] : [];
+    v['actions'] = [
+      {
+        'id': 'rescue_ledger',
+        'label': '先抢救投递簿',
+        'cost': 2,
+        'risk_text': '录音带会受损。',
+        'allowed_now': true,
+        'remaining_uses': 1,
+      },
+    ];
+    return snapshot;
+  }
 }

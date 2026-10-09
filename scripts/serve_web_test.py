@@ -30,6 +30,7 @@ class PreviewRoutes(unittest.TestCase):
                 for path in ['/', '/me', '/rooms/uuid', '/discover?category=scifi', '/editor/uuid', '/assets']:
                     with urlopen(base + path) as response:
                         self.assertEqual(response.status, 200)
+                        self.assertEqual(response.headers.get("Cache-Control"), "no-cache")
                         self.assertEqual(response.read(), b'entry point')
                 with urlopen(base + '/assets/app.js') as response:
                     self.assertEqual(response.read(), b'actual asset')

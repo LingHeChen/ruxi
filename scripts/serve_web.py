@@ -18,6 +18,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def end_headers(self):
+        self.send_header("Cache-Control", "no-cache")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "credentialless")
         super().end_headers()

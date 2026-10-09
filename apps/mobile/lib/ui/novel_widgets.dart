@@ -17,9 +17,13 @@ class NovelMessage {
     this.clue = false,
     this.confirm = false,
     this.ending = false,
+    this.illustration,
+    this.choices = const [],
   });
   final String title, text;
   final String? subtitle;
+  final String? illustration;
+  final List<Json> choices;
   final List<String> acknowledge;
   final int? round;
   final bool clue, confirm, ending;
@@ -27,8 +31,10 @@ class NovelMessage {
 
 Future<bool?> showNovelMessage(
   BuildContext context,
-  NovelMessage message,
-) => showGeneralDialog<bool>(
+  NovelMessage message, {
+  Future<String?> Function(Json)? onChoice,
+  bool Function(Json)? choiceAvailable,
+}) => showGeneralDialog<bool>(
   context: context,
   barrierDismissible: false,
   barrierLabel: '故事对话',
@@ -48,7 +54,11 @@ Future<bool?> showNovelMessage(
   ),
   pageBuilder: (context, _, _) => message.round != null
       ? RoundTransition(message: message)
-      : NovelReader(message: message),
+      : NovelReader(
+          message: message,
+          onChoice: onChoice,
+          choiceAvailable: choiceAvailable,
+        ),
 );
 
 class NovelPanel extends StatelessWidget {
@@ -73,8 +83,15 @@ class NovelPanel extends StatelessWidget {
 }
 
 class NovelReader extends StatefulWidget {
-  const NovelReader({super.key, required this.message});
+  const NovelReader({
+    super.key,
+    required this.message,
+    this.onChoice,
+    this.choiceAvailable,
+  });
   final NovelMessage message;
+  final Future<String?> Function(Json)? onChoice;
+  final bool Function(Json)? choiceAvailable;
   @override
   State<NovelReader> createState() => _NovelReaderState();
 }
@@ -82,6 +99,8 @@ class NovelReader extends StatefulWidget {
 class _NovelReaderState extends State<NovelReader> {
   Timer? _typing;
   int _count = 0;
+  bool _submitting = false;
+  String? _error;
   late final _characters = widget.message.text.characters.toList();
   bool get complete => _count >= _characters.length;
   @override
@@ -111,25 +130,47 @@ class _NovelReaderState extends State<NovelReader> {
     super.dispose();
   }
 
+  Future<void> select(Json choice) async {
+    if (_submitting || widget.onChoice == null) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    String? error;
+    try {
+      error = await widget.onChoice!(choice);
+    } catch (_) {
+      error = '这次选择尚未确认，请稍后查询操作结果。';
+    }
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.pop(context, true);
+    } else {
+      setState(() {
+        _error = error;
+        _submitting = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = widget.message;
+    final narrow = MediaQuery.sizeOf(context).width < 600;
     return SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: 720,
-              maxHeight: MediaQuery.sizeOf(context).height * .82,
+              maxWidth: m.illustration == null ? 720 : 880,
+              maxHeight: MediaQuery.sizeOf(context).height * .9,
             ),
             child: Material(
               color: Colors.transparent,
               child: NovelPanel(
                 child: Padding(
-                  padding: EdgeInsets.all(
-                    MediaQuery.sizeOf(context).width < 600 ? 24 : 40,
-                  ),
+                  padding: EdgeInsets.all(narrow ? 22 : 32),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -160,7 +201,7 @@ class _NovelReaderState extends State<NovelReader> {
                       ),
                       if (m.subtitle != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.only(top: 10),
                           child: Text(
                             m.subtitle!,
                             style: const TextStyle(
@@ -170,64 +211,168 @@ class _NovelReaderState extends State<NovelReader> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       Flexible(
-                        child: SizedBox(
-                          height: 180,
-                          child: SingleChildScrollView(
-                            child: GestureDetector(
-                              onTap: reveal,
-                              child: Semantics(
-                                label: m.text,
-                                excludeSemantics: true,
-                                child: Text(
-                                  _characters.take(_count).join(),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    height: 2,
-                                    color: Color(0xffeee7d8),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (m.illustration != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Image.asset(
+                                    m.illustration!,
+                                    height: narrow ? 160 : 230,
+                                    fit: BoxFit.cover,
+                                    semanticLabel: '当前剧情插图',
+                                    errorBuilder: (_, _, _) =>
+                                        const SizedBox.shrink(),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                              GestureDetector(
+                                onTap: reveal,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: m.choices.isEmpty ? 120 : 96,
+                                  ),
+                                  child: Semantics(
+                                    label: m.text,
+                                    excludeSemantics: true,
+                                    child: Text(
+                                      _characters.take(_count).join(),
+                                      style: TextStyle(
+                                        fontSize: narrow ? 16 : 18,
+                                        height: 1.9,
+                                        color: const Color(0xffeee7d8),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              if (m.clue)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 16),
+                                  child: Text(
+                                    '✧ 新线索已记入线索册',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: novelGold,
+                                    ),
+                                  ),
+                                ),
+                              if (_error != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: Text(
+                                    _error!,
+                                    style: const TextStyle(
+                                      color: Color(0xffedb4a0),
+                                      height: 1.7,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 24),
+                              if (complete && m.choices.isNotEmpty) ...[
+                                const Text(
+                                  '此刻，你会怎么做？',
+                                  style: TextStyle(
+                                    color: novelGold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                for (final choice in m.choices)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: OutlinedButton(
+                                      onPressed:
+                                          _submitting ||
+                                              widget.onChoice == null ||
+                                              !(widget.choiceAvailable?.call(
+                                                    choice,
+                                                  ) ??
+                                                  choice['allowed_now'] == true)
+                                          ? null
+                                          : () => unawaited(select(choice)),
+                                      style: OutlinedButton.styleFrom(
+                                        alignment: Alignment.centerLeft,
+                                        padding: const EdgeInsets.all(16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Text(
+                                            '◇ ${choice['label']} · ${choice['cost']} 余力',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              color: novelGold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            choice['risk_text'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              height: 1.6,
+                                              color: Color(0xffb6c0bd),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                if (_submitting)
+                                  const Padding(
+                                    padding: EdgeInsets.only(bottom: 12),
+                                    child: LinearProgressIndicator(
+                                      minHeight: 2,
+                                    ),
+                                  ),
+                              ],
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (m.confirm)
+                                    TextButton(
+                                      onPressed: _submitting
+                                          ? null
+                                          : () => Navigator.pop(context, false),
+                                      child: const Text('再想一想'),
+                                    ),
+                                  FilledButton(
+                                    onPressed: _submitting
+                                        ? null
+                                        : () {
+                                            if (!complete) {
+                                              reveal();
+                                            } else {
+                                              Navigator.pop(context, true);
+                                            }
+                                          },
+                                    child: Text(
+                                      !complete
+                                          ? '显示全文'
+                                          : m.choices.isNotEmpty
+                                          ? '稍后决定'
+                                          : m.confirm
+                                          ? '确认选择 →'
+                                          : '继续 →',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 28),
-                      if (m.clue)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 18),
-                          child: Text(
-                            '✧ 新线索已记入线索册',
-                            style: TextStyle(fontSize: 12, color: novelGold),
-                          ),
-                        ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (m.confirm)
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('再想一想'),
-                            ),
-                          const SizedBox(width: 10),
-                          FilledButton(
-                            onPressed: () {
-                              if (!complete) {
-                                reveal();
-                              } else {
-                                Navigator.pop(context, true);
-                              }
-                            },
-                            child: Text(
-                              !complete
-                                  ? '显示全文'
-                                  : m.confirm
-                                  ? '确认选择 →'
-                                  : '继续 →',
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),

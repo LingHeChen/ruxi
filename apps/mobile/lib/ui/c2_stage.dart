@@ -63,6 +63,37 @@ class _C2StageState extends State<C2Stage> {
     setState(() {});
   }
 
+  String? illustrationFor(Json v, String? media, [String? action]) {
+    if (v['story_title'] != '雨夜最后一封信') return null;
+    if (media == 'opening' || action == 'read_letter') {
+      return 'assets/stories/last_letter/arrival.png';
+    }
+    if (action == 'inspect_damage' || media == 'echo_inspect_damage') {
+      return 'assets/stories/last_letter/rescue.png';
+    }
+    return null;
+  }
+
+  List<Json> narrativeChoices(Json v, List<dynamic> clues, String? action) {
+    if (v['story_title'] != '雨夜最后一封信' || v['room']['status'] != 'active') {
+      return [];
+    }
+    final gained = clues.map((c) => c['id']).toSet();
+    final group = gained.contains('damage') || action == 'inspect_damage'
+        ? {'rescue_ledger', 'rescue_tape', 'listen_rain'}
+        : gained.contains('last_note') || gained.contains('doubt')
+        ? {'deduce_rescue', 'deduce_abandon'}
+        : action?.startsWith('move:') == true &&
+              v['self']['location'] == 'office' &&
+              items('knowledge').any((k) => k['id'] == 'truth')
+        ? {'deliver', 'keep'}
+        : <String>{};
+    return items('actions')
+        .where((a) => group.contains(a['id']) && (a['remaining_uses'] ?? 1) > 0)
+        .map((a) => Map<String, dynamic>.from(a))
+        .toList();
+  }
+
   void observe(Json v) {
     final room = v['room'];
     final round = room['round'] as int?;
@@ -117,6 +148,10 @@ class _C2StageState extends State<C2Stage> {
           text: details,
           subtitle: '${result['label'] ?? '你的选择'} · ${result['cost'] ?? 0} 行动点',
           clue: freshKnowledge.isNotEmpty,
+          illustration: illustrationFor(v, null, result['action_id']),
+          choices: success
+              ? narrativeChoices(v, freshKnowledge, result['action_id'])
+              : const [],
           acknowledge: freshCues.map((c) => '${c['id']}').toList(),
         ),
       );
@@ -136,6 +171,10 @@ class _C2StageState extends State<C2Stage> {
           NovelMessage(
             title: '故事 · 旁白',
             text: '${cue['summary'] ?? cue['text'] ?? ''}',
+            illustration: illustrationFor(v, cue['media_id']),
+            choices: cue['media_id'] == 'echo_inspect_damage'
+                ? narrativeChoices(v, const [], 'inspect_damage')
+                : const [],
             acknowledge: ['${cue['id']}'],
           ),
         );
@@ -187,9 +226,17 @@ class _C2StageState extends State<C2Stage> {
     while (_messages.isNotEmpty && mounted) {
       if (!mounted) break;
       final message = _messages.removeAt(0);
-      await showNovelMessage(context, message);
+      await showNovelMessage(
+        context,
+        message,
+        onChoice: (action) => submitNarrativeChoice(message, action),
+        choiceAvailable: choiceAvailable,
+      );
       if (!mounted) break;
       for (final cue in message.acknowledge) {
+        if ((client.view?['acknowledged_cues'] as List? ?? []).contains(cue)) {
+          continue;
+        }
         await client.command('media.complete', {
           'cue_id': cue,
           'mode': 'summary',
@@ -202,6 +249,48 @@ class _C2StageState extends State<C2Stage> {
     }
     _presenting = false;
     if (mounted) setState(() {});
+  }
+
+  bool choiceAvailable(Json choice) {
+    if (client.busy ||
+        client.pending != null ||
+        client.view?['own_intent'] != null ||
+        client.view?['room']['status'] != 'active') {
+      return false;
+    }
+    final current = items('actions')
+        .where((a) => a['id'] == choice['id'])
+        .firstOrNull;
+    return current != null && current['allowed_now'] == true;
+  }
+
+  Future<String?> submitNarrativeChoice(
+    NovelMessage message,
+    Json action,
+  ) async {
+    if (client.busy || client.pending != null) return '上一项操作尚未确认，请先返回场景查询操作结果。';
+    for (final cue in message.acknowledge) {
+      if ((client.view?['acknowledged_cues'] as List? ?? []).contains(cue)) {
+        continue;
+      }
+      await client.command('media.complete', {
+        'cue_id': cue,
+        'mode': 'summary',
+      });
+      if (!mounted) return '故事已经离开当前页面。';
+      if (client.error != null || client.pending != null) {
+        return client.error ?? '阅读确认尚未完成，请稍后重试。';
+      }
+    }
+    await client.refresh();
+    if (!mounted) return '故事已经离开当前页面。';
+    if (!choiceAvailable(action)) return '当前条件或余力已经变化。你可以稍后决定，回到场景查看新的选项。';
+    await client.command('action.submit', {
+      'action_id': action['id'],
+      'target_id': null,
+    });
+    return client.error ??
+        (client.pending != null ? '这次选择尚未确认，请返回场景查询操作结果。' : null);
   }
 
   Future<void> send(
