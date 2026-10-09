@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../data/c2_client.dart';
 import '../data/room_client.dart';
 import 'novel_widgets.dart';
+import 'story_text.dart';
+import 'story_map.dart';
 import 'game_inventory.dart';
 import 'interaction_dialog.dart';
 
@@ -464,33 +466,48 @@ class _C2StageState extends State<C2Stage> {
     }
   }
 
-  Future<void> move(Json location, Json? link) async {
-    final current = client.view?['self']?['location'] == location['id'];
-    final confirmed = await ask(
-      NovelMessage(
-        title: location['label'],
-        illustration: location['image_uri'],
-        text: location['description'] ?? '安静地观察这个地点。',
-        subtitle: current
-            ? '你正在这里'
-            : link == null
-            ? '这里没有直接相连的通路'
-            : '移动消耗 ${link['cost']} 行动点',
-        confirm:
-            !current &&
-            link?['allowed_now'] == true &&
-            !blocked &&
-            client.view?['room']['status'] == 'active' &&
-            (link?['cost'] ?? 0) <=
-                ((client.view?['self']['ap_remaining'] ?? 0) -
-                    (client.view?['self']['ap_reserved'] ?? 0)),
-      ),
-    );
-    if (confirmed == true && link != null && mounted) {
-      await send('action.submit', {
-        'action_id': 'move:${link['id']}',
-        'target_id': null,
-      });
+  Future<void> openMap() async {
+    if (_presenting || !mounted) return;
+    _presenting = true;
+    try {
+      final v = client.view!;
+      final selected = await showDialog<Json>(
+        context: context,
+        builder: (_) => StoryMapDialog(
+          locations: (v['map']?['locations'] as List? ?? []).cast<Json>(),
+          links: (v['map']?['links'] as List? ?? []).cast<Json>(),
+          current: v['self']['location'],
+          canMove: !blocked && v['room']['status'] == 'active',
+          ap:
+              (v['self']['ap_remaining'] ?? 0) -
+              (v['self']['ap_reserved'] ?? 0),
+        ),
+      );
+      if (selected != null && mounted) {
+        final fresh = client.view!;
+        final link = (fresh['map']?['links'] as List? ?? [])
+            .cast<Json>()
+            .where(
+              (e) =>
+                  e['from'] == fresh['self']['location'] &&
+                  e['to'] == selected['id'] &&
+                  e['allowed_now'] == true,
+            )
+            .firstOrNull;
+        if (link != null && !blocked) {
+          await send('action.submit', {
+            'action_id': 'move:${link['id']}',
+            'target_id': null,
+          });
+        } else {
+          enqueue(
+            const NovelMessage(title: '暂时无法移动', text: '房间状态已经变化，请等待同伴或重新查看地图。'),
+          );
+        }
+      }
+    } finally {
+      _presenting = false;
+      if (mounted) unawaited(present());
     }
   }
 
@@ -613,7 +630,6 @@ class _C2StageState extends State<C2Stage> {
     final room = v['room'];
     final self = v['self'];
     final locations = (v['map']?['locations'] as List? ?? []).cast<Json>();
-    final links = (v['map']?['links'] as List? ?? []).cast<Json>();
     final location = locations
         .where((l) => l['id'] == self?['location'])
         .firstOrNull;
@@ -867,25 +883,20 @@ class _C2StageState extends State<C2Stage> {
                             Positioned(
                               top: 4,
                               right: narrow ? 12 : 40,
-                              child: SizedBox(
-                                width: narrow ? 146 : 250,
-                                height: narrow ? 155 : 210,
-                                child: NovelMap(
-                                  locations: locations,
-                                  links: links,
-                                  current: self?['location'],
-                                  onSelect: (l) => unawaited(
-                                    move(
-                                      l,
-                                      links
-                                          .where(
-                                            (e) =>
-                                                e['from'] ==
-                                                    self?['location'] &&
-                                                e['to'] == l['id'],
-                                          )
-                                          .firstOrNull,
-                                    ),
+                              child: OutlinedButton.icon(
+                                onPressed: () => unawaited(openMap()),
+                                icon: const Icon(Icons.map_outlined, size: 20),
+                                label: Text(
+                                  narrow
+                                      ? '${location?['label'] ?? '当前位置'} · 地图'
+                                      : '当前位置 · ${location?['label'] ?? '地图'}',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: const Color(0xe615252e),
+                                  foregroundColor: novelGold,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
                                   ),
                                 ),
                               ),
@@ -946,7 +957,7 @@ class _C2StageState extends State<C2Stage> {
                                     ],
                                   ),
                                   const SizedBox(height: 14),
-                                  Text(
+                                  StoryText(
                                     lobby
                                         ? solo
                                               ? '以你的角色视角探索场景、询问人物、查证线索。\n准备好之后，独自走进这个故事。'
@@ -1007,6 +1018,8 @@ class _C2StageState extends State<C2Stage> {
                                           ),
                                       ],
                                     ),
+                                  if (active && items('npcs').isNotEmpty)
+                                    const SizedBox(height: 18),
                                   if (lobby) ...[
                                     if (!solo && v['invite_code'] != null)
                                       Padding(

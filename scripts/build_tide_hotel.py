@@ -1,6 +1,7 @@
 """Build the authored 1–4-player mystery. No AI runtime or remote dependency."""
 import json
 import hashlib
+import re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 out=ROOT/'content/c3/tide_hotel/story.json'
@@ -267,6 +268,18 @@ for o in s['c3_settings']['objectives']:
 opening=next(m for m in s['media'] if m['id']=='opening')
 opening['summary']=opening['summary'].replace('你叫徐闻，给一家地方电台做声音纪录。今晚，你带着录音笔来到潮汐旅馆，赴作家江临的约。','你们因各自的调查来到潮汐旅馆，赴作家江临的约。声音记者、档案研究员、救援志愿者和纪实摄影师，可由1～4人自由选择任意角色；独自到访也能完成全部调查。').replace('开场先问林素','先回看自己的行前笔记；多人可以分头探索，主线发现会同步到团队手记，私人笔记可自行分享。每个调查步等待同伴提交行动或结束回合；所有人在场并阅读完叙事后再继续。结局选择需要全员回到同一地点，选择同一个方案；意见不同时不会擅自结束故事。开场先问林素')
 media('cover','1～4人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局','cover')
+# Author-controlled emphasis. Gold marks anchors, jade marks evidence; no verdict is highlighted.
+def emphasize(text):
+ for name in ['江临','林素','陈雾','赵朔','何泊','赵世衡']:
+  text=text.replace(name,'**'+name+'**',1)
+ for evidence in ['原始救援记录','原始护理页','旅馆登记簿','港务原始页','预录钟声','护理页、客簿原件与救援命令','原始磁带','两条时间线']:
+  text=text.replace(evidence,'=='+evidence+'==',1)
+ return text
+for m in s['media']:
+ m['summary']=emphasize(m['summary'])
+for l in s['locations']: l['description']=emphasize(l['description'])
+for c in s['clues']: c['text']=emphasize(c['text'])
+for n in s['c3_settings']['npcs']: n['description']=emphasize(n['description'])
 manifest={f'assets/stories/tide_hotel/{file.name}':hashlib.sha256(file.read_bytes()).hexdigest() for file in (ROOT/'apps/mobile/assets/stories/tide_hotel').glob('*.png')}
 for m in s['media']:
  if m['kind']=='image':
@@ -275,4 +288,4 @@ for m in s['media']:
    m['sha256']=hashlib.sha256(file.read_bytes()).hexdigest();manifest[m['uri']]=m['sha256']
 (ROOT/'services/core/priv/c3/bundled_art.json').write_text(json.dumps(manifest,indent=2)+'\n')
 out.write_text(json.dumps(s,ensure_ascii=False,indent=2)+'\n')
-print(json.dumps({'story':str(out),'actions':len(s['actions']),'clues':len(s['clues']),'media':len(s['media']),'npcs':len(npcs),'narrative_characters':sum(len(m['summary']) for m in s['media'] if m['id'].startswith('echo_') or m['id']=='opening')},ensure_ascii=False))
+print(json.dumps({'story':str(out),'actions':len(s['actions']),'clues':len(s['clues']),'media':len(s['media']),'npcs':len(npcs),'narrative_characters':sum(len(re.sub(r'\*\*|==','',m['summary'])) for m in s['media'] if m['id'].startswith('echo_') or m['id']=='opening')},ensure_ascii=False))

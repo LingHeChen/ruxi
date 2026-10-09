@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ruxi/main.dart';
 import 'package:ruxi/data/room_client.dart';
 import 'package:ruxi/ui/c2_stage.dart';
+import 'package:ruxi/ui/novel_widgets.dart';
 
 class TideIdentity extends RoomClient {
   final Json fixture = jsonDecode(
@@ -73,6 +74,11 @@ void main() {
         find.image(const AssetImage('assets/stories/tide_hotel/lobby-v2.png')),
         findsOneWidget,
       );
+      final chipBottom = tester
+          .getRect(find.widgetWithText(ActionChip, '与林素交谈'))
+          .bottom;
+      final actionTop = tester.getRect(find.byType(NovelChoice).first).top;
+      expect(actionTop - chipBottom, greaterThanOrEqualTo(18));
       await tester.tap(find.text('与林素交谈'));
       await tester.pumpAndSettle();
       if (find.text('显示全文').evaluate().isNotEmpty) {
@@ -80,6 +86,15 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.textContaining('问林素：最后见到江临是什么时候？'), findsWidgets);
+      final portrait = tester.widget<Image>(
+        find.descendant(
+          of: find.byType(NovelReader),
+          matching: find.image(
+            const AssetImage('assets/stories/tide_hotel/npc-lin.png'),
+          ),
+        ),
+      );
+      expect(portrait.fit, BoxFit.contain);
       expect(tester.takeException(), isNull);
       if (Platform.environment['RUXI_CAPTURE_UI'] == '1') {
         await expectLater(

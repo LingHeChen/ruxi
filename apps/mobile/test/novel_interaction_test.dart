@@ -56,6 +56,25 @@ class InteractiveIdentity extends StageIdentity {
   }
 }
 
+class MapIdentity extends StageIdentity {
+  final movements = <String>[];
+  @override
+  Future<dynamic> request(
+    String method,
+    String path, [
+    Json? body,
+    bool private = false,
+    bool retried = false,
+    Map<String, String> extraHeaders = const {},
+  ]) async {
+    if (method == 'POST' && body?['type'] == 'action.submit') {
+      movements.add(body!['body']['action_id']);
+      return {'status': 'committed'};
+    }
+    return super.request(method, path, body, private, retried, extraHeaders);
+  }
+}
+
 void main() {
   testWidgets(
     'inline rescue acknowledges reading before submitting exactly once',
@@ -135,28 +154,36 @@ void main() {
   testWidgets(
     'known map node explains movement and respects current position',
     (tester) async {
+      final identity = MapIdentity();
       await tester.pumpWidget(
         MaterialApp(
           theme: playerTheme(),
           home: C2Stage(
             roomId: 'room',
-            identity: StageIdentity(),
+            identity: identity,
             autoInitialize: false,
           ),
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('档案室'));
+      await tester.tap(find.byIcon(Icons.map_outlined));
+      await tester.pumpAndSettle();
+      expect(find.text('你正在这里'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ChoiceChip, '档案室'));
       await tester.pumpAndSettle();
       expect(find.text('移动消耗 1 行动点'), findsOneWidget);
-      if (find.text('显示全文').evaluate().isNotEmpty) {
-        await tester.tap(find.text('显示全文'));
-      }
-      await tester.pump();
       expect(find.text('二十年前的投递簿，就在最上层抽屉。'), findsOneWidget);
-      await tester.tap(find.text('再想一想'));
+      await tester.tap(find.byTooltip('关闭地图'));
       await tester.pumpAndSettle();
       expect(find.text('移动消耗 1 行动点'), findsNothing);
+      expect(identity.movements, isEmpty);
+      await tester.tap(find.byIcon(Icons.map_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '档案室'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('移动到档案室'));
+      await tester.pumpAndSettle();
+      expect(identity.movements, ['move:dining_hall']);
       await tester.pumpWidget(const SizedBox());
     },
   );

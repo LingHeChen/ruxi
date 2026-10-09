@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/room_client.dart';
+import 'story_text.dart';
 
 const novelGold = Color(0xffdcc18d);
 
@@ -82,6 +83,52 @@ class NovelPanel extends StatelessWidget {
   );
 }
 
+class NarrativeIllustration extends StatelessWidget {
+  const NarrativeIllustration({
+    super.key,
+    required this.uri,
+    required this.child,
+  });
+  final String? uri;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (uri == null) return child;
+    final portrait = uri!.contains('/npc-');
+    final narrow = MediaQuery.sizeOf(context).width < 700;
+    final image = ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.asset(
+        uri!,
+        width: portrait ? (narrow ? 180 : 240) : double.infinity,
+        height: portrait ? (narrow ? 270 : 360) : (narrow ? 180 : 260),
+        fit: portrait ? BoxFit.contain : BoxFit.cover,
+        semanticLabel: portrait ? '人物肖像，完整展示' : '当前剧情插图',
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      ),
+    );
+    if (portrait && !narrow) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          image,
+          const SizedBox(width: 28),
+          Expanded(child: child),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (portrait) Center(child: image) else image,
+        const SizedBox(height: 22),
+        child,
+      ],
+    );
+  }
+}
+
 class NovelReader extends StatefulWidget {
   const NovelReader({
     super.key,
@@ -101,7 +148,8 @@ class _NovelReaderState extends State<NovelReader> {
   int _count = 0;
   bool _submitting = false;
   String? _error;
-  late final _characters = widget.message.text.characters.toList();
+  late final _characters = storyPlainText(widget.message.text).characters
+      .toList();
   bool get complete => _count >= _characters.length;
   @override
   void didChangeDependencies() {
@@ -214,166 +262,157 @@ class _NovelReaderState extends State<NovelReader> {
                       const SizedBox(height: 20),
                       Flexible(
                         child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (m.illustration != null) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Image.asset(
-                                    m.illustration!,
-                                    height: narrow ? 160 : 230,
-                                    fit: BoxFit.cover,
-                                    alignment: m.illustration!.contains('/npc-')
-                                        ? const Alignment(0, -.5)
-                                        : Alignment.center,
-                                    semanticLabel: '当前剧情插图',
-                                    errorBuilder: (_, _, _) =>
-                                        const SizedBox.shrink(),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                              ],
-                              GestureDetector(
-                                onTap: reveal,
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: m.choices.isEmpty ? 120 : 96,
-                                  ),
-                                  child: Semantics(
-                                    label: m.text,
-                                    excludeSemantics: true,
-                                    child: Text(
-                                      _characters.take(_count).join(),
-                                      style: TextStyle(
-                                        fontSize: narrow ? 16 : 18,
-                                        height: 1.9,
-                                        color: const Color(0xffeee7d8),
-                                      ),
+                          child: NarrativeIllustration(
+                            uri: m.illustration,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTap: reveal,
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight: m.choices.isEmpty ? 120 : 96,
                                     ),
-                                  ),
-                                ),
-                              ),
-                              if (m.clue)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 16),
-                                  child: Text(
-                                    '✧ 新线索已记入线索册',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: novelGold,
-                                    ),
-                                  ),
-                                ),
-                              if (_error != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Color(0xffedb4a0),
-                                      height: 1.7,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 24),
-                              if (complete && m.choices.isNotEmpty) ...[
-                                const Text(
-                                  '此刻，你会怎么做？',
-                                  style: TextStyle(
-                                    color: novelGold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                for (final choice in m.choices)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: OutlinedButton(
-                                      onPressed:
-                                          _submitting ||
-                                              widget.onChoice == null ||
-                                              !(widget.choiceAvailable?.call(
-                                                    choice,
-                                                  ) ??
-                                                  choice['allowed_now'] == true)
-                                          ? null
-                                          : () => unawaited(select(choice)),
-                                      style: OutlinedButton.styleFrom(
-                                        alignment: Alignment.centerLeft,
-                                        padding: const EdgeInsets.all(16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
+                                    child: Semantics(
+                                      label: storyPlainText(m.text),
+                                      excludeSemantics: true,
+                                      child: StoryText(
+                                        m.text,
+                                        visibleCharacters: _count,
+                                        style: TextStyle(
+                                          fontSize: narrow ? 16 : 18,
+                                          height: 1.9,
+                                          color: const Color(0xffeee7d8),
                                         ),
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          Text(
-                                            '◇ ${choice['label']} · ${choice['cost']} 余力',
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              color: novelGold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            choice['risk_text'] ?? '',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              height: 1.6,
-                                              color: Color(0xffb6c0bd),
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                  ),
+                                ),
+                                if (m.clue)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 16),
+                                    child: Text(
+                                      '✧ 新线索已记入线索册',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: novelGold,
                                       ),
                                     ),
                                   ),
-                                if (_submitting)
-                                  const Padding(
-                                    padding: EdgeInsets.only(bottom: 12),
-                                    child: LinearProgressIndicator(
-                                      minHeight: 2,
+                                if (_error != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 16),
+                                    child: Text(
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: Color(0xffedb4a0),
+                                        height: 1.7,
+                                      ),
                                     ),
                                   ),
-                              ],
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (m.confirm)
-                                    TextButton(
+                                const SizedBox(height: 24),
+                                if (complete && m.choices.isNotEmpty) ...[
+                                  const Text(
+                                    '此刻，你会怎么做？',
+                                    style: TextStyle(
+                                      color: novelGold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  for (final choice in m.choices)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
+                                      child: OutlinedButton(
+                                        onPressed:
+                                            _submitting ||
+                                                widget.onChoice == null ||
+                                                !(widget.choiceAvailable?.call(
+                                                      choice,
+                                                    ) ??
+                                                    choice['allowed_now'] ==
+                                                        true)
+                                            ? null
+                                            : () => unawaited(select(choice)),
+                                        style: OutlinedButton.styleFrom(
+                                          alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.all(16),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Text(
+                                              '◇ ${choice['label']} · ${choice['cost']} 余力',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                color: novelGold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              choice['risk_text'] ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                height: 1.6,
+                                                color: Color(0xffb6c0bd),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  if (_submitting)
+                                    const Padding(
+                                      padding: EdgeInsets.only(bottom: 12),
+                                      child: LinearProgressIndicator(
+                                        minHeight: 2,
+                                      ),
+                                    ),
+                                ],
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (m.confirm)
+                                      TextButton(
+                                        onPressed: _submitting
+                                            ? null
+                                            : () =>
+                                                  Navigator.pop(context, false),
+                                        child: const Text('再想一想'),
+                                      ),
+                                    FilledButton(
                                       onPressed: _submitting
                                           ? null
-                                          : () => Navigator.pop(context, false),
-                                      child: const Text('再想一想'),
+                                          : () {
+                                              if (!complete) {
+                                                reveal();
+                                              } else {
+                                                Navigator.pop(context, true);
+                                              }
+                                            },
+                                      child: Text(
+                                        !complete
+                                            ? '显示全文'
+                                            : m.choices.isNotEmpty
+                                            ? '稍后决定'
+                                            : m.confirm
+                                            ? '确认选择 →'
+                                            : '继续 →',
+                                      ),
                                     ),
-                                  FilledButton(
-                                    onPressed: _submitting
-                                        ? null
-                                        : () {
-                                            if (!complete) {
-                                              reveal();
-                                            } else {
-                                              Navigator.pop(context, true);
-                                            }
-                                          },
-                                    child: Text(
-                                      !complete
-                                          ? '显示全文'
-                                          : m.choices.isNotEmpty
-                                          ? '稍后决定'
-                                          : m.confirm
-                                          ? '确认选择 →'
-                                          : '继续 →',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -516,163 +555,4 @@ class NovelChoice extends StatelessWidget {
       style: const TextStyle(fontSize: 14),
     ),
   );
-}
-
-class NovelMap extends StatelessWidget {
-  const NovelMap({
-    super.key,
-    required this.locations,
-    required this.links,
-    required this.current,
-    required this.onSelect,
-  });
-  final List<Json> locations, links;
-  final String? current;
-  final void Function(Json) onSelect;
-  @override
-  Widget build(BuildContext context) => NovelPanel(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-      child: Column(
-        children: [
-          const Text(
-            '探索地图',
-            style: TextStyle(fontSize: 11, color: novelGold, letterSpacing: 2),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, box) {
-                // Only authorized known locations/edges reach this map. Connections are never inferred.
-                final width = box.maxWidth;
-                final height = math.max(
-                  box.maxHeight,
-                  ((locations.length + 1) ~/ 2) * 72.0,
-                );
-                final positions = <String, Offset>{};
-                for (var i = 0; i < locations.length; i++) {
-                  positions[locations[i]['id']] = Offset(
-                    width * (i.isEven ? .26 : .74),
-                    30 + (i ~/ 2) * 72 + (i.isOdd ? 18 : 0),
-                  );
-                }
-                return SingleChildScrollView(
-                  child: SizedBox(
-                    width: width,
-                    height: height,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: MapPaths(positions, links, current),
-                          ),
-                        ),
-                        for (final l in locations)
-                          Positioned(
-                            left: positions[l['id']]!.dx - 30,
-                            top: positions[l['id']]!.dy - 23,
-                            width: 60,
-                            child: Semantics(
-                              button: true,
-                              label:
-                                  '${l['label']}${l['id'] == current ? '，当前位置' : '，查看地点'}',
-                              child: Tooltip(
-                                message: '${l['label']} · 点击查看',
-                                child: InkWell(
-                                  onTap: () => onSelect(l),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: l['id'] == current
-                                              ? const Color(0xffbba477)
-                                              : const Color(0xff21333e),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          border: Border.all(
-                                            color: l['id'] == current
-                                                ? const Color(0xfff7dda9)
-                                                : const Color(0xff647984),
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          l['id'] == current
-                                              ? Icons.person_pin_circle_outlined
-                                              : Icons.home_outlined,
-                                          color: l['id'] == current
-                                              ? const Color(0xff172632)
-                                              : const Color(0xffabbec2),
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Text(
-                                        l['label'],
-                                        maxLines: 2,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: l['id'] == current
-                                              ? novelGold
-                                              : const Color(0xffb9c5c8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class MapPaths extends CustomPainter {
-  MapPaths(this.positions, this.links, this.current);
-  final Map<String, Offset> positions;
-  final List<Json> links;
-  final String? current;
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final edge in links) {
-      final a = positions[edge['from']], b = positions[edge['to']];
-      if (a == null || b == null) continue;
-      final delta = b - a;
-      if (delta.distance < 1) continue;
-      final direction = delta / delta.distance;
-      final start = a + direction * 24, end = b - direction * 24;
-      final paint = Paint()
-        ..color = edge['allowed_now'] == true
-            ? novelGold
-            : const Color(0xff647580)
-        ..strokeWidth = 1.3;
-      final length = (end - start).distance;
-      for (double i = 0; i < length; i += 8) {
-        canvas.drawLine(
-          start + direction * i,
-          start + direction * math.min(i + 4, length),
-          paint,
-        );
-      }
-      final normal = Offset(-direction.dy, direction.dx);
-      canvas.drawLine(end, end - direction * 5 + normal * 3, paint);
-      canvas.drawLine(end, end - direction * 5 - normal * 3, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(MapPaths oldDelegate) => true;
 }

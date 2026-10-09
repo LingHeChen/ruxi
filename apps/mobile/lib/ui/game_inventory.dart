@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/room_client.dart';
 import 'novel_widgets.dart';
+import 'story_text.dart';
 
 enum GamePanel { clues, inventory, history }
 
@@ -266,7 +267,7 @@ class _GameInventoryState extends State<GameInventory> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Text(
+                StoryText(
                   '${panel == GamePanel.clues ? item['text'] : item['description'] ?? '这件物品已经放入你的背包。相关用途会在场景互动中出现。'}',
                   style: const TextStyle(
                     fontSize: 15,

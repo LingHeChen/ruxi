@@ -144,7 +144,9 @@ void main() {
         );
       }
       if (capture) {
-        await tester.tap(find.text('档案室'));
+        await tester.tap(find.byIcon(Icons.map_outlined));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ChoiceChip, '档案室'));
         await tester.pumpAndSettle();
         if (find.text('显示全文').evaluate().isNotEmpty) {
           await tester.tap(find.text('显示全文'));
