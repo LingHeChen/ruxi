@@ -22,15 +22,18 @@ void main() {
         }
         final catalog = await clients[0].request('GET', '/stories');
         final fixture = (catalog['items'] as List).firstWhere(
-          (s) => (s['roles'] as List).map((r) => r['id']).join(',') == 'guest,doctor,reporter',
+          (s) =>
+              (s['roles'] as List).map((r) => r['id']).join(',') ==
+              'guest,doctor,reporter',
         );
         final created = await clients[0].request('POST', '/rooms', {
           'release_id': fixture['release_id'],
         });
-        for (final c in clients.skip(1))
+        for (final c in clients.skip(1)) {
           await c.request('POST', '/rooms/join', {
             'invite_code': created['invite_code'],
           });
+        }
         for (var i = 0; i < 3; i++) {
           final c = clients[i];
           await c.load(created['room_id']);
@@ -39,17 +42,19 @@ void main() {
           });
           await c.command('member.ready', {'ready': true});
         }
-        for (var n = 0; n < 100 && !clients.every((c) => c.live); n++)
+        for (var n = 0; n < 100 && !clients.every((c) => c.live); n++) {
           await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
         expect(clients.every((c) => c.live), isTrue);
         await clients[0].command('room.start');
         for (final c in clients) {
           await c.refresh();
-          for (final cue in c.view!['narrative_cues'])
+          for (final cue in c.view!['narrative_cues']) {
             await c.command('media.complete', {
               'cue_id': cue['id'],
               'mode': 'summary',
             });
+          }
         }
         var round = 0;
         for (final action in [
@@ -81,8 +86,12 @@ void main() {
         expect(restored.reducer.seq, greaterThan(0));
       } finally {
         restored?.dispose();
-        for (final c in clients) c.dispose();
-        for (final identity in identities) identity.dispose();
+        for (final c in clients) {
+          c.dispose();
+        }
+        for (final identity in identities) {
+          identity.dispose();
+        }
       }
     },
     skip: !const bool.fromEnvironment('RUXI_LIVE_TEST')

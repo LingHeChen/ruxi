@@ -27,7 +27,7 @@ defmodule RuxiWeb.Endpoint do
     parsers: [:json],
     pass: ["application/json"],
     json_decoder: Ruxi.StrictJSON,
-    length: 65_536
+    length: 1_048_576
   )
 
   plug(RuxiWeb.Router)
