@@ -2,12 +2,12 @@ import RTC, {MediaType, RoomProfileType, StreamIndex} from '@volcengine/rtc';
 let engine=null, epoch=0, callback=null, microphone=false, captureEpoch=0, peers=new Set();
 function emit(type,data={}) { callback?.(JSON.stringify({type,...data})); }
 async function mute() {
-  ++captureEpoch; microphone=false;
+  ++captureEpoch; const wasPublishing=microphone; microphone=false;
   const current=engine;
   if (!current) return;
   // Stop capture before awaiting signalling. No microphone survives a lost focus.
   try { await current.stopAudioCapture(); } catch {}
-  try { await current.unpublishStream(MediaType.AUDIO); } catch {}
+  if(wasPublishing) { try { await current.unpublishStream(MediaType.AUDIO); } catch {} }
   emit('muted');
 }
 async function leave() {
@@ -30,7 +30,15 @@ window.ruxiRTC={
       if(state===5) {void mute(); emit('connected');}
       else if(state===1 || state===4 || state===6) { void mute(); emit('disconnected'); }
     });
-    current.on('onError', ()=> { if(generation===epoch){void mute();emit('failed');} });
+    current.on('onError', ({errorCode})=> {
+      if(generation!==epoch) return;
+      // Capture/device errors do not invalidate the authorized listening room.
+      if(['GET_AUDIO_TRACK_FAILED','NO_PERMISSION','INVALID_DEVICE_ID','PUBLISH_FAILED'].includes(errorCode)) {
+        void mute(); emit('microphone_error');
+      } else if(!['REPEAT_CAPTURE','REPEAT_PUBLISH','EMPTY_STREAM','STREAM_NOT_EXIST','UNPUBLISH_BEFORE_JOIN','INVOKED_BEFORE_CAPTURE'].includes(errorCode)) {
+        void mute(); emit('failed');
+      }
+    });
     current.on('onUserJoined', ({userInfo})=>{ if(generation===epoch && userInfo?.userId) peers.add(userInfo.userId); });
     current.on('onUserLeave', ({userId})=>peers.delete(userId));
     current.on('onTokenWillExpire', ()=> { if(generation===epoch) emit('renew'); });
@@ -51,7 +59,13 @@ window.ruxiRTC={
     try {
       await current.startAudioCapture();
       if(intent!==captureEpoch || generation!==epoch || document.hidden || !document.hasFocus()) {await current.stopAudioCapture();return;}
-      await current.publishStream(MediaType.AUDIO);microphone=true;
+      await current.publishStream(MediaType.AUDIO);
+      if(intent!==captureEpoch || generation!==epoch || document.hidden || !document.hasFocus()) {
+        await current.stopAudioCapture();
+        await current.unpublishStream(MediaType.AUDIO);
+        return;
+      }
+      microphone=true;
     } catch { await mute(); throw new Error('MIC_PERMISSION_OR_DEVICE'); }
   },
   async renew(token) {if(engine) await engine.updateToken(token);},

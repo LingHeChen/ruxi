@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "esbuild bridge.js --bundle --minify --format=iife --target=es2022 --outfile=../mobile/web/rtc_bridge.js"
+    "build": "esbuild bridge.js --bundle --minify --format=iife --target=es2022 --outfile=../mobile/web/rtc_bridge.js",
+    "test": "node --test test/*.test.mjs"
   },
   "author": "",
   "license": "MIT",

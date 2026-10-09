@@ -327,6 +327,10 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
       case 'muted':
         mic = false;
         break;
+      case 'microphone_error':
+        mic = false;
+        error = '无法使用麦克风，请检查权限；仍可收听和发送文字';
+        break;
       case 'focus_lost':
       case 'device_changed':
         await microphone(false);
@@ -414,7 +418,11 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     foreground = state == AppLifecycleState.resumed;
-    if (!foreground) {
+    if (state == AppLifecycleState.inactive) {
+      // Permission dialogs and window blur are not a room exit. Keep the
+      // authorized listening session and its lease, but stop microphone capture.
+      unawaited(microphone(false));
+    } else if (!foreground) {
       unawaited(stop());
     } else {
       unawaited(refresh());

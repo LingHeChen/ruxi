@@ -170,6 +170,38 @@ void main() {
       await tester.pump();
     },
   );
+  testWidgets('permission dialog only mutes; actual background leaves voice', (
+    tester,
+  ) async {
+    final (c, client, id, rtc) = fixture();
+    await c.refresh();
+    await c.participation(true);
+    await c.join();
+    rtc.callback!({'type': 'connected'});
+    await tester.pump();
+    id.voice = {...id.voice, 'status': 'connected', 'generation': 1};
+    rtc.callback!({'type': 'microphone_error'});
+    await tester.pump();
+    expect(c.grant, isNotNull);
+    expect(rtc.leaves, 0);
+    c.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(c.grant, isNotNull);
+    expect(c.connected, isTrue);
+    expect(rtc.leaves, 0);
+    expect(rtc.microphones.last, isFalse);
+    c.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await tester.pump();
+    c.didChangeAppLifecycleState(AppLifecycleState.hidden);
+    await tester.pump();
+    expect(c.grant, isNull);
+    expect(c.connected, isFalse);
+    expect(rtc.leaves, 1);
+    c.dispose();
+    client.dispose();
+    id.dispose();
+    await tester.pump();
+  });
   for (final width in [390.0, 768.0, 1440.0]) {
     testWidgets('communication panel remains usable at $width and 200% text', (
       tester,
