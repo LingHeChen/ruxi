@@ -13,6 +13,7 @@ import {
   Select,
   Space,
   Spin,
+  Switch,
   Tabs,
   Tag,
   Typography,
@@ -536,6 +537,13 @@ function WorldEditor() {
           }
         />
       )}
+      <Card size="small" style={{ marginBottom: 16 }} title="同伴交流">
+        <Space wrap>
+          <Switch checked={story.communication?.voice?.enabled === true} onChange={(enabled) => edit({...story, communication: {voice: {enabled, scope: "scene"}}})}/>
+          <Typography.Text>启用场景语音（玩家主动加入；单人不连接 RTC）</Typography.Text>
+        </Space>
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 8 }}>仅允许同场景且两两可见的玩家互听；预览不创建 RTC 连接。旧发布版不会自动启用。</Typography.Paragraph>
+      </Card>
       <Space style={{ marginBottom: 16 }}>
         <Button onClick={() => setConfig("rules")}>回合与行动点规则</Button>
         <Button onClick={() => setConfig("initial")}>世界变量与初始物品</Button>
@@ -906,6 +914,12 @@ function WorldEditor() {
           <Button danger style={{ marginBottom: 16 }} onClick={removeSelected}>
             删除实体
           </Button>
+        )}
+        {selected && selection?.kind === "locations" && (
+          <Space direction="vertical" style={{ marginBottom: 16, width: "100%" }}>
+            <Typography.Text>场景语音</Typography.Text>
+            <Select aria-label="场景语音策略" value={selected.voice?.mode ?? "inherit"} options={[{value:"inherit",label:"继承剧目设置"},{value:"disabled",label:"禁用（隐藏或非对称场景）"}]} onChange={(mode)=>updateCollection("locations", story.locations.map((x: Json)=>x.id===selected.id ? {...x,voice:{mode}} : x))} style={{ width: "100%" }}/>
+          </Space>
         )}
         {selected && selection?.kind === "locations" && (
           <Button

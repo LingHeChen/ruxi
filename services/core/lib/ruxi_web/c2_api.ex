@@ -8,7 +8,16 @@ defmodule RuxiWeb.C2API do
       conn = fetch_query_params(conn)
       data = unwrap(dispatch(conn, conn.method, Enum.drop(conn.path_info, 2)))
 
-      json(conn, 200, %{
+      conn =
+        if Enum.any?(conn.path_info, &(&1 in ["voice", "chat", "communication-reports"])),
+          do: put_resp_header(conn, "cache-control", "no-store"),
+          else: conn
+
+      status =
+        if conn.method == "POST" and List.last(conn.path_info) == "requests" and
+             data["accepted"] == true, do: 202, else: 200
+
+      json(conn, status, %{
         "data" => data,
         "meta" => %{"trace_id" => Util.id(), "server_time" => DB.time(), "protocol_version" => 2}
       })
@@ -18,6 +27,34 @@ defmodule RuxiWeb.C2API do
       {:error, code} -> failure(conn, code)
     end
   end
+
+  defp dispatch(c, "GET", ["rooms", id, "chat"]), do: Ruxi.C2.Communication.history(ctx(c), id)
+
+  defp dispatch(c, "POST", ["rooms", id, "chat", "messages"]),
+    do: Ruxi.C2.Communication.send(ctx(c), id, body(c))
+
+  defp dispatch(c, "GET", ["rooms", id, "voice"]), do: Ruxi.C2.Communication.voice(ctx(c), id)
+
+  defp dispatch(c, "POST", ["rooms", id, "voice", "requests"]),
+    do: Ruxi.C2.Communication.voice_request(ctx(c), id, body(c))
+
+  defp dispatch(c, "POST", ["rooms", id, kind, "reports"]) when kind in ["voice", "chat"],
+    do: Ruxi.C2.Communication.report(ctx(c), id, body(c), kind)
+
+  defp dispatch(c, "GET", ["admin", "rooms"]),
+    do: Ruxi.SceneVoice.Operations.list(ctx(c, "admin"))
+
+  defp dispatch(c, "GET", ["admin", "communication-reports"]),
+    do: Ruxi.SceneVoice.Operations.reports(ctx(c, "admin"))
+
+  defp dispatch(c, "GET", ["admin", "rooms", id, "voice"]),
+    do: Ruxi.SceneVoice.Operations.get(ctx(c, "admin"), id)
+
+  defp dispatch(c, "POST", ["admin", "rooms", id, "voice", "requests"]),
+    do: Ruxi.SceneVoice.Operations.request(ctx(c, "admin"), id, body(c))
+
+  defp dispatch(c, "GET", ["admin", "rooms", id, "voice", "operations", op]),
+    do: Ruxi.SceneVoice.Operations.operation(ctx(c, "admin"), id, op)
 
   defp dispatch(c, method, ["studio" | rest]), do: dispatch(c, method, rest)
 
@@ -166,6 +203,15 @@ defmodule RuxiWeb.C2API do
         "NOT_ALLOWED" -> 403
         "IDEMPOTENCY_CONFLICT" -> 409
         "OWNER_UNAVAILABLE" -> 503
+        "VOICE_UNAVAILABLE" -> 503
+        "TARGET_UNAVAILABLE" -> 404
+        "STALE_REVISION" -> 409
+        "NOT_READY" -> 409
+        "LEASE_REVOKED" -> 409
+        "VOICE_TRANSITION_PENDING" -> 409
+        "CONTROL_LOST" -> 409
+        "RATE_LIMITED" -> 429
+        "INPUT_INVALID" -> 422
         _ -> 400
       end
 

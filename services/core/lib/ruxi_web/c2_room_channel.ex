@@ -2,7 +2,7 @@ defmodule RuxiWeb.C2RoomChannel do
   use Phoenix.Channel, log_join: false, log_handle_in: false
   alias Ruxi.C2.Store
   alias Ruxi.Util
-  intercept(["room.view"])
+  intercept(["room.view", "communication.changed"])
 
   def join(topic, p, socket) do
     ctx = socket.assigns.ctx
@@ -22,6 +22,10 @@ defmodule RuxiWeb.C2RoomChannel do
         p["protocol_version"] == snapshot["protocol_version"],
         "UNSUPPORTED_CAPABILITY"
       )
+
+      reference = Ruxi.Util.id()
+      Ruxi.SceneVoice.Coordinator.socket_connected(ctx, reference)
+      socket = assign(socket, :voice_socket_ref, reference)
 
       {:ok, %{"snapshot" => snapshot, "mode" => "snapshot"},
        assign(socket, :view_seq, snapshot["view_seq"])}
@@ -52,6 +56,25 @@ defmodule RuxiWeb.C2RoomChannel do
     end
   end
 
+  def handle_out("communication.changed", _, socket) do
+    try do
+      Store.socket_valid!(socket.assigns.ctx)
+      state = Ruxi.C2.Communication.voice(socket.assigns.ctx, socket.assigns.ctx.room)
+
+      push(socket, "voice.state", %{
+        "type" => "voice.state",
+        "cause" => "participation",
+        "world_revision" => state["world_revision"],
+        "state" => state
+      })
+
+      push(socket, "chat.changed", %{})
+      {:noreply, socket}
+    catch
+      {:error, _} -> {:stop, :normal, socket}
+    end
+  end
+
   def handle_in("room.command", p, socket),
     do: respond(Store.command(socket.assigns.ctx, socket.assigns.ctx.room, p), socket)
 
@@ -70,6 +93,24 @@ defmodule RuxiWeb.C2RoomChannel do
   end
 
   def handle_in(_, _, socket), do: respond({:error, "INVALID_ARGUMENT"}, socket)
+
+  def terminate(_, socket) do
+    if socket.assigns[:voice_socket_ref] do
+      try do
+        Ruxi.SceneVoice.Coordinator.socket_disconnected(
+          socket.assigns.ctx,
+          socket.assigns.voice_socket_ref
+        )
+      rescue
+        _ in [DBConnection.ConnectionError, DBConnection.OwnershipError] -> :ok
+      catch
+        {:error, _} -> :ok
+      end
+    end
+
+    :ok
+  end
+
   defp respond({:ok, value}, socket), do: {:reply, {:ok, value}, socket}
   defp respond({:error, code}, socket), do: {:reply, {:error, %{"code" => code}}, socket}
 end

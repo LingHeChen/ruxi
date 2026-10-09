@@ -33,6 +33,7 @@ config :phoenix, :json_library, Jason
 config :logger, level: :warning
 
 if config_env() == :test do
+  config :ruxi, voice_maintenance: false
   config :ruxi, Oban, testing: :manual, queues: false, plugins: false
 
   config :ruxi, Ruxi.Repo,

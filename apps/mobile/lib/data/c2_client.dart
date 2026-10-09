@@ -33,6 +33,7 @@ class C2ViewReducer {
 }
 
 class C2Client extends ChangeNotifier {
+  final communicationEvents = StreamController<Json>.broadcast();
   C2Client(this.identity);
   final RoomClient identity;
   final reducer = C2ViewReducer();
@@ -130,6 +131,9 @@ class C2Client extends ChangeNotifier {
                 'stream_id': reducer.stream,
                 'view_seq': reducer.seq,
               });
+            } else if (frame[3] == 'voice.state' ||
+                frame[3] == 'chat.changed') {
+              communicationEvents.add(Map<String, dynamic>.from(frame[4]));
             } else if (frame[3] == 'phx_error' || frame[3] == 'phx_close') {
               _disconnected(attempt);
             }
@@ -254,6 +258,7 @@ class C2Client extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(communicationEvents.close());
     closed = true;
     _generation++;
     _heartbeat?.cancel();

@@ -1,0 +1,100 @@
+{
+  "Request": {
+    "voice_protocol_version": 1,
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "control_epoch": 3,
+    "expected_revision": 12,
+    "action": "participation",
+    "body": {
+      "enabled": true
+    }
+  },
+  "State": {
+    "voice_protocol_version": 1,
+    "voice_revision": 13,
+    "voice_seq": 28,
+    "participation": "on",
+    "status": "connected",
+    "reason": null,
+    "generation": 4,
+    "lease_id": "22222222-2222-4222-8222-222222222222",
+    "members": [
+      {
+        "member_id": "m_self",
+        "display_name": "你",
+        "mic_state": "muted",
+        "connection_state": "connected",
+        "rtc_uid": "random_lease_uid"
+      },
+      {
+        "member_id": "m_peer",
+        "display_name": "林岚",
+        "mic_state": "unknown",
+        "connection_state": "connected",
+        "rtc_uid": "random_peer_lease_uid"
+      }
+    ],
+    "world_revision": 41
+  },
+  "Grant": {
+    "voice_protocol_version": 1,
+    "lease_id": "22222222-2222-4222-8222-222222222222",
+    "generation": 4,
+    "provider": "volcengine",
+    "app_id": "DEMO_ONLY",
+    "rtc_room_id": "random_room_generation_4",
+    "rtc_uid": "random_lease_uid",
+    "token": "DEMO_NOT_A_REAL_TOKEN",
+    "token_expires_at": "2026-10-09T13:04:00Z",
+    "lease_expires_at": "2026-10-09T13:02:30Z",
+    "voice_revision": 13,
+    "world_revision": 41
+  },
+  "Receipt": {
+    "voice_protocol_version": 1,
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "accepted": true,
+    "voice_revision": 13,
+    "lease_expires_at": null
+  },
+  "Error": {
+    "error": {
+      "code": "NOT_READY",
+      "safe_message": "等待同场景伙伴",
+      "retryable": false,
+      "trace_id": "demo-trace"
+    }
+  },
+  "Event": {
+    "type": "voice.state",
+    "cause": "participation",
+    "world_revision": 41,
+    "state": {
+      "voice_protocol_version": 1,
+      "voice_revision": 13,
+      "voice_seq": 28,
+      "participation": "on",
+      "status": "connected",
+      "reason": null,
+      "generation": 4,
+      "lease_id": "22222222-2222-4222-8222-222222222222",
+      "members": [
+        {
+          "member_id": "m_self",
+          "display_name": "你",
+          "mic_state": "muted",
+          "connection_state": "connected",
+          "rtc_uid": "random_lease_uid"
+        },
+        {
+          "member_id": "m_peer",
+          "display_name": "林岚",
+          "mic_state": "unknown",
+          "connection_state": "connected",
+          "rtc_uid": "random_peer_lease_uid"
+        }
+      ],
+      "world_revision": 41
+    }
+  }
+}

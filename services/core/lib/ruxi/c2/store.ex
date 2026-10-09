@@ -93,6 +93,7 @@ defmodule Ruxi.C2.Store do
         "roles" => Enum.map(p["content"]["roles"], &Map.take(&1, ~w(id label))),
         "cover_uri" => Engine.image_uri(p["content"], "cover", nil),
         "playtime_minutes" => get_in(p, ["content", "c3_settings", "playtime_minutes"]),
+        "voice_enabled" => get_in(p, ["content", "communication", "voice", "enabled"]) == true,
         "estimated_minutes" =>
           get_in(p, ["content", "c3_settings", "playtime_minutes", "max"]) ||
             ceil(
@@ -291,6 +292,15 @@ defmodule Ruxi.C2.Store do
           end)
         end)
 
+      view =
+        if Ruxi.SceneVoice.Coordinator.pending(room),
+          do:
+            view
+            |> put_in(["room", "status"], "suspended")
+            |> put_in(["room", "deadline_at"], nil)
+            |> put_in(["room", "voice_transition_pending"], true),
+          else: view
+
       common
       |> Map.merge(view)
       |> Map.put(
@@ -383,6 +393,7 @@ defmodule Ruxi.C2.Store do
         Util.require!(old["payload_hash"] == command_hash(c), "IDEMPOTENCY_CONFLICT")
         old["result"]
       else
+        Util.require!(Ruxi.SceneVoice.Coordinator.pending(r) == nil, "VOICE_TRANSITION_PENDING")
         owner = fence!(r, now)
         DB.query("UPDATE c2_room_members SET last_seen_at=$2 WHERE id=$1", [m["id"], now])
         state = r["state"]
@@ -397,7 +408,9 @@ defmodule Ruxi.C2.Store do
             do: Map.put(next, "lobby_expires_at", now + 1_800_000),
             else: next
 
-        save(r, next, owner, now)
+        Util.require!(Ruxi.SceneVoice.Coordinator.pending(r) == nil, "VOICE_TRANSITION_PENDING")
+        saved = save(r, next, owner, now)
+        result = if saved == :deferred, do: Map.put(result, "status", "queued"), else: result
         seq = DB.one("SELECT view_seq FROM c2_room_members WHERE id=$1", [m["id"]])["view_seq"]
         result = Map.merge(result, %{"command_id" => c["command_id"], "receipt_seq" => seq})
 
@@ -636,6 +649,12 @@ defmodule Ruxi.C2.Store do
   end
 
   defp save(r, s, epoch, now) do
+    if Ruxi.SceneVoice.Coordinator.before_commit(r, s, epoch, now) == :ready,
+      do: save_ready(r, s, epoch, now),
+      else: :deferred
+  end
+
+  defp save_ready(r, s, epoch, now) do
     updated =
       DB.query(
         "UPDATE c2_rooms SET state=$2,status=$3,revision=revision+1,updated_at=$4 WHERE id=$1 AND owner_epoch=$5 AND lease_until>$4",
@@ -861,23 +880,31 @@ defmodule Ruxi.C2.Store do
       epoch = fence!(r, now)
       s = r["state"]
 
+      prepared = Ruxi.SceneVoice.Coordinator.prepared_next(r, epoch, now)
+
       next =
-        if s["status"] == "lobby" do
-          s = if s["swap"] && s["swap"]["expires_at"] <= now, do: Map.put(s, "swap", nil), else: s
-          if s["lobby_expires_at"] <= now, do: Map.put(s, "status", "abandoned"), else: s
+        if prepared != nil do
+          if prepared == :blocked, do: s, else: prepared
         else
-          {:ok, next} =
-            case Ruxi.C3.Draws.with_room(r, fn -> Engine.tick(s, now) end) do
-              {:ok, x} -> {:ok, x}
-              {:error, _, x} -> {:ok, x}
-            end
+          if s["status"] == "lobby" do
+            s =
+              if s["swap"] && s["swap"]["expires_at"] <= now, do: Map.put(s, "swap", nil), else: s
 
-          rows = members(id)
+            if s["lobby_expires_at"] <= now, do: Map.put(s, "status", "abandoned"), else: s
+          else
+            {:ok, next} =
+              case Ruxi.C3.Draws.with_room(r, fn -> Engine.tick(s, now) end) do
+                {:ok, x} -> {:ok, x}
+                {:error, _, x} -> {:ok, x}
+              end
 
-          if next["status"] == "active" and
-               Enum.any?(rows, &(&1["last_seen_at"] <= now - 120_000)),
-             do: Engine.suspend(next, now),
-             else: next
+            rows = members(id)
+
+            if next["status"] == "active" and
+                 Enum.any?(rows, &(&1["last_seen_at"] <= now - 120_000)),
+               do: Engine.suspend(next, now),
+               else: next
+          end
         end
 
       if next != s, do: save(r, next, epoch, now)
@@ -892,6 +919,8 @@ defmodule Ruxi.C2.Store do
 
       if m["device_id"] != DB.uuid(ctx.device) do
         Util.require!(takeover == true, "TAKEOVER_REQUIRED")
+        {room, _} = Ruxi.C2.Communication.context!(ctx, id)
+        Ruxi.SceneVoice.Coordinator.retire_for(room, m)
 
         DB.query(
           "UPDATE c2_room_members SET device_id=$2,control_epoch=control_epoch+1,stream_id=$3,view_seq=0,ack_seq=0 WHERE id=$1",

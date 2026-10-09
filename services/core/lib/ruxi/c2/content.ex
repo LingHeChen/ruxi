@@ -6,7 +6,9 @@ defmodule Ruxi.C2.Content do
 
   def validate(story) do
     errors = Schema.validate(story, Schema.load("story"))
-    errors = if errors == [], do: semantic(story), else: errors
+
+    errors =
+      if errors == [], do: semantic(story) ++ Ruxi.SceneVoice.Policy.validate(story), else: errors
 
     %{
       "valid" => errors == [],
@@ -21,7 +23,7 @@ defmodule Ruxi.C2.Content do
       Application.app_dir(:ruxi, "priv/c3/story.schema.json") |> File.read!() |> Jason.decode!()
 
     errors = Schema.validate(story, schema)
-    if errors == [], do: semantic(story), else: errors
+    if errors == [], do: semantic(story) ++ Ruxi.SceneVoice.Policy.validate(story), else: errors
   end
 
   def validate_condition(story, c),

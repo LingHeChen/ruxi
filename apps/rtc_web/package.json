@@ -1,0 +1,16 @@
+{
+  "name": "@ruxi/rtc-web",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "esbuild bridge.js --bundle --minify --format=iife --target=es2022 --outfile=../mobile/web/rtc_bridge.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@volcengine/rtc": "4.69.3",
+    "esbuild": "0.25.12"
+  },
+  "private": true
+}

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/c2_client.dart';
+import '../data/scene_communication.dart';
+import 'scene_communication_panel.dart';
 import '../data/room_client.dart';
 import 'novel_widgets.dart';
 import 'story_text.dart';
@@ -28,6 +30,7 @@ class C2Stage extends StatefulWidget {
 class _C2StageState extends State<C2Stage> {
   late final identity = widget.identity ?? RoomClient();
   late final client = C2Client(identity);
+  late final communication = SceneCommunication(client);
   bool loading = true, _seeded = false, _presenting = false;
   String? error, _ending;
   int? _round;
@@ -38,6 +41,7 @@ class _C2StageState extends State<C2Stage> {
   void initState() {
     super.initState();
     client.addListener(changed);
+    communication.addListener(communicationChanged);
     unawaited(initialize());
   }
 
@@ -57,6 +61,10 @@ class _C2StageState extends State<C2Stage> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  void communicationChanged() {
+    if (mounted) setState(() {});
   }
 
   void changed() {
@@ -601,6 +609,8 @@ class _C2StageState extends State<C2Stage> {
   @override
   void dispose() {
     client.removeListener(changed);
+    communication.removeListener(communicationChanged);
+    communication.dispose();
     client.dispose();
     if (widget.identity == null) identity.dispose();
     super.dispose();
@@ -756,6 +766,22 @@ class _C2StageState extends State<C2Stage> {
                                 fontSize: narrow ? 19 : 25,
                                 color: const Color(0xfff4ecd9),
                               ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '同伴交流 · 文本与场景语音',
+                            onPressed: () => unawaited(
+                              showDialog<void>(
+                                context: context,
+                                builder: (_) => SceneCommunicationPanel(
+                                  controller: communication,
+                                ),
+                              ),
+                            ),
+                            icon: Badge(
+                              isLabelVisible: communication.unread > 0,
+                              label: Text('${communication.unread}'),
+                              child: const Icon(Icons.forum_outlined),
                             ),
                           ),
                           IconButton(
@@ -1265,7 +1291,16 @@ class _C2StageState extends State<C2Stage> {
                                         ),
                                       ),
                                   ],
-                                  if (room['status'] == 'suspended')
+                                  if (room['voice_transition_pending'] == true)
+                                    const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: Text(
+                                        '语音频道正在安全切换，故事与行动点暂时冻结。',
+                                        style: TextStyle(color: novelGold),
+                                      ),
+                                    ),
+                                  if (room['status'] == 'suspended' &&
+                                      room['voice_transition_pending'] != true)
                                     FilledButton(
                                       onPressed: client.busy
                                           ? null

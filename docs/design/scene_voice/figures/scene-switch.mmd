@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant F as Flutter
+  participant E as Elixir
+  participant D as 数据库
+  participant R as 火山 RTC
+  E->>D: 冻结输入与持久化结算计划
+  E->>F: switching 立即停音
+  E->>R: 封禁受影响旧物理房间
+  alt 回收条件得到确认
+    R-->>E: 回收完成证据
+    E->>D: 原子提交位置 AP 事件与新代数
+    E-->>F: 新世界与语音投影
+    F->>E: 请求新 Grant
+    E-->>F: 绑定新代数的凭证
+    F->>R: 默认关麦加入
+  else 超时或证据不足
+    E->>D: blocked 保留原计划
+    E-->>F: 安全切换中 暂停本步
+  end

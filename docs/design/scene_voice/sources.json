@@ -1,0 +1,30 @@
+[
+  {
+    "id": "S1",
+    "title": "音视频通话计费",
+    "url": "https://docs.volcengine.com/docs/real_time_communication/Billingforaudiovideocalls",
+    "supports": "普通端单价与驻留计费规则",
+    "checked_on": "2026-10-09"
+  },
+  {
+    "id": "S2",
+    "title": "封禁房间与用户",
+    "url": "https://docs.volcengine.com/docs/real_time_communication/BanRoomUserBanRoomUser-1?lang=zh",
+    "supports": "封禁范围时长与40QPS；未承诺媒体原子撤销",
+    "checked_on": "2026-10-09"
+  },
+  {
+    "id": "S3",
+    "title": "使用Token鉴权",
+    "url": "https://www.volcengine.com/docs/real_time_communication/AuthenticationusingToken",
+    "supports": "服务端绑定房间与用户；具体失效传播待联调",
+    "checked_on": "2026-10-09"
+  },
+  {
+    "id": "S4",
+    "title": "Flutter官方SDK",
+    "url": "https://github.com/volcengine/VolcEngineRTC_Flutter_SDK",
+    "supports": "Flutter插件来源；各目标平台须单独验证",
+    "checked_on": "2026-10-09"
+  }
+]

@@ -12,6 +12,7 @@ flag=lambda ref,value=True:{'op':'eq','ref':f'world.{ref}','value':value}
 setflag=lambda ref,value=True:{'op':'set','ref':f'world.{ref}','value':value}
 reveal=lambda ref:{'op':'reveal','ref':ref,'audience':'self'}
 s={ 'schema_version':4,'id':'tide_hotel','title':'潮汐旅馆：第九声钟响',
+'communication':{'voice':{'enabled':True,'scope':'scene'}},
 'rules':{'ap_per_round':6,'step_timeout_s':300,'proposal_ttl_s':60,'round_limit':24},
 'roles':[{'id':'reporter','label':'徐闻 · 声音记者','location':'lobby','knowledge':[], 'goals':['查明江临失踪与第九声钟响的关系。','区分证词与实证，重建十五年前的救援时间线。','决定怎样保存证据，以及怎样让活着的人开口。']}],
 'locations':[],'links':[],'objects':[],'clues':[],'actions':[],'templates':[],'events':[],

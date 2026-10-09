@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/room_client.dart';
+import '../data/audio_session_coordinator.dart';
 import '../data/media_clock.dart';
 import '../data/captions.dart';
 
@@ -54,6 +55,7 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
     });
     final old = player;
     player = null;
+    if (old != null) AudioSessionCoordinator.instance.detach(old);
     await old?.dispose();
     try {
       final a = await widget.client.mediaAccess(widget.media);
@@ -72,7 +74,13 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
       );
       player = p;
       await p.initialize().timeout(const Duration(seconds: 30));
+      AudioSessionCoordinator.instance.attach(
+        p,
+        widget.media['audio_role'] == 'bgm' ? 'bgm' : 'narration',
+        (volume) => unawaited(p.setVolume(volume)),
+      );
       if (!mounted || current != generation) {
+        AudioSessionCoordinator.instance.detach(p);
         await p.dispose();
         return;
       }
@@ -195,6 +203,7 @@ class _AuthorizedMediaSheetState extends State<AuthorizedMediaSheet>
     widget.client.removeListener(roomChanged);
     WidgetsBinding.instance.removeObserver(this);
     player?.removeListener(videoChanged);
+    if (player != null) AudioSessionCoordinator.instance.detach(player!);
     player?.dispose();
     super.dispose();
   }

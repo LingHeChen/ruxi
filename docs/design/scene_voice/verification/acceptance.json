@@ -1,0 +1,416 @@
+[
+  {
+    "id": "VA01",
+    "name": "VA01 同场景与跨局隔离",
+    "steps": "同局 A/B 同场景，C 另一场景，D 另一局",
+    "expected": "只有 A/B 互听，猜房号无法取得授权",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "建立两局和至少三个地点；A/B 在同局同地，C/D 不满足此条件",
+      "A/B 主动加入并开麦；分别发送可识别短音",
+      "C/D 尝试领取 A/B 场景凭证并重放无权限请求"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA02",
+    "name": "VA02 独处与加入",
+    "steps": "一人选择语音，第二人随后选择",
+    "expected": "先 waiting 无 RTC，随后连接且双方关麦",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "A 独自参与，检查无供应商授权与join",
+      "B 到达但未参与，确认仍不连接",
+      "B 主动参与，确认二人默认关麦；B退出后A回waiting"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA03",
+    "name": "VA03 正常移动",
+    "steps": "开麦时移动并立即在目的地发声",
+    "expected": "旧权限回收后才提交位置，新会话默认关麦",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "A/B 连通并开麦，A提交合法移动",
+      "记录 retirement、world commit、Grant 时间线",
+      "A 在新地点主动开麦发标记，旧地点验证收不到"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA04",
+    "name": "VA04 快速返回",
+    "steps": "A→B→A 并重放第一次 Token",
+    "expected": "新身份与代数生效，旧 Token 不可收听",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "A 到 B 再返回 A，分别保存测试授权引用",
+      "复用首次租约 renew、旧 Grant 和旧 Token 重入",
+      "验证旧物理房不复用，新会话正常加入"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA05",
+    "name": "VA05 撤权中断",
+    "steps": "封禁超时或返回 429",
+    "expected": "步挂起，无到达、无 AP 扣除；重试原计划",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "拦截封禁接口制造超时、429、明确错误三种结果",
+      "推进有移动的步，观察8秒挂起和AP预留",
+      "恢复供应商，重试原execution且只结算一次"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA06",
+    "name": "VA06 原子组移动",
+    "steps": "多人同一步 group_move",
+    "expected": "先回收相关旧房，成员一起提交，仅一次组到达",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "两人 group_move，另有人留在源地点",
+      "观测受影响频道去重和整组 fencing",
+      "缺一人资格时按原玩法取消，不出现部分先行到达"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA07",
+    "name": "VA07 重复与乱序",
+    "steps": "重复 request、迟到 Grant 和旧 SDK callback",
+    "expected": "无多租约、无恢复旧音频、无重复开麦",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "重复发送同request_id同参数及异参数",
+      "把旧voice.state和旧Grant延迟到新代数后送达",
+      "验证一份有效租约，旧消息不会恢复采集或播放"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA08",
+    "name": "VA08 WS 与 RTC 分离故障",
+    "steps": "只断 WS，RTC 网络仍通",
+    "expected": "本机停音，服务端租约到期回收，不继续续签",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "保持媒体网络，只断开WS连接",
+      "观察本机立即停音、心跳不再续租以及服务端过期扫描",
+      "重建WS后先同步世界，再获取新授权且关麦"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA09",
+    "name": "VA09 设备与系统权限",
+    "steps": "拒绝麦克风，换设备，来电和后台",
+    "expected": "可听不采集；旧设备失权；返回默认关麦",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "拒绝麦克风权限后加入仅收听",
+      "切换控制设备并重放旧control_epoch请求",
+      "触发系统来电和后台，返回后确认无自动采集"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA10",
+    "name": "VA10 隐藏信息",
+    "steps": "隐藏地点、潜伏角色、秘密阵营",
+    "expected": "无其他场景名单；不对称可见场景发布禁语音",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "编译含潜伏观察者且语音开启的场景，确认发布拒绝",
+      "禁用该场景语音后发布；检查外部玩家投影",
+      "查看原始HTTP、WS、RTC用户信息，不能定位隐藏房间或阵营"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA11",
+    "name": "VA11 关闭与终局",
+    "steps": "退出语音、登出、暂停、解散和结局",
+    "expected": "回收含已发未用 Token，无幽灵驻留计费",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "分别测试退出语音、登出、暂停、结局、解散",
+      "准备已签发但尚未join的Token，并于退出后使用",
+      "确认全场景旧凭证受限，供应商用量不再增长"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA12",
+    "name": "VA12 音频体验",
+    "steps": "蓝牙切换、外放、BGM、旁白并播",
+    "expected": "无持续回声，设备变更关麦，压低与恢复正确",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "外放与耳机各通话30分钟并播放旁白BGM",
+      "插拔蓝牙，确认关麦与新路由提示",
+      "测BGM降低8dB及结束后800ms等待和280ms恢复"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA13",
+    "name": "VA13 无障碍与布局",
+    "steps": "390/768/1440 宽、200% 字体、减动效",
+    "expected": "无溢出遮挡，键盘和读屏可操作，不重复播报电平",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "390、768、1440逻辑宽度检查面板和焦点",
+      "设置200%字体并使用读屏、键盘、Escape与系统返回",
+      "打开减少动态效果，连点开关与中途关闭不重复提交"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA14",
+    "name": "VA14 权限与管理",
+    "steps": "房主尝试旁听，运营暂停资格，玩家举报",
+    "expected": "房主无越权，运营审计，举报不自动录音",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "房主访问admin端点须被拒绝",
+      "运营限制、解除一名成员语音并检查审计",
+      "举报当前合法同场景目标可创建工单；跨房目标被拒绝"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA15",
+    "name": "VA15 崩溃恢复",
+    "steps": "计划、封禁、世界提交、outbox 各点断电",
+    "expected": "同一 execution 恢复，旧房不复用，AP 不重扣",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "在计划持久化后、封禁成功后、世界提交后、outbox发送后分别终止owner",
+      "新owner恢复同execution并拒绝旧owner写入",
+      "验证旧房不复用，随机journal、AP与到达事件仅一次"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA16",
+    "name": "VA16 成本对账",
+    "steps": "6 人通话后分散、静音、离局",
+    "expected": "按实际在 RTC 人分钟估算，静音不计为免费",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "6人连续60分钟，记录360人分钟和2.52元参考估算",
+      "静音继续驻留不得归零，独处退出后停止累计",
+      "对账未知leave区间有estimated标记；模拟预算80/100%告警收口"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA17",
+    "name": "VA17 旧客户端与单人",
+    "steps": "无能力客户端、旧内容、单人本",
+    "expected": "仍能文字游玩；无默认开语音和真人 RTC 费用",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "旧客户端无scene_voice_v1进入可选语音剧本",
+      "旧内容无voice字段、新单人本分别开局",
+      "均可文字推进，无真人Grant和云端驻留"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  },
+  {
+    "id": "VA18",
+    "name": "VA18 旧玩法回归",
+    "steps": "密码、骰子、隐藏地图、轮次暂停",
+    "expected": "结果及知识权限不变，语音不占行动名额",
+    "status": "NOT_RUN",
+    "evidence_required": [
+      "code_sha",
+      "sdk_version",
+      "device_os",
+      "network",
+      "timestamps",
+      "observed_result",
+      "redacted_evidence"
+    ],
+    "detailed_steps": [
+      "运行C3密码错误与正确、骰子失败与成功、隐藏地图投影用例",
+      "语音重连与游戏暂停交错，完成移动结算",
+      "比较无语音基线，AP、journal、知识权限和终局保持一致"
+    ],
+    "precondition": "隔离测试应用与可控测试账号；真机或真实客户端，记录已锁定SDK版本",
+    "observed_result": null
+  }
+]

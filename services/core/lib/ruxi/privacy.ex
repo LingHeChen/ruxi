@@ -127,6 +127,28 @@ defmodule Ruxi.Privacy do
     if DB.one("SELECT to_regclass('ruxi.c2_favorites') IS NOT NULL AS ready")["ready"],
       do: DB.query("DELETE FROM c2_favorites WHERE user_id=$1", [uid])
 
+    if DB.one("SELECT to_regclass('ruxi.c2_chat_messages') IS NOT NULL AS ready")["ready"] do
+      DB.query(
+        "DELETE FROM c2_chat_messages WHERE sender_id IN (SELECT id FROM c2_room_members WHERE user_id=$1)",
+        [uid]
+      )
+
+      DB.query(
+        "DELETE FROM c2_communication_reports WHERE reporter_id IN (SELECT id FROM c2_room_members WHERE user_id=$1) OR target_id IN (SELECT id FROM c2_room_members WHERE user_id=$1)",
+        [uid]
+      )
+
+      DB.query(
+        "DELETE FROM c2_communication_requests WHERE member_id IN (SELECT id FROM c2_room_members WHERE user_id=$1)",
+        [uid]
+      )
+
+      DB.query(
+        "UPDATE c2_voice_participation SET enabled=false WHERE member_id IN (SELECT id FROM c2_room_members WHERE user_id=$1)",
+        [uid]
+      )
+    end
+
     DB.query("DELETE FROM account_commands WHERE user_id=$1", [uid])
     DB.query("DELETE FROM telemetry_events WHERE user_id=$1", [uid])
 

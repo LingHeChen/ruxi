@@ -1,0 +1,22 @@
+{
+  "communication": {
+    "voice": {
+      "enabled": true,
+      "scope": "scene"
+    }
+  },
+  "locations": [
+    {
+      "id": "archive",
+      "voice": {
+        "mode": "inherit"
+      }
+    },
+    {
+      "id": "concealed_observation",
+      "voice": {
+        "mode": "disabled"
+      }
+    }
+  ]
+}

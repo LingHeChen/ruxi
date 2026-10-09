@@ -43,6 +43,9 @@ dependencies:
   go_router: ^18.0.2
   flutter_web_plugins:
     sdk: flutter
+  volc_engine_rtc: 3.60.8
+  permission_handler: ^12.0.1
+  shared_preferences: ^2.5.4
 
 dev_dependencies:
   flutter_test:

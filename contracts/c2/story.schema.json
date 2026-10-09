@@ -101,6 +101,21 @@
           },
           "discovered": {
             "type": "boolean"
+          },
+          "voice": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "enum": [
+                  "inherit",
+                  "disabled"
+                ]
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -582,6 +597,31 @@
         ],
         "additionalProperties": false
       }
+    },
+    "communication": {
+      "type": "object",
+      "properties": {
+        "voice": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "scope": {
+              "const": "scene"
+            }
+          },
+          "required": [
+            "enabled",
+            "scope"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "voice"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

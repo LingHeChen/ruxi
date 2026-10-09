@@ -1,0 +1,18 @@
+{
+  "voice_protocol_version": 1,
+  "min_participants": 2,
+  "token_ttl_seconds": 120,
+  "lease_ttl_seconds": 30,
+  "heartbeat_seconds": 10,
+  "renew_before_seconds": 45,
+  "retire_ban_seconds": 180,
+  "clock_margin_seconds": 30,
+  "retire_timeout_seconds": 8,
+  "ban_qps_budget": 20,
+  "lease_scan_seconds": 5,
+  "default_mic_enabled": false,
+  "background_voice_enabled": false,
+  "daily_budget_yuan": 50,
+  "budget_warning_ratio": 0.8,
+  "budget_stop_grace_seconds": 60
+}

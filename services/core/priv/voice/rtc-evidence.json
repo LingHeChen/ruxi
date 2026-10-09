@@ -1,0 +1,95 @@
+{
+  "verification_id": "rtc-forced-expiry-web-4.69.3-20261009",
+  "app_id_hash": "a6c5c4eab61aab87080d7ab13fc26b686fd1945d50b17b5c03fbc7c43b8dd083",
+  "forced_expiry_verified": true,
+  "expiry_margin_ms": 30000,
+  "sdk": "@volcengine/rtc 4.69.3",
+  "platform": "headless Chromium with synthetic microphone",
+  "evidence": {
+    "probe-evidence": {
+      "date": "2026-10-09T15:03:51.918Z",
+      "sdk": "4.69.3",
+      "before": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 6,
+        "lastLevelAt": 1791558228090,
+        "errors": []
+      },
+      "after": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 7,
+        "lastLevelAt": 1791558228486,
+        "errors": [
+          "ROOM_DISMISS"
+        ]
+      },
+      "replay": "ROOM_FORBIDDEN",
+      "ban": {
+        "message": "success",
+        "status": 200
+      },
+      "scope": "two headless Chromium clients, synthetic microphone; no native-device proof"
+    },
+    "expiry-evidence": {
+      "date": "2026-10-09T15:18:07.461Z",
+      "sdk": "4.69.3",
+      "before": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 8,
+        "lastLevelAt": 1791559019159,
+        "errors": []
+      },
+      "after": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 57,
+        "lastLevelAt": 1791559043559,
+        "errors": [
+          "PUBLISH_PRIVILEGE_EXPIRED",
+          "SUBSCRIBE_PRIVILEGE_EXPIRED",
+          "TOKEN_EXPIRED"
+        ]
+      },
+      "replay": "INVALID_TOKEN",
+      "ban": {
+        "mode": "token_expiry"
+      },
+      "scope": "two headless Chromium clients, synthetic microphone; no native-device proof"
+    },
+    "expiry-120-evidence": {
+      "date": "2026-10-09T15:24:31.589Z",
+      "sdk": "4.69.3",
+      "before": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 8,
+        "lastLevelAt": 1791559313321,
+        "errors": []
+      },
+      "after": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 237,
+        "lastLevelAt": 1791559427721,
+        "errors": [
+          "PUBLISH_PRIVILEGE_EXPIRED",
+          "SUBSCRIBE_PRIVILEGE_EXPIRED",
+          "TOKEN_EXPIRED"
+        ]
+      },
+      "replay": "INVALID_TOKEN",
+      "ban": {
+        "mode": "token_expiry"
+      },
+      "scope": "two headless Chromium clients, synthetic microphone; no native-device proof"
+    }
+  },
+  "limitations": [
+    "Ban API acknowledgement is not a media fence.",
+    "Prepared world transition waits for maximum issued token expiry plus 30 seconds.",
+    "Native hardware, Bluetooth and interruptions require separate acceptance."
+  ]
+}

@@ -1,0 +1,126 @@
+[
+  {
+    "path": "README.txt",
+    "sha256": "1aac2a3260f57e3fdeb4ca7bb9c32550978a444d656b55527b1c86d783713755"
+  },
+  {
+    "path": "contracts/openapi.json",
+    "sha256": "96e0d22593a624fc0f158fd97cca28b9f8a32c7765113a0f6a8ff48ee71b1117"
+  },
+  {
+    "path": "contracts/policy.schema.json",
+    "sha256": "5b5f6d8a1f552505a23acbe44174b9c82ca52eed3b43ba0ba05717badd7fd0a0"
+  },
+  {
+    "path": "contracts/voice.schema.json",
+    "sha256": "dee529a6d777b9b8a4348dd65826d0a16b8949221a57cfa5178620374afb86a6"
+  },
+  {
+    "path": "docs/V1_Scene_Voice.docx",
+    "sha256": "2361bf91f294a2116353fe0e180735560e288022cfaf1ff533bf3995fd0537c1"
+  },
+  {
+    "path": "docs/V2_Scene_Voice.docx",
+    "sha256": "fe0ae500df2e2cd044a8703b8844c50918b31d16430bb4276e9612fbaff41046"
+  },
+  {
+    "path": "docs/V3_Scene_Voice.docx",
+    "sha256": "8dc2b29ae6d63d1889e632f0e4ea624377d9b43a8f7d1e4720eba5bbc979ecbb"
+  },
+  {
+    "path": "docs/V4_Scene_Voice.docx",
+    "sha256": "a382a4833ed5781b705f8c53c25c0c002561d52ff11afa406b0df6811fae11cf"
+  },
+  {
+    "path": "examples/config.json",
+    "sha256": "694911d6953e74890564bb609fd110ded4ebb014bcde767bedb9b223f762430d"
+  },
+  {
+    "path": "examples/policy.json",
+    "sha256": "30a401b5eb9d552b38ad6c9d77ffd02ee2ec65cc024421d2213a3be72883cf31"
+  },
+  {
+    "path": "examples/wire.json",
+    "sha256": "ab449dec6a01dc42f6f7a1c0bc063f5573dfc6bfa82152c8a08390f4684d5093"
+  },
+  {
+    "path": "figures/architecture.mmd",
+    "sha256": "1a48089ef30fd38f20a6a09b647d7d465e7d5684bcb343b1cf3025589748c05e"
+  },
+  {
+    "path": "figures/scene-switch.mmd",
+    "sha256": "06af79f36aa2fd2afdb626c0e2ad39c39ffa593fca628870181743cce8085185"
+  },
+  {
+    "path": "figures/voice_desktop.png",
+    "sha256": "68b825ccd4cf8cccad768d07b48c7c9bf2deccc54df0f1ff0b9d9555f1df526e"
+  },
+  {
+    "path": "figures/voice_mobile.png",
+    "sha256": "8129ae69e0d3857f0a7c976d9719d361aadd9e1bbd521028ac184ce5eeb999cc"
+  },
+  {
+    "path": "figures/voice_permission.png",
+    "sha256": "2c3fd92372500c8900ba8465e31d1c924a6963bfba59aba72bb13cee3644a6b3"
+  },
+  {
+    "path": "index.html",
+    "sha256": "7ba0657064a224cb307c9739169bcf72e19e4dea099943c8fee4c2d1512a798f"
+  },
+  {
+    "path": "prototype/voice.html",
+    "sha256": "baae51c0f77d3ad94b04bd1481fa0a008031ed7bad6b36654825b8d46c306e7e"
+  },
+  {
+    "path": "source/V1.md",
+    "sha256": "59b12d9613a2258421d0be4e98249cbb8c9c1ed8bdcc5f6ea8220e5d6b766079"
+  },
+  {
+    "path": "source/V2.md",
+    "sha256": "986fd9e193c7e8097d83fb51de17144b8ea4558e26b485604edd3d9488669532"
+  },
+  {
+    "path": "source/V3.md",
+    "sha256": "6272e20e789202c0999ce85d856e591ad616ad75517daf63e812338f776f8b03"
+  },
+  {
+    "path": "source/V4.md",
+    "sha256": "addf06220faf23e94cddd4bf063c5974c6faf516c19a5b3b6f06ccd142b9388a"
+  },
+  {
+    "path": "source/documents.json",
+    "sha256": "63d930be3928a7658418c886be4615e354ee6de3cfb252adf4a503765a1655f1"
+  },
+  {
+    "path": "sources.json",
+    "sha256": "a117e4edb9297cecfaa52197f3fc29e4eda90fa24164c73b6a1e230d22c80cbe"
+  },
+  {
+    "path": "verification/acceptance.json",
+    "sha256": "a9b8897e38fe9ae2658fa5dfd7f8e94c893f15b6946dab5bf377365b2ab282f1"
+  },
+  {
+    "path": "verification/browser_check.cjs",
+    "sha256": "f42cab3d3f7bd02b5e8e5cbb3cdee4c0a6be475a103de45c1e121b1d48a18bf8"
+  },
+  {
+    "path": "verification/browser_results.json",
+    "sha256": "c7a166f209e179a8171239e32cd18515e56858f8292b7297d6a085ac6055431a"
+  },
+  {
+    "path": "verification/contract_results.json",
+    "sha256": "fc331b8896dabc86392b24b5b6e5de3b9b76940d8335c68e93ca53a5ee4a6542"
+  },
+  {
+    "path": "verification/coverage.csv",
+    "sha256": "761ce6a93fff0c3ea106a23d746165d647110d822d929b6bf7dc0d12322214d6"
+  },
+  {
+    "path": "verification/review.txt",
+    "sha256": "8c6b690488fc44cd33ef44f9fa87441debb10e4afe366c5e2083edc6f4683392"
+  },
+  {
+    "path": "verification/validate_contracts.py",
+    "sha256": "80a0e7e5e50a0451f12a845179e4ebee8f1b2284b65c33754e8fdac625c2189e"
+  }
+]

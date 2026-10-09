@@ -1,0 +1,862 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruxi.example/contracts/voice-v1",
+  "title": "Scene voice v1",
+  "$defs": {
+    "Request": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "voice_protocol_version": {
+              "const": 1
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "control_epoch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "action": {
+              "const": "participation"
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "voice_protocol_version",
+            "request_id",
+            "control_epoch",
+            "expected_revision",
+            "action",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "voice_protocol_version": {
+              "const": 1
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "control_epoch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "action": {
+              "const": "grant"
+            },
+            "body": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "voice_protocol_version",
+            "request_id",
+            "control_epoch",
+            "expected_revision",
+            "action",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "voice_protocol_version": {
+              "const": 1
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "control_epoch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "action": {
+              "const": "heartbeat"
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "lease_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "lease_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "voice_protocol_version",
+            "request_id",
+            "control_epoch",
+            "expected_revision",
+            "action",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "voice_protocol_version": {
+              "const": 1
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "control_epoch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "action": {
+              "const": "renew"
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "lease_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "lease_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "voice_protocol_version",
+            "request_id",
+            "control_epoch",
+            "expected_revision",
+            "action",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "voice_protocol_version": {
+              "const": 1
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "control_epoch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "action": {
+              "const": "client_state"
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "lease_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "enum": [
+                    "connected",
+                    "failed",
+                    "left"
+                  ]
+                }
+              },
+              "required": [
+                "lease_id",
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "voice_protocol_version",
+            "request_id",
+            "control_epoch",
+            "expected_revision",
+            "action",
+            "body"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "State": {
+      "type": "object",
+      "properties": {
+        "voice_protocol_version": {
+          "const": 1
+        },
+        "voice_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "voice_seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "participation": {
+          "enum": [
+            "on",
+            "off"
+          ]
+        },
+        "status": {
+          "enum": [
+            "off",
+            "unavailable",
+            "waiting",
+            "connecting",
+            "connected",
+            "switching",
+            "reconnecting",
+            "suspended",
+            "failed"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lease_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "member_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "display_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mic_state": {
+                "enum": [
+                  "muted",
+                  "unmuted",
+                  "unknown"
+                ]
+              },
+              "connection_state": {
+                "enum": [
+                  "waiting",
+                  "connecting",
+                  "connected",
+                  "reconnecting"
+                ]
+              },
+              "rtc_uid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "member_id",
+              "display_name",
+              "mic_state",
+              "connection_state",
+              "rtc_uid"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 64
+        },
+        "world_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "voice_protocol_version",
+        "voice_revision",
+        "voice_seq",
+        "participation",
+        "status",
+        "reason",
+        "generation",
+        "lease_id",
+        "members",
+        "world_revision"
+      ],
+      "additionalProperties": false
+    },
+    "Grant": {
+      "type": "object",
+      "properties": {
+        "voice_protocol_version": {
+          "const": 1
+        },
+        "lease_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "provider": {
+          "const": "volcengine"
+        },
+        "app_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rtc_room_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rtc_uid": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lease_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "voice_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "world_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "voice_protocol_version",
+        "lease_id",
+        "generation",
+        "provider",
+        "app_id",
+        "rtc_room_id",
+        "rtc_uid",
+        "token",
+        "token_expires_at",
+        "lease_expires_at",
+        "voice_revision",
+        "world_revision"
+      ],
+      "additionalProperties": false
+    },
+    "Receipt": {
+      "type": "object",
+      "properties": {
+        "voice_protocol_version": {
+          "const": 1
+        },
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "accepted": {
+          "const": true
+        },
+        "voice_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "voice_protocol_version",
+        "request_id",
+        "accepted",
+        "voice_revision",
+        "lease_expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "AUTH_REQUIRED",
+                "TARGET_UNAVAILABLE",
+                "STALE_REVISION",
+                "CONTROL_LOST",
+                "NOT_READY",
+                "LEASE_REVOKED",
+                "IDEMPOTENCY_CONFLICT",
+                "INPUT_INVALID",
+                "RATE_LIMITED",
+                "VOICE_UNAVAILABLE",
+                "FORBIDDEN"
+              ]
+            },
+            "safe_message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "trace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "current_revision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "retry_after_ms": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "code",
+            "safe_message",
+            "retryable",
+            "trace_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "voice.state"
+        },
+        "cause": {
+          "enum": [
+            "participation",
+            "scene_change",
+            "network",
+            "policy",
+            "ended"
+          ]
+        },
+        "world_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "$ref": "#/$defs/State"
+        }
+      },
+      "required": [
+        "type",
+        "cause",
+        "world_revision",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "Report": {
+      "type": "object",
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "target_member_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_code": {
+          "enum": [
+            "harassment",
+            "noise",
+            "other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "request_id",
+        "target_member_id",
+        "reason_code"
+      ],
+      "additionalProperties": false
+    },
+    "ReportReceipt": {
+      "type": "object",
+      "properties": {
+        "report_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "report_id"
+      ],
+      "additionalProperties": false
+    },
+    "AdminState": {
+      "type": "object",
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "channel_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "generation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "status": {
+                "enum": [
+                  "dormant",
+                  "opening",
+                  "active",
+                  "retiring",
+                  "blocked"
+                ]
+              }
+            },
+            "required": [
+              "channel_ref",
+              "generation",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "pending_transition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "estimated_person_minutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "estimated_cost_yuan": {
+          "type": "number",
+          "minimum": 0
+        },
+        "restricted_member_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "room_id",
+        "enabled",
+        "channels",
+        "pending_transition_ids",
+        "estimated_person_minutes",
+        "estimated_cost_yuan",
+        "restricted_member_ids"
+      ],
+      "additionalProperties": false
+    },
+    "AdminRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "action": {
+              "const": "restrict_member"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "member_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "member_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "request_id",
+            "action",
+            "reason",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "action": {
+              "const": "release_member"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "member_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "member_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "request_id",
+            "action",
+            "reason",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "action": {
+              "const": "retry_retirement"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "transition_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "transition_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "request_id",
+            "action",
+            "reason",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "action": {
+              "const": "disable_room"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "body": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "request_id",
+            "action",
+            "reason",
+            "body"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "OperationReceipt": {
+      "type": "object",
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "operation_id"
+      ],
+      "additionalProperties": false
+    },
+    "OperationState": {
+      "type": "object",
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "failed"
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "operation_id",
+        "status",
+        "error_code"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

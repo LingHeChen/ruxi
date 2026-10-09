@@ -21,6 +21,7 @@ defmodule Ruxi.C2.Maintenance do
                   "SELECT id FROM c2_rooms WHERE status IN ('lobby','active','suspended','ending') AND (lease_until IS NULL OR lease_until <= $1 OR owner_id=$2) ORDER BY updated_at LIMIT 128",
                   [DB.time(), Application.get_env(:ruxi, :core_instance, "local-core")]
                 ) do
+            Ruxi.SceneVoice.Coordinator.reconcile(DB.str(r["id"]))
             Store.tick(DB.str(r["id"]))
           end
 

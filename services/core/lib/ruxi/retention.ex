@@ -81,6 +81,33 @@ defmodule Ruxi.Retention do
         DB.query("DELETE FROM sessions WHERE id=$1", [s["id"]])
       end
 
+      if DB.one("SELECT to_regclass('ruxi.c2_chat_messages') IS NOT NULL AS ready")["ready"] do
+        DB.query("DELETE FROM c2_communication_requests WHERE created_at<=$1", [now - @day])
+        DB.query("DELETE FROM c2_chat_messages WHERE created_at<=$1", [now - 30 * @day])
+
+        DB.query("UPDATE c2_communication_reports SET description='' WHERE created_at<=$1", [
+          now - 30 * @day
+        ])
+
+        DB.query("DELETE FROM c2_communication_reports WHERE created_at<=$1", [now - 180 * @day])
+      end
+
+      if DB.one("SELECT to_regclass('ruxi.c2_voice_daily_usage') IS NOT NULL AS ready")["ready"] do
+        DB.query(
+          "INSERT INTO c2_voice_daily_usage(day,estimated_ms) SELECT (to_timestamp(joined_at/1000.0) AT TIME ZONE 'UTC')::date,sum(greatest(0,left_at-joined_at))::bigint FROM c2_voice_usage WHERE left_at<=$1 GROUP BY 1 ON CONFLICT(day) DO UPDATE SET estimated_ms=c2_voice_daily_usage.estimated_ms+EXCLUDED.estimated_ms",
+          [now - 30 * @day]
+        )
+
+        DB.query("DELETE FROM c2_voice_usage WHERE left_at<=$1", [now - 30 * @day])
+
+        DB.query(
+          "DELETE FROM c2_voice_leases WHERE state IN ('closed','expired') AND created_at<=$1",
+          [now - 30 * @day]
+        )
+
+        DB.query("DELETE FROM c2_voice_daily_usage WHERE day<(CURRENT_DATE-180)")
+      end
+
       DB.query("DELETE FROM audit_log WHERE occurred_at<=$1", [now - 180 * @day])
 
       DB.query(

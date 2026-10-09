@@ -15,6 +15,8 @@ defmodule Ruxi.Application do
           {DynamicSupervisor, name: Ruxi.RoomSupervisor, strategy: :one_for_one},
           Ruxi.Dispatcher,
           Ruxi.C2.Maintenance,
+          {Task.Supervisor, name: Ruxi.VoiceTasks},
+          Ruxi.SceneVoice.Maintenance,
           {Oban, Application.fetch_env!(:ruxi, Oban)},
           RuxiWeb.Endpoint
         ],

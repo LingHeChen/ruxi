@@ -27,5 +27,5 @@ defmodule Ruxi.MixProject do
       ]
     ]
 
-  def application, do: [mod: {Ruxi.Application, []}, extra_applications: [:logger, :crypto]]
+  def application, do: [mod: {Ruxi.Application, []}, extra_applications: [:logger, :crypto, :inets, :ssl]]
 end

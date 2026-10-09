@@ -3867,5 +3867,11 @@
       "accuse_murder",
       "leave_early"
     ]
+  },
+  "communication": {
+    "voice": {
+      "enabled": true,
+      "scope": "scene"
+    }
   }
 }

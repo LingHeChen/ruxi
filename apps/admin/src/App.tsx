@@ -38,6 +38,7 @@ import {
 } from "@ant-design/icons";
 import { api, type Role } from "./api";
 import { roleNames, useAuth } from "./shared";
+import { Communication } from "./pages/Communication";
 import { Users } from "./pages/Directories";
 import { Dashboard } from "./pages/Dashboard";
 
@@ -47,6 +48,7 @@ const World = lazy(() =>
   import("./pages/World").then((m) => ({ default: m.World })),
 );
 const sections = [
+  {key:"/communication",label:"房间交流",icon:<TeamOutlined/>,role:"directory"},
   { key: "/dashboard", label: "工作概览", icon: <AppstoreOutlined /> },
   {
     key: "/stories",
@@ -343,6 +345,7 @@ export function AdminApp() {
           </Route>
           <Route element={<Guard role="directory" />}>
             <Route path="users" element={<Users />} />
+            <Route path="communication" element={<Communication />} />
           </Route>
           <Route
             path="*"

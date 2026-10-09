@@ -1,0 +1,21 @@
+flowchart TB
+  subgraph Clients["玩家客户端"]
+    A["Flutter 玩家 A"]
+    B["Flutter 玩家 B"]
+    C["Flutter 玩家 C 与 D"]
+  end
+  E["Elixir 游戏状态与语音资格"]
+  G["火山接口与凭证模块"]
+  R1["餐厅 RTC 当前代数"]
+  R2["走廊 RTC 当前代数"]
+  D["数据库 租约与回收任务"]
+  A <-->|"WS 状态与 HTTPS 凭证"| E
+  B <--> E
+  C <--> E
+  E --> G
+  E <--> D
+  G -->|"签发与回收"| R1
+  G --> R2
+  A <-->|"音频"| R1
+  B <-->|"音频"| R1
+  C <-->|"音频"| R2

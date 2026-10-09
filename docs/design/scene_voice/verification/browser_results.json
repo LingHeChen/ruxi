@@ -1,0 +1,78 @@
+{
+  "checks": [
+    {
+      "name": "用户明确点击后开麦",
+      "status": "PASS"
+    },
+    {
+      "name": "换场景立即关麦且位置未提前变化",
+      "status": "PASS"
+    },
+    {
+      "name": "新场景默认关麦",
+      "status": "PASS"
+    },
+    {
+      "name": "本地屏蔽不退出会话",
+      "status": "PASS"
+    },
+    {
+      "name": "退出立即停止并清理状态",
+      "status": "PASS"
+    },
+    {
+      "name": "再次加入不自动开麦",
+      "status": "PASS"
+    },
+    {
+      "name": "独处不能发送语音",
+      "status": "PASS"
+    },
+    {
+      "name": "权限拒绝仍有收听成员",
+      "status": "PASS"
+    },
+    {
+      "name": "关闭面板不退出通话",
+      "status": "PASS"
+    },
+    {
+      "name": "焦点还原到入口",
+      "status": "PASS"
+    },
+    {
+      "name": "Escape收起面板",
+      "status": "PASS"
+    },
+    {
+      "name": "减少动态效果开启",
+      "status": "PASS"
+    },
+    {
+      "name": "无横向溢出390",
+      "status": "PASS"
+    },
+    {
+      "name": "无横向溢出768",
+      "status": "PASS"
+    },
+    {
+      "name": "无横向溢出1024",
+      "status": "PASS"
+    },
+    {
+      "name": "无横向溢出1440",
+      "status": "PASS"
+    },
+    {
+      "name": "200%字体面板仍可滚动",
+      "status": "PASS"
+    },
+    {
+      "name": "无脚本异常",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "scope": "仅本地HTML状态与布局，不证明RTC和Flutter行为"
+}
