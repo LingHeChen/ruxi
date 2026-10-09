@@ -310,4 +310,33 @@ defmodule Ruxi.C2EngineTest do
     assert live["cue_acks"] == e["cue_acks"]
     assert live["barrier"]["deadline"] == 900_000
   end
+
+  test "one player independently reaches either last-letter ending" do
+    story = fixture("last_letter")
+    assert Content.validate(story)["valid"]
+
+    for {choice, ending} <- [{"deliver", "dawn"}, {"keep", "kept"}] do
+      state = initial(story)
+
+      state =
+        Enum.reduce(
+          ~w(read_letter inspect_photo move:office_archive read_ledger open_box move:archive_office),
+          state,
+          fn action, state ->
+            state =
+              if state["actors"]["keeper"]["ap_remaining"] == 0 do
+                {:ok, next, _} = cmd(state, "keeper", "round.end", %{})
+                next
+              else
+                state
+              end
+
+            step(state, [{"keeper", action}])
+          end
+        )
+
+      state = step(state, [{"keeper", choice}])
+      assert state["ending"] == ending
+    end
+  end
 end

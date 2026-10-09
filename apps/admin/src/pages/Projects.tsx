@@ -188,7 +188,7 @@ export function Projects() {
             label="角色人数"
             rules={[{ required: true }]}
           >
-            <InputNumber min={2} max={4} />
+            <InputNumber min={1} max={4} />
           </Form.Item>
         </Form>
       </Modal>

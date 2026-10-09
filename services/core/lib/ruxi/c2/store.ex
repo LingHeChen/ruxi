@@ -45,7 +45,7 @@ defmodule Ruxi.C2.Store do
       )
 
     rows =
-      if seats in 2..4,
+      if seats in 1..4,
         do: Enum.filter(rows, &(length(&1["content"]["roles"]) == seats)),
         else: rows
 

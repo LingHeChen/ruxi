@@ -1,0 +1,347 @@
+{
+  "schema_version": 3,
+  "id": "last_letter",
+  "title": "雨夜最后一封信",
+  "rules": {
+    "ap_per_round": 4,
+    "step_timeout_s": 120,
+    "proposal_ttl_s": 60,
+    "round_limit": 6
+  },
+  "roles": [
+    {
+      "id": "keeper",
+      "label": "值夜人",
+      "location": "office",
+      "knowledge": [],
+      "goals": [
+        "查明未寄出的信件属于谁，在天亮前作出你的选择。"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "office",
+      "label": "值班室",
+      "description": "雨水沿窗玻璃蜿蜒而下。桌上的旧信封没有邮票，收件人却写着你的名字。",
+      "discovered": true
+    },
+    {
+      "id": "archive",
+      "label": "档案室",
+      "description": "铁柜后传来钟摆声。二十年前的投递簿，就在最上层抽屉。",
+      "discovered": true
+    }
+  ],
+  "links": [
+    {
+      "id": "office_archive",
+      "from": "office",
+      "to": "archive",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      }
+    },
+    {
+      "id": "archive_office",
+      "from": "archive",
+      "to": "office",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      }
+    }
+  ],
+  "objects": [
+    {
+      "id": "letter",
+      "label": "未寄出的信",
+      "location": "office",
+      "tags": [
+        "inspectable"
+      ]
+    },
+    {
+      "id": "photo",
+      "label": "泛黄的合照",
+      "location": "office",
+      "tags": [
+        "inspectable"
+      ]
+    },
+    {
+      "id": "ledger",
+      "label": "投递簿",
+      "location": "archive",
+      "tags": [
+        "inspectable"
+      ]
+    },
+    {
+      "id": "box",
+      "label": "蓝色铁盒",
+      "location": "archive",
+      "tags": [
+        "inspectable"
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "address",
+      "text": "信上的地址早已拆迁。落款是母亲的名字，日期是她离开邮局的前一天。她写道：如果你看到这封信，先去找蓝色铁盒。",
+      "shareable": false
+    },
+    {
+      "id": "memory",
+      "text": "合照背面写着：每一次离开，都可以是为了回来。照片里，年幼的你紧握母亲的手。",
+      "shareable": false
+    },
+    {
+      "id": "record",
+      "text": "投递簿记载：那一夜桥梁被洪水冲断。母亲留下信件，带着最后一辆邮车去疏散居民，此后再没有回来。",
+      "shareable": false
+    },
+    {
+      "id": "truth",
+      "text": "铁盒里是一份救援名单和母亲留下的录音文字：不是不想回来，是有人需要我。等你长大，就替我把这些信送到吧。",
+      "shareable": false
+    }
+  ],
+  "actions": [
+    {
+      "id": "read_letter",
+      "label": "拆开未寄出的信",
+      "location": "office",
+      "target": "letter",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "address",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "信封已经受潮，慢慢展开它。"
+    },
+    {
+      "id": "inspect_photo",
+      "label": "翻看旧合照",
+      "location": "office",
+      "target": "photo",
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": []
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "照片背面似乎还有一行字。"
+    },
+    {
+      "id": "read_ledger",
+      "label": "查阅雨夜投递簿",
+      "location": "archive",
+      "target": "ledger",
+      "cost": 1,
+      "condition": {
+        "op": "has_knowledge",
+        "ref": "address"
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "record",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "沿着信件上的日期寻找记录。"
+    },
+    {
+      "id": "open_box",
+      "label": "打开蓝色铁盒",
+      "location": "archive",
+      "target": "box",
+      "cost": 1,
+      "condition": {
+        "op": "has_knowledge",
+        "ref": "record"
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "truth",
+          "audience": "self"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "你已经知道那一夜发生了什么。"
+    },
+    {
+      "id": "deliver",
+      "label": "带上信件，继续她的投递",
+      "location": "office",
+      "target": "letter",
+      "cost": 1,
+      "condition": {
+        "op": "has_knowledge",
+        "ref": "truth"
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.choice",
+          "value": "dawn"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "最终选择：让这段故事走向天亮。"
+    },
+    {
+      "id": "keep",
+      "label": "将信件留在邮局，珍藏这段往事",
+      "location": "office",
+      "target": "letter",
+      "cost": 1,
+      "condition": {
+        "op": "has_knowledge",
+        "ref": "truth"
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.choice",
+          "value": "kept"
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "最终选择：把思念留给自己。"
+    }
+  ],
+  "templates": [],
+  "events": [
+    {
+      "id": "ending_kept",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "eq",
+        "ref": "world.choice",
+        "value": "kept"
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "kept"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "ending_dawn",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "eq",
+        "ref": "world.choice",
+        "value": "dawn"
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "dawn"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "timeout",
+      "trigger": "round_end",
+      "priority": 100,
+      "condition": {
+        "op": "gte",
+        "ref": "clock.round",
+        "value": 6
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "unfinished"
+        }
+      ],
+      "once": true
+    }
+  ],
+  "initial": {
+    "world": {
+      "choice": "none"
+    },
+    "inventory": {
+      "keeper": []
+    }
+  },
+  "media": [
+    {
+      "id": "opening",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "旧邮局即将停用，这是你最后一次值夜。午夜，一封没有邮票的信从门缝滑进来，收件人竟是你。你可以先拆信、翻看合照，再去档案室寻找那场雨夜的记录。调查消耗行动点；用尽后结束回合即可继续。"
+    },
+    {
+      "id": "dawn",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "天亮时，你带着铁盒里的信件走出邮局。第一扇门打开，一位老人看着信上的字迹，忽然红了眼眶。原来，有些迟到的告别，仍然能够抵达。你终于理解了母亲，也开始了自己的第一趟投递。"
+    },
+    {
+      "id": "kept",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "你把母亲的信放进蓝色铁盒，锁好档案柜。邮局即将消失，但那些被救下的人、那场雨和她的选择，都不会再被你忘记。你关上最后一盏灯，带着平静离开。"
+    },
+    {
+      "id": "unfinished",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "清晨的拆迁通知打断了你的调查。你带走了桌上的信，谜底仍留在档案室里。或许有一天，你会重新回到这里，完成这次迟到的告别。"
+    }
+  ],
+  "votes": []
+}

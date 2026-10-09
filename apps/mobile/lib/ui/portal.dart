@@ -69,7 +69,7 @@ class _PortalState extends State<Portal> {
     if (q == null) return;
     search.text = (q['q'] ?? '').characters.take(80).toString();
     category = categories.containsKey(q['category']) ? q['category']! : '';
-    seats = ['2', '3', '4'].contains(q['seats']) ? q['seats']! : '';
+    seats = ['1', '2', '3', '4'].contains(q['seats']) ? q['seats']! : '';
     sort = q['sort'] == 'title' ? 'title' : 'latest';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) filter(updateUrl: false);
@@ -578,7 +578,7 @@ class _PortalState extends State<Portal> {
         spacing: 12,
         runSpacing: 12,
         children: [
-          for (final n in ['', '2', '3', '4'])
+          for (final n in ['', '1', '2', '3', '4'])
             FilterChip(
               label: Text(n.isEmpty ? '不限人数' : '$n 人故事'),
               selected: seats == n,

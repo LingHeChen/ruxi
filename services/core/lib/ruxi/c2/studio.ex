@@ -54,7 +54,7 @@ defmodule Ruxi.C2.Studio do
     Auth.role!(ctx, "editor")
 
     Util.require!(
-      is_binary(p["title"]) and String.length(p["title"]) in 1..120 and p["seat_count"] in 2..4,
+      is_binary(p["title"]) and String.length(p["title"]) in 1..120 and p["seat_count"] in 1..4,
       "INVALID_ARGUMENT"
     )
 
@@ -345,7 +345,7 @@ defmodule Ruxi.C2.Studio do
 
     Util.require!(
       is_map(graph) and graph["schema_version"] == 3 and is_list(graph["roles"]) and
-        length(graph["roles"]) in 2..4,
+        length(graph["roles"]) in 1..4,
       "INVALID_ARGUMENT"
     )
 
