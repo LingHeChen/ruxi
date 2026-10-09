@@ -88,7 +88,7 @@ void main() {
       await tester.ensureVisible(find.text('另一段原创故事'));
       await tester.tap(find.text('另一段原创故事'));
       await tester.pumpAndSettle();
-      expect(find.text('4 名角色 · 私人房间 · 10–15 分钟'), findsOneWidget);
+      expect(find.text('4 名角色 · 私人房间 · 15 分钟'), findsOneWidget);
       await tester.tap(find.text('创建房间'));
       await tester.pumpAndSettle();
       expect(client.createdStory, 'new-story');

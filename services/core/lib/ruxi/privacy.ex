@@ -123,6 +123,10 @@ defmodule Ruxi.Privacy do
 
     DB.query("DELETE FROM player_accounts WHERE user_id=$1", [uid])
     DB.query("DELETE FROM story_favorites WHERE user_id=$1", [uid])
+
+    if DB.one("SELECT to_regclass('ruxi.c2_favorites') IS NOT NULL AS ready")["ready"],
+      do: DB.query("DELETE FROM c2_favorites WHERE user_id=$1", [uid])
+
     DB.query("DELETE FROM account_commands WHERE user_id=$1", [uid])
     DB.query("DELETE FROM telemetry_events WHERE user_id=$1", [uid])
 

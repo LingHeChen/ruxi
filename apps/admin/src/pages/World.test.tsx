@@ -28,6 +28,8 @@ vi.mock("@xyflow/react", () => ({
   Background: () => null,
   Controls: () => null,
   MiniMap: () => null,
+  Handle: () => null,
+  Position: { Left: "left", Right: "right" },
 }));
 beforeEach(() => {
   localStorage.clear();

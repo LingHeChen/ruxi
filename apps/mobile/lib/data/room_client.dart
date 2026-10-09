@@ -542,11 +542,15 @@ class RoomClient extends ChangeNotifier {
 
   Future<void> favorite(String id, bool saved) => run(() async {
     if (!signedIn) throw ApiError('LOGIN_REQUIRED');
-    await request('POST', '/v1/stories/$id/favorite', {
-      'saved': saved,
-      'command_id': uuid.v4(),
-    });
-    favorites = (await request('GET', '/v1/me/favorites'))['items'];
+    await request(
+      'POST',
+      '/api/v2/stories/$id/favorite',
+      {'saved': saved},
+      false,
+      false,
+      {'Idempotency-Key': uuid.v4()},
+    );
+    favorites = (await request('GET', '/api/v2/me/favorites'))['items'];
   });
 
   Future<void> resetPassword(String code, String password) => run(() async {
@@ -568,14 +572,14 @@ class RoomClient extends ChangeNotifier {
   });
 
   Future<void> catalog() async {
-    final directory = await request('GET', '/v1/stories');
+    final directory = await request('GET', '/api/v2/stories');
     stories = directory['items'];
     storiesTotal = directory['total'] ?? stories.length;
     storiesNext = directory['next_cursor'];
     if (signedIn) {
       profile = await request('GET', '/v1/me');
-      rooms = (await request('GET', '/v1/rooms'))['items'];
-      favorites = (await request('GET', '/v1/me/favorites'))['items'];
+      rooms = (await request('GET', '/api/v2/games'))['items'];
+      favorites = (await request('GET', '/api/v2/me/favorites'))['items'];
     } else {
       rooms = [];
       favorites = [];
@@ -601,28 +605,36 @@ class RoomClient extends ChangeNotifier {
 
   Future<void> create(String story) async => run(() async {
     await ensureGuest();
-    final r = await request('POST', '/v1/rooms', {
-      'story_id': story,
-      'command_id': uuid.v4(),
-    });
-    await enter(r['room_id']);
+    final detail = await request('GET', '/api/v2/stories/$story');
+    final r = await request(
+      'POST',
+      '/api/v2/rooms',
+      {'release_id': detail['release_id']},
+      false,
+      false,
+      {'Idempotency-Key': uuid.v4()},
+    );
+    roomId = r['room_id'];
     invite = r['invite_code'];
-    await persist();
   });
   Future<void> join(String code) async => run(() async {
-    if (!RegExp(r'^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$')
-        .hasMatch(code.trim().toUpperCase())) {
-      throw ApiError('INVALID_ARGUMENT');
-    }
     await ensureGuest();
-    final r = await request('POST', '/v1/rooms/join', {
-      'invite_code': code.trim().toUpperCase(),
-      'command_id': uuid.v4(),
-    });
-    await enter(r['room_id']);
+    final r = await request(
+      'POST',
+      '/api/v2/rooms/join',
+      {'invite_code': code.trim().toUpperCase()},
+      false,
+      false,
+      {'Idempotency-Key': uuid.v4()},
+    );
+    roomId = r['room_id'];
     invite = code.trim().toUpperCase();
-    await persist();
   });
+  Future<void> openGame(String id) async {
+    roomId = id;
+    notifyListeners();
+  }
+
   Future<void> enter(String id, {bool takeover = false}) async {
     close();
     if (roomId != id) invite = null;

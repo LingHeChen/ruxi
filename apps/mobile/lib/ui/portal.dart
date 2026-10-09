@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../data/room_client.dart';
 
-const _gold = Color(0xfff3ad47);
-const _ink = Color(0xff1b2125);
+const _gold = Color(0xffd8b678);
+const _ink = Color(0xff1a2823);
 const _muted = Color(0xffb0b7bd);
 const categories = {
   'mystery': '悬疑推理',
@@ -107,7 +107,7 @@ class _PortalState extends State<Portal> {
             'offset': (next ?? client.storiesNext)!,
         },
       ).query;
-      final data = await client.request('GET', '/v1/stories?$query');
+      final data = await client.request('GET', '/api/v2/stories?$query');
       if (!mounted || generation != requestGeneration) return;
       setState(() {
         results = [if (more) ...(results ?? client.stories), ...data['items']];
@@ -347,7 +347,7 @@ class _PortalState extends State<Portal> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    '${story['seat_count']} 人协作  /  10–15 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
+                    '${story['seat_count']} 人协作  /  ${story['estimated_minutes'] ?? 15} 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
                     style: const TextStyle(color: _muted),
                   ),
                   const SizedBox(height: 24),
@@ -381,15 +381,19 @@ class _PortalState extends State<Portal> {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.train_outlined,
-                      size: 104,
-                      color: Color(0xffa3bab7),
+                    const Text(
+                      '入\n戏',
+                      style: TextStyle(
+                        fontFamily: 'Songti SC',
+                        fontSize: 60,
+                        height: 1.3,
+                        color: Color(0xffc2cabb),
+                      ),
                     ),
                     const Positioned(
                       bottom: 12,
                       child: Text(
-                        '每个人，都有一段秘密。',
+                        '每个选择，都会留下回响。',
                         style: TextStyle(
                           color: _gold,
                           letterSpacing: 2,
@@ -461,7 +465,7 @@ class _PortalState extends State<Portal> {
                     'adventure' => const Color(0xff3d4a32),
                     _ => const Color(0xff344342),
                   },
-                  const Color(0xff192427),
+                  const Color(0xff16221e),
                 ],
               ),
             ),
@@ -469,8 +473,8 @@ class _PortalState extends State<Portal> {
               children: [
                 Icon(
                   categoryIcon(story['category']),
-                  size: 64,
-                  color: _gold.withValues(alpha: .7),
+                  size: 44,
+                  color: _gold.withValues(alpha: .55),
                 ),
                 const Spacer(),
                 Text(
@@ -506,10 +510,10 @@ class _PortalState extends State<Portal> {
                   style: const TextStyle(color: _muted, height: 1.7),
                 ),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   children: [
                     Text(
-                      '10–15 分钟',
+                      '${story['estimated_minutes'] ?? 15} 分钟',
                       style: TextStyle(color: _muted, fontSize: 12),
                     ),
                     Spacer(),
@@ -655,7 +659,7 @@ class _PortalState extends State<Portal> {
         trailing: const Icon(Icons.chevron_right),
         onTap: client.busy
             ? null
-            : () => client.run(() => client.enter(room['room_id'])),
+            : () => client.run(() => client.openGame(room['room_id'])),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
     ),
@@ -721,7 +725,7 @@ class _PortalState extends State<Portal> {
               children: [
                 const Icon(
                   Icons.account_circle_outlined,
-                  size: 64,
+                  size: 44,
                   color: _gold,
                 ),
                 const SizedBox(height: 20),
@@ -909,7 +913,7 @@ class _PortalState extends State<Portal> {
     if (loadedStory != widget.storyId) {
       loadedStory = widget.storyId;
       detailFuture = client
-          .request('GET', '/v1/stories/${widget.storyId}')
+          .request('GET', '/api/v2/stories/${widget.storyId}')
           .then((v) => Map<String, dynamic>.from(v));
     }
     return FutureBuilder<Json>(
@@ -971,7 +975,7 @@ class _PortalState extends State<Portal> {
               ),
               const SizedBox(height: 12),
               Text(
-                '${story['seat_count']} 名角色 · 私人房间 · 10–15 分钟',
+                '${story['seat_count']} 名角色 · 私人房间 · ${story['estimated_minutes'] ?? 15} 分钟',
                 style: const TextStyle(color: _muted),
               ),
               const Divider(height: 40),

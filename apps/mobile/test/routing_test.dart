@@ -29,7 +29,35 @@ class RouteClient extends CatalogClient {
     bool retried = false,
     Map<String, String> extraHeaders = const {},
   ]) async {
-    if (path.startsWith('/v1/stories/')) return stories.last;
+    if (path.startsWith('/api/v2/stories/')) return stories.last;
+    if (path.endsWith('/snapshot')) {
+      entered = path.split('/')[4];
+      return {
+        'protocol_version': 2,
+        'stream_id': 'stream',
+        'view_seq': 1,
+        'control_epoch': 1,
+        'blocks': {
+          'story_title': '另一段原创故事',
+          'own_member_id': 'm1',
+          'host_member_id': 'm1',
+          'seat_count': 3,
+          'room': {'status': 'lobby'},
+          'roles': [
+            {'id': 'guest', 'label': '来客'},
+          ],
+          'members': [
+            {
+              'member_id': 'm1',
+              'display_name': '玩家',
+              'role_id': null,
+              'ready': false,
+              'online': true,
+            },
+          ],
+        },
+      };
+    }
     return super.request(method, path, body, private, retried);
   }
 }
@@ -89,7 +117,7 @@ void main() {
       );
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
-      expect(find.text('4 名角色 · 私人房间 · 10–15 分钟'), findsOneWidget);
+      expect(find.text('4 名角色 · 私人房间 · 15 分钟'), findsOneWidget);
       await tester.tap(find.text('返回剧目列表'));
       await tester.pumpAndSettle();
       router.go('/discover?category=scifi&q=星空&seats=4');

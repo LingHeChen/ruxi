@@ -35,18 +35,18 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: "#a16a20",
-          borderRadius: 8,
+          colorPrimary: "#397858",
+          borderRadius: 10,
           fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
-          colorBgLayout: "#f4f5f7",
+          colorBgLayout: "#f5f7f5",
         },
         components: {
           Menu: {
-            darkItemBg: "#19282c",
-            darkItemSelectedBg: "#344840",
-            darkItemSelectedColor: "#f4c778",
+            darkItemBg: "#17392e",
+            darkItemSelectedBg: "#2d5140",
+            darkItemSelectedColor: "#e0ecd9",
           },
-          Layout: { siderBg: "#19282c", headerBg: "#fff" },
+          Layout: { siderBg: "#17392e", headerBg: "#fff" },
         },
       }}
     >

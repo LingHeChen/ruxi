@@ -55,7 +55,7 @@ void main() {
         await expectLater(
           find.byType(Home),
           matchesGoldenFile(
-            '../../../docs/screenshots/player-home-${size.width.toInt()}-widget.png',
+            '../../../.local/ui-review/player-home-${size.width.toInt()}-widget.png',
           ),
         );
       }
@@ -67,7 +67,7 @@ void main() {
         await expectLater(
           find.byType(Home),
           matchesGoldenFile(
-            '../../../docs/screenshots/player-personal-${size.width.toInt()}-widget.png',
+            '../../../.local/ui-review/player-personal-${size.width.toInt()}-widget.png',
           ),
         );
       }

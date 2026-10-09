@@ -37,6 +37,18 @@ export function seed(s: Json): any {
   return "";
 }
 const names: Record<string, string> = {
+  step_timeout_s: "每步等待时间（秒）",
+  proposal_ttl_s: "提案有效时间（秒）",
+  description: "场景描述",
+  risk_text: "行动风险说明",
+  threshold: "成功概率（%）",
+  failure: "未成功时的结果",
+  shareable: "允许分享",
+  text: "线索内容",
+  inventory: "角色初始物品",
+  world: "世界变量",
+  required_tag: "目标所需标签",
+  intent: "意图说明",
   ap_per_round: "每回合行动点",
   step_timeout_sec: "行动等待秒数",
   proposal_ttl_sec: "提案有效秒数",

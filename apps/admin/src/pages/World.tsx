@@ -22,6 +22,9 @@ import {
   Background,
   Controls,
   MiniMap,
+  Handle,
+  Position,
+  type NodeProps,
   type Node,
   type Edge,
 } from "@xyflow/react";
@@ -29,6 +32,36 @@ import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, type Json } from "../api";
 import { PageTitle, useAuth } from "../shared";
 import { C2Field, c2Schema, resolve, seed } from "../components/C2Field";
+function LocationNode({ data }: NodeProps) {
+  return (
+    <div className="world-location-node">
+      <Handle type="target" position={Position.Left} />
+      <div className="location-node-title">
+        <span className="location-symbol">⌖</span>
+        <strong>{String(data.label)}</strong>
+        <small>{String(data.count ?? 0)} 项内容</small>
+      </div>
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
+}
+function EntityNode({ data }: NodeProps) {
+  return (
+    <div className={`world-entity-node entity-${data.kind}`}>
+      <span className="entity-symbol">
+        {data.kind === "actions" ? "↗" : "◇"}
+      </span>
+      <div>
+        <small>{data.kind === "actions" ? "角色行动" : "场景对象"}</small>
+        <strong>{String(data.title)}</strong>
+      </div>
+      {data.cost !== undefined && (
+        <span className="entity-cost">{String(data.cost)} 点</span>
+      )}
+    </div>
+  );
+}
+const nodeTypes = { location: LocationNode, entity: EntityNode };
 const groups: Record<string, string> = {
   locations: "地点",
   links: "通路",
@@ -186,34 +219,41 @@ function WorldEditor() {
       ];
       nodes.push({
         id: key,
+        type: "location",
         position: positions[key] ?? {
           x: (i % 3) * 370,
           y: Math.floor(i / 3) * 430,
         },
-        data: { label: l.label },
+        data: { label: l.label, count: children.length },
         style: {
           width: 310,
-          height: Math.max(180, 70 + children.length * 64),
-          background: "#faf8f1",
-          border: "1px solid #b8ac91",
+          height: Math.max(180, 80 + children.length * 72),
+          background: "#f8faf5",
+          border: "1px solid #cedacc",
           borderRadius: 12,
-          padding: 14,
+          padding: 0,
         },
       });
       children.forEach(({ kind, item }, j) => {
         const k = `${kind}:${item.id}`;
         nodes.push({
           id: k,
+          type: "entity",
           parentId: key,
           extent: "parent",
-          position: positions[k] ?? { x: 20, y: 60 + j * 64 },
+          position: positions[k] ?? { x: 20, y: 66 + j * 72 },
           data: {
+            kind,
+            title: item.label,
+            cost: item.cost,
             label: `${groups[kind]} · ${item.label} ${item.cost === undefined ? "" : `/ ${item.cost} 点`}`,
           },
           style: {
             width: 270,
             borderColor: kind === "actions" ? "#769283" : "#bdaf99",
-            borderRadius: 8,
+            borderRadius: 9,
+            padding: 0,
+            border: "1px solid #dfe7dc",
             background: "#fff",
           },
         });
@@ -285,12 +325,10 @@ function WorldEditor() {
                     ? "未保存"
                     : "已保存"}
             </Tag>
-            <Button onClick={() => navigate(`/studio/${id}/releases`)}>
+            <Button onClick={() => navigate(`/stories/${id}/releases`)}>
               审核与发布
             </Button>
-            <Button onClick={() => navigate("/studio/projects")}>
-              返回项目
-            </Button>
+            <Button onClick={() => navigate("/stories")}>返回项目</Button>
             <Button
               disabled={conflict}
               loading={saving}

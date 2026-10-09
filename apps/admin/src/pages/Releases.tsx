@@ -73,7 +73,7 @@ export function Releases() {
         title="审核与发布"
         description="每个发布版本固定内容；已有房间继续使用创建时的版本。"
         extra={
-          <Button onClick={() => navigate(`/studio/${id}/world`)}>
+          <Button onClick={() => navigate(`/stories/${id}/world`)}>
             返回世界画布
           </Button>
         }

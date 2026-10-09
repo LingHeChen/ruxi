@@ -6,6 +6,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useParams,
 } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -37,23 +38,15 @@ import {
 } from "@ant-design/icons";
 import { api, type Role } from "./api";
 import { roleNames, useAuth } from "./shared";
-import { Dashboard, Stories, Users, Reports } from "./pages/Directories";
-import { Assets } from "./pages/Assets";
+import { Users } from "./pages/Directories";
+import { Dashboard } from "./pages/Dashboard";
+
 import { Releases } from "./pages/Releases";
 import { Projects } from "./pages/Projects";
 const World = lazy(() =>
   import("./pages/World").then((m) => ({ default: m.World })),
 );
-const Editor = lazy(() =>
-  import("./pages/Editor").then((module) => ({ default: module.Editor })),
-);
 const sections = [
-  {
-    key: "/studio/projects",
-    label: "创作项目",
-    icon: <EditOutlined />,
-    role: "editor",
-  },
   { key: "/dashboard", label: "工作概览", icon: <AppstoreOutlined /> },
   {
     key: "/stories",
@@ -62,26 +55,8 @@ const sections = [
     role: "editor",
   },
   {
-    key: "/editor",
-    label: "内容工作室",
-    icon: <EditOutlined />,
-    role: "editor",
-  },
-  {
-    key: "/assets",
-    label: "素材库",
-    icon: <PictureOutlined />,
-    role: "editor",
-  },
-  {
-    key: "/reports",
-    label: "举报审核",
-    icon: <AuditOutlined />,
-    role: "reviewer",
-  },
-  {
     key: "/users",
-    label: "用户目录",
+    label: "用户管理",
     icon: <TeamOutlined />,
     role: "directory",
   },
@@ -226,6 +201,15 @@ function Login() {
     </div>
   );
 }
+function StudioRedirect() {
+  const { id, view } = useParams();
+  return (
+    <Navigate
+      to={`/stories/${id}/${view === "releases" ? "releases" : "world"}`}
+      replace
+    />
+  );
+}
 function Shell() {
   const { profile } = useAuth();
   const location = useLocation();
@@ -234,7 +218,9 @@ function Shell() {
   const { message } = App.useApp();
   const [mobile, setMobile] = useState(false),
     [narrow, setNarrow] = useState(false);
-  const selected = "/" + (location.pathname.split("/")[1] || "dashboard");
+  const selected = location.pathname.startsWith("/studio")
+    ? "/stories"
+    : "/" + (location.pathname.split("/")[1] || "dashboard");
   const active = sections.find((s) => s.key === selected);
   const sidebar = (
     <>
@@ -286,7 +272,7 @@ function Shell() {
               />
             )}
             <Typography.Text type="secondary">
-              工作台 / {active?.label ?? "内容工作室"}
+              工作台 / {active?.label ?? "剧目工作台"}
             </Typography.Text>
           </Flex>
           <Flex align="center" gap={12}>
@@ -334,37 +320,26 @@ export function AdminApp() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route element={<Guard role="editor" />}>
-            <Route path="studio/:id/releases" element={<Releases />} />
-            <Route path="studio/projects" element={<Projects />} />
+            <Route path="stories" element={<Projects />} />
+            <Route path="stories/:id/releases" element={<Releases />} />
             <Route
-              path="studio/:id/world"
+              path="stories/:id/world"
               element={
                 <Suspense fallback={<Spin />}>
                   <World />
                 </Suspense>
               }
             />
-            <Route path="stories" element={<Stories />} />
             <Route
-              path="editor"
-              element={
-                <Suspense fallback={<Spin />}>
-                  <Editor />
-                </Suspense>
-              }
+              path="studio/projects"
+              element={<Navigate to="/stories" replace />}
             />
+            <Route path="studio/:id/:view" element={<StudioRedirect />} />
             <Route
-              path="editor/:versionId"
-              element={
-                <Suspense fallback={<Spin />}>
-                  <Editor />
-                </Suspense>
-              }
+              path="editor/*"
+              element={<Navigate to="/stories" replace />}
             />
-            <Route path="assets" element={<Assets />} />
-          </Route>
-          <Route element={<Guard role="reviewer" />}>
-            <Route path="reports" element={<Reports />} />
+            <Route path="assets" element={<Navigate to="/stories" replace />} />
           </Route>
           <Route element={<Guard role="directory" />}>
             <Route path="users" element={<Users />} />

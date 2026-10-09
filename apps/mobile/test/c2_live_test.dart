@@ -26,9 +26,12 @@ void main() {
               (s['roles'] as List).map((r) => r['id']).join(',') ==
               'guest,doctor,reporter',
         );
-        final created = await clients[0].request('POST', '/rooms', {
-          'release_id': fixture['release_id'],
-        });
+        await identities[0].create(fixture['story_id']);
+        expect(identities[0].roomId, isNotNull, reason: identities[0].status);
+        final created = {
+          'room_id': identities[0].roomId!,
+          'invite_code': identities[0].invite!,
+        };
         for (final c in clients.skip(1)) {
           await c.request('POST', '/rooms/join', {
             'invite_code': created['invite_code'],
@@ -36,7 +39,7 @@ void main() {
         }
         for (var i = 0; i < 3; i++) {
           final c = clients[i];
-          await c.load(created['room_id']);
+          await c.load(created['room_id']!);
           await c.command('role.select', {
             'role_id': ['guest', 'doctor', 'reporter'][i],
           });
@@ -81,7 +84,7 @@ void main() {
         }
         expect(clients[0].view!['room']['ending']['id'], 'safe');
         restored = C2Client(identities[0]);
-        await restored.load(created['room_id']);
+        await restored.load(created['room_id']!);
         expect(restored.view!['room']['ending']['id'], 'safe');
         expect(restored.reducer.seq, greaterThan(0));
       } finally {

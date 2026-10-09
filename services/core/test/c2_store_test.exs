@@ -202,4 +202,20 @@ defmodule Ruxi.C2.StoreTest do
              "n"
            ] == 1
   end
+
+  test "the player catalogue searches new releases and keeps favorites private", s do
+    assert Store.list_stories(%{"q" => "停电", "seats" => "3"})["total"] == 1
+    assert Store.list_stories(%{"q" => "不存在的故事"})["items"] == []
+    assert Store.list_stories(%{"q" => "停电", "seats" => "4"})["total"] == 0
+    ctx = hd(s.people)
+    assert {:ok, _} = DB.transaction(fn -> Store.favorite(ctx, s.project, %{"saved" => true}) end)
+    assert [%{"story_id" => id}] = Store.favorites(ctx)["items"]
+    assert id == s.project
+    assert Store.favorites(Enum.at(s.people, 1))["items"] == []
+
+    assert {:ok, _} =
+             DB.transaction(fn -> Store.favorite(ctx, s.project, %{"saved" => false}) end)
+
+    assert Store.favorites(ctx)["items"] == []
+  end
 end

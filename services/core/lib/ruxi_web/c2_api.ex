@@ -24,6 +24,11 @@ defmodule RuxiWeb.C2API do
   defp dispatch(c, method, ["admin", "releases" | rest]),
     do: dispatch(c, method, ["releases" | rest])
 
+  defp dispatch(c, "GET", ["me", "favorites"]), do: Store.favorites(ctx(c))
+
+  defp dispatch(c, "POST", ["stories", id, "favorite"]),
+    do: mutate(c, fn ctx, p -> Store.favorite(ctx, id, p) end)
+
   defp dispatch(c, "GET", ["games"]), do: Store.games(ctx(c))
 
   defp dispatch(c, "POST", ["session", "socket-ticket"]),

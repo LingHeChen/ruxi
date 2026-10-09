@@ -29,7 +29,7 @@ defmodule Ruxi.C2.Store do
   end
 
   def list_stories(query \\ %{}) do
-    q = String.slice(query["query"] || "", 0, 120)
+    q = String.slice(query["q"] || query["query"] || "", 0, 120)
     category = query["category"] || ""
 
     seats =
@@ -40,7 +40,7 @@ defmodule Ruxi.C2.Store do
 
     rows =
       DB.rows(
-        "SELECT p.id,p.title,p.summary,p.category,p.difficulty,p.current_release_id,l.content FROM c2_projects p JOIN c2_releases l ON l.id=p.current_release_id WHERE p.archived_at IS NULL AND l.status='published' AND ($1='' OR p.title ILIKE '%'||$1||'%' OR p.summary ILIKE '%'||$1||'%') AND ($2='' OR p.category=$2) ORDER BY p.title LIMIT 100",
+        "SELECT p.id,p.title,p.summary,p.category,p.difficulty,p.current_release_id,p.updated_at,l.content FROM c2_projects p JOIN c2_releases l ON l.id=p.current_release_id WHERE p.archived_at IS NULL AND l.status='published' AND ($1='' OR p.title ILIKE '%'||$1||'%' OR p.summary ILIKE '%'||$1||'%') AND ($2='' OR p.category=$2) ORDER BY p.updated_at DESC LIMIT 100",
         [q, category]
       )
 
@@ -49,7 +49,23 @@ defmodule Ruxi.C2.Store do
         do: Enum.filter(rows, &(length(&1["content"]["roles"]) == seats)),
         else: rows
 
-    %{"items" => Enum.map(rows, &story_view/1), "next_cursor" => nil}
+    rows =
+      if query["sort"] == "title", do: Enum.sort_by(rows, & &1["title"]), else: rows
+
+    offset =
+      case Integer.parse(query["offset"] || "0") do
+        {n, ""} when n >= 0 -> min(n, 100)
+        _ -> 0
+      end
+
+    total = length(rows)
+    items = rows |> Enum.drop(offset) |> Enum.take(24) |> Enum.map(&story_view/1)
+
+    %{
+      "items" => items,
+      "total" => total,
+      "next_cursor" => if(offset + 24 < total, do: to_string(offset + 24), else: nil)
+    }
   end
 
   def story(id) do
@@ -224,7 +240,9 @@ defmodule Ruxi.C2.Store do
           nil -> nil
           x -> DB.str(x["id"])
         end,
-      "own_member_id" => DB.str(m["id"])
+      "own_member_id" => DB.str(m["id"]),
+      "story_title" => state["content"]["title"],
+      "roles" => Enum.map(state["content"]["roles"], &Map.take(&1, ~w(id label)))
     }
 
     if state["status"] in ~w(lobby abandoned) and is_nil(state["actors"]) do
@@ -737,7 +755,7 @@ defmodule Ruxi.C2.Store do
     do: %{
       "items" =>
         DB.rows(
-          "SELECT r.id,r.status,r.release_id,p.title,m.id AS member_id,m.role_id FROM c2_rooms r JOIN c2_room_members m ON m.room_id=r.id JOIN c2_releases l ON l.id=r.release_id JOIN c2_projects p ON p.id=l.project_id WHERE m.user_id=$1 ORDER BY r.updated_at DESC LIMIT 100",
+          "SELECT r.id,r.status,r.release_id,r.updated_at,p.title,m.id AS member_id,m.role_id FROM c2_rooms r JOIN c2_room_members m ON m.room_id=r.id JOIN c2_releases l ON l.id=r.release_id JOIN c2_projects p ON p.id=l.project_id WHERE m.user_id=$1 ORDER BY r.updated_at DESC LIMIT 100",
           [DB.uuid(ctx.user)]
         )
         |> Enum.map(fn x ->
@@ -745,6 +763,9 @@ defmodule Ruxi.C2.Store do
           |> Map.put("room_id", DB.str(x["id"]))
           |> Map.update!("release_id", &DB.str/1)
           |> Map.update!("member_id", &DB.str/1)
+          |> Map.put("lifecycle", if(x["status"] == "active", do: "running", else: x["status"]))
+          |> Map.put("updated_at", Util.iso(x["updated_at"]))
+          |> Map.put("can_resume", x["status"] != "abandoned")
           |> Map.delete("id")
         end),
       "next_cursor" => nil
@@ -928,5 +949,38 @@ defmodule Ruxi.C2.Store do
 
       length(rows)
     end)
+  end
+
+  def favorites(ctx) do
+    Auth.valid!(ctx)
+
+    rows =
+      DB.rows(
+        "SELECT p.id,p.title,p.summary,p.category,p.difficulty,p.current_release_id,l.content FROM c2_favorites f JOIN c2_projects p ON p.id=f.project_id JOIN c2_releases l ON l.id=p.current_release_id WHERE f.user_id=$1 AND p.archived_at IS NULL AND l.status='published' ORDER BY f.created_at DESC",
+        [DB.uuid(ctx.user)]
+      )
+
+    %{"items" => Enum.map(rows, &story_view/1)}
+  end
+
+  def favorite(ctx, id, body) do
+    Auth.valid!(ctx)
+    story(id)
+    Util.require!(is_boolean(body["saved"]), "INVALID_ARGUMENT")
+
+    if body["saved"],
+      do:
+        DB.query("INSERT INTO c2_favorites VALUES($1,$2,$3) ON CONFLICT DO NOTHING", [
+          DB.uuid(ctx.user),
+          DB.uuid(id),
+          DB.time()
+        ]),
+      else:
+        DB.query("DELETE FROM c2_favorites WHERE user_id=$1 AND project_id=$2", [
+          DB.uuid(ctx.user),
+          DB.uuid(id)
+        ])
+
+    %{"saved" => body["saved"]}
   end
 end

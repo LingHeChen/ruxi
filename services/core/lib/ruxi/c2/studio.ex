@@ -33,7 +33,7 @@ defmodule Ruxi.C2.Studio do
     %{
       "items" =>
         DB.rows(
-          "SELECT p.id,p.title,p.summary,p.category,p.difficulty,p.revision,p.layout_revision,p.current_release_id,p.archived_at FROM c2_projects p WHERE p.owner_id=$1 OR EXISTS(SELECT 1 FROM c2_project_members m WHERE m.project_id=p.id AND m.user_id=$1) ORDER BY p.updated_at DESC LIMIT 100",
+          "SELECT p.id,p.title,p.summary,p.category,p.difficulty,p.revision,p.layout_revision,p.current_release_id,p.archived_at,p.updated_at,jsonb_array_length(p.content->'roles') AS seat_count,jsonb_array_length(p.content->'locations') AS location_count FROM c2_projects p WHERE p.owner_id=$1 OR EXISTS(SELECT 1 FROM c2_project_members m WHERE m.project_id=p.id AND m.user_id=$1) ORDER BY p.updated_at DESC LIMIT 100",
           [DB.uuid(ctx.user)]
         )
         |> Enum.map(&serialize/1),
