@@ -33,6 +33,7 @@ class InteractiveIdentity extends StageIdentity {
       extraHeaders,
     );
     final v = snapshot['blocks'];
+    v['story_title'] = '停电之前';
     v['room']['round'] = round;
     v['own_results'] = acted
         ? [
@@ -79,7 +80,7 @@ void main() {
       }
       await tester.pump();
       expect(find.text('母亲在信里写道：先去找蓝色铁盒。'), findsOneWidget);
-      expect(find.text('✧ 新线索已记入旅途手记'), findsOneWidget);
+      expect(find.text('✧ 新线索已记入线索册'), findsOneWidget);
       await tester.tap(find.text('继续 →'));
       await tester.pumpAndSettle();
       expect(find.text('行动回响'), findsNothing);

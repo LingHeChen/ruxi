@@ -311,46 +311,99 @@ defmodule Ruxi.C2EngineTest do
     assert live["barrier"]["deadline"] == 900_000
   end
 
-  test "one player independently reaches either last-letter ending" do
+  defp solo_action(state, action) do
+    cost = if action in ~w(rescue_ledger rescue_tape), do: 2, else: 1
+
+    state =
+      if state["actors"]["keeper"]["ap_remaining"] < cost do
+        {:ok, state, _} = cmd(state, "keeper", "round.end", %{})
+        acknowledge_solo(state)
+      else
+        state
+      end
+
+    step(state, [{"keeper", action}]) |> acknowledge_solo()
+  end
+
+  defp acknowledge_solo(state) do
+    Enum.reduce(state["cues"], state, fn cue, state ->
+      {:ok, state, _} =
+        cmd(state, "keeper", "media.complete", %{"cue_id" => cue["id"], "mode" => "summary"})
+
+      state
+    end)
+  end
+
+  test "solo choices preserve one item and change the resulting farewell" do
     story = fixture("last_letter")
     assert Content.validate(story)["valid"]
+    assert length(Engine.project(initial(story), "keeper", 1)["map"]["locations"]) == 1
 
-    for {choice, ending} <- [{"deliver", "dawn"}, {"keep", "kept"}] do
-      state = initial(story)
+    for saved <- ~w(ledger tape), memory <- [false, true], choice <- ~w(deliver keep) do
+      route =
+        ["read_letter", "inspect_postmark"] ++
+          if(memory, do: ["inspect_photo"], else: []) ++
+          [
+            "move:office_archive",
+            "inspect_damage",
+            "rescue_#{saved}",
+            "open_box",
+            "deduce_rescue",
+            "move:archive_office",
+            choice
+          ]
 
-      state =
-        Enum.reduce(
-          ~w(read_letter inspect_photo move:office_archive read_ledger open_box move:archive_office),
-          state,
-          fn action, state ->
-            state =
-              if state["actors"]["keeper"]["ap_remaining"] == 0 do
-                {:ok, next, _} = cmd(state, "keeper", "round.end", %{})
-                next
-              else
-                state
-              end
+      state = Enum.reduce(route, initial(story), &solo_action(&2, &1))
 
-            next = step(state, [{"keeper", action}])
+      expected =
+        if choice == "keep",
+          do: if(memory, do: "kept_memory", else: "kept"),
+          else:
+            if(saved == "tape" and not memory,
+              do: "dawn",
+              else: "dawn_#{saved}" <> if(memory, do: "_memory", else: "")
+            )
 
-            Enum.reduce(next["cues"], next, fn cue, state ->
-              {:ok, state, _} =
-                cmd(state, "keeper", "media.complete", %{
-                  "cue_id" => cue["id"],
-                  "mode" => "summary"
-                })
+      assert state["ending"] == expected
+      own = Engine.project(state, "keeper", 4)
+      assert Enum.any?(own["inventory"], &(&1["id"] == saved))
 
-              state
-            end)
-          end
-        )
+      refute Enum.any?(
+               own["inventory"],
+               &(&1["id"] == if(saved == "tape", do: "ledger", else: "tape"))
+             )
 
-      state = step(state, [{"keeper", choice}])
-      assert state["ending"] == ending
-      own = Engine.project(state, "keeper", 4)["own_results"]
-      assert Enum.all?(own, &(&1["label"] != nil))
-      refute Enum.any?(own, &(Map.has_key?(&1, "actor") or Map.has_key?(&1, "roll")))
+      assert length(own["action_history"]) == length(route)
+      assert Enum.all?(own["action_history"], &(&1["label"] != nil))
+
+      refute Enum.any?(
+               own["own_results"],
+               &(Map.has_key?(&1, "actor") or Map.has_key?(&1, "roll"))
+             )
     end
+  end
+
+  test "incomplete interpretation leaves room to reason again and time can expire" do
+    state =
+      Enum.reduce(
+        ~w(read_letter inspect_postmark move:office_archive inspect_damage rescue_tape open_box deduce_abandon),
+        initial(fixture("last_letter")),
+        &solo_action(&2, &1)
+      )
+
+    assert state["ending"] == nil
+    assert "doubt" in state["actors"]["keeper"]["knowledge"]
+    state = solo_action(state, "deduce_rescue")
+    assert "truth" in state["actors"]["keeper"]["knowledge"]
+    state = initial(fixture("last_letter"))
+
+    state =
+      Enum.reduce(1..4, state, fn _, state ->
+        {:ok, state, _} = cmd(state, "keeper", "round.end", %{})
+        acknowledge_solo(state)
+      end)
+
+    assert state["ending"] == "unfinished"
   end
 
   test "action feedback exposes only the viewing actor's settled facts" do
@@ -359,6 +412,7 @@ defmodule Ruxi.C2EngineTest do
     other = Engine.project(state, "doctor", 4)
     assert [%{"action_id" => "ask", "success" => true, "cost" => 1}] = own
     assert other["own_results"] == []
+    assert other["action_history"] == []
     assert other["knowledge"] == []
     refute Map.has_key?(hd(own), "roll")
     refute Map.has_key?(hd(own), "actor")

@@ -922,6 +922,7 @@ defmodule Ruxi.C2.Engine do
       end)
       |> Enum.map(fn x ->
         Map.merge(Map.take(x, ~w(id label cost risk_text required_participants)), %{
+          "remaining_uses" => max(0, (x["max_uses"] || 1) - Map.get(a["used"], x["id"], 0)),
           "allowed_now" =>
             valid?(s, r, x, now) and x["cost"] <= a["ap_remaining"] - a["ap_reserved"]
         })
@@ -929,7 +930,7 @@ defmodule Ruxi.C2.Engine do
 
     knowledge =
       Enum.filter(story["clues"], &(&1["id"] in a["knowledge"]))
-      |> Enum.map(&Map.take(&1, ~w(id text shareable)))
+      |> Enum.map(&Map.take(&1, ~w(id label text shareable)))
 
     team =
       Enum.map(story["roles"], fn other ->
@@ -951,7 +952,7 @@ defmodule Ruxi.C2.Engine do
         o && o["owner"] == r
       end)
       |> Enum.map(fn item ->
-        Map.merge(Map.take(item, ~w(id label tags)), %{
+        Map.merge(Map.take(item, ~w(id label description tags)), %{
           "version" => s["ownership"][item["id"]]["version"],
           "reserved" => reserved?(s, item["id"], now)
         })
@@ -970,9 +971,9 @@ defmodule Ruxi.C2.Engine do
         do: Content.index(story, "media")[s["ending"]] |> Map.take(~w(id summary kind)),
         else: nil
 
-    own_results =
+    action_history =
       s["settlements"]
-      |> Enum.take(-8)
+      |> Enum.take(-80)
       |> Enum.flat_map(fn settlement ->
         settlement["results"]
         |> Enum.filter(&(&1["actor"] == r and &1["status"] != "passed"))
@@ -980,6 +981,7 @@ defmodule Ruxi.C2.Engine do
           Map.take(result, ~w(intent_id action_id status cost success))
           |> Map.put("step_id", settlement["step_id"])
           |> Map.put("round", settlement["round"])
+          |> Map.put("step", settlement["step"])
           |> Map.put("label", get_in(settlement, ["intents", r, "action", "label"]))
         end)
       end)
@@ -999,7 +1001,8 @@ defmodule Ruxi.C2.Engine do
       "map" => %{"locations" => locations, "links" => links},
       "actions" => actions,
       "knowledge" => knowledge,
-      "own_results" => own_results,
+      "own_results" => Enum.take(action_history, -8),
+      "action_history" => action_history,
       "own_intent" => if(s["intents"][r], do: Map.take(s["intents"][r], ~w(id)), else: nil),
       "inventory" => inventory,
       "offers" => s["offers"] |> Map.values() |> Enum.filter(&(r in [&1["from"], &1["to"]])),

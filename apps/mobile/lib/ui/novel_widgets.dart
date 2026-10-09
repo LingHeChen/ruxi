@@ -198,7 +198,7 @@ class _NovelReaderState extends State<NovelReader> {
                         const Padding(
                           padding: EdgeInsets.only(bottom: 18),
                           child: Text(
-                            '✧ 新线索已记入旅途手记',
+                            '✧ 新线索已记入线索册',
                             style: TextStyle(fontSize: 12, color: novelGold),
                           ),
                         ),

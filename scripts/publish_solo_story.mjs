@@ -24,7 +24,8 @@ if(!isDeepStrictEqual(current.content,story)) {
 }
 const catalog=await api('GET','/api/v2/stories?seats=1');
 assert(catalog.items.some(p=>p.story_id===project.id),'Single-player catalog filter');
-for(const choice of ['deliver','keep']) {
+const endings=new Set();
+for(const saved of ['ledger','tape']) for(const memory of [false,true]) for(const choice of ['deliver','keep']) {
  const player=await api('POST','/v1/auth/guest',{device_id:uuid(),command_id:uuid()});
  const room=await api('POST','/api/v2/rooms',{release_id:project.current_release_id},player.access_token,{'Idempotency-Key':uuid()});
  const snap=()=>api('GET',`/api/v2/rooms/${room.room_id}/snapshot`,{},player.access_token);
@@ -37,14 +38,19 @@ for(const choice of ['deliver','keep']) {
  await command('member.ready',{ready:true});
  await command('room.start');
  for(const cue of (await snap()).blocks.narrative_cues)await command('media.complete',{cue_id:cue.id,mode:'summary'});
- for(const action_id of ['read_letter','inspect_photo','move:office_archive','read_ledger','open_box','move:archive_office',choice]) {
+ for(const action_id of ['read_letter','inspect_postmark',...(memory?['inspect_photo']:[]),'move:office_archive','inspect_damage',`rescue_${saved}`,'open_box','deduce_rescue','move:archive_office',choice]) {
   const state=await snap();
-  if(state.blocks.self.ap_remaining===0)await command('round.end');
+  if(state.blocks.self.ap_remaining<(action_id.startsWith('rescue_')?2:1)) { await command('round.end'); const pass=await snap(); for(const cue of pass.blocks.narrative_cues.filter(c=>!pass.blocks.acknowledged_cues.includes(c.id))) await command('media.complete',{cue_id:cue.id,mode:'summary'}); }
   await command('action.submit',{action_id,target_id:null});
   const updated=await snap();
   for(const cue of updated.blocks.narrative_cues.filter(c=>!updated.blocks.acknowledged_cues.includes(c.id))) await command('media.complete',{cue_id:cue.id,mode:'summary'});
  }
  const end=await snap();
- assert.equal(end.blocks.room.ending.id,choice==='deliver'?'dawn':'kept');
+ const expected=choice==='keep'?(memory?'kept_memory':'kept'):(saved==='tape'&&!memory?'dawn':`dawn_${saved}${memory?'_memory':''}`);
+ assert.equal(end.blocks.room.ending.id,expected);
+ assert(end.blocks.inventory.some(i=>i.id===saved));
+ assert(!end.blocks.inventory.some(i=>i.id===(saved==='ledger'?'tape':'ledger')));
+ assert(end.blocks.action_history.length>=9);
+ endings.add(expected);
 }
-console.log(JSON.stringify({passed:true,title:story.title,players:1,endings:['dawn','kept'],story_id:project.id,player_url:`http://localhost:8080/stories/${project.id}`}));
+console.log(JSON.stringify({passed:true,title:story.title,players:1,endings:[...endings],routes:8,story_id:project.id,player_url:`http://localhost:8080/stories/${project.id}`}));

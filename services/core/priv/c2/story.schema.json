@@ -176,6 +176,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
           }
         },
         "required": [
@@ -201,6 +205,10 @@
           },
           "shareable": {
             "type": "boolean"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80
           }
         },
         "required": [

@@ -4,9 +4,9 @@
   "title": "雨夜最后一封信",
   "rules": {
     "ap_per_round": 4,
-    "step_timeout_s": 120,
+    "step_timeout_s": 240,
     "proposal_ttl_s": 60,
-    "round_limit": 6
+    "round_limit": 4
   },
   "roles": [
     {
@@ -15,7 +15,7 @@
       "location": "office",
       "knowledge": [],
       "goals": [
-        "查明未寄出的信件属于谁，在天亮前作出你的选择。"
+        "找出母亲在雨夜离开的原因，以及是谁把旧信送到门前。"
       ]
     }
   ],
@@ -29,8 +29,8 @@
     {
       "id": "archive",
       "label": "档案室",
-      "description": "铁柜后传来钟摆声。二十年前的投递簿，就在最上层抽屉。",
-      "discovered": true
+      "description": "雨水正从屋顶裂缝滴下。桌上的投递簿与录音带，不能同时抢救。",
+      "discovered": false
     }
   ],
   "links": [
@@ -40,8 +40,8 @@
       "to": "archive",
       "cost": 1,
       "condition": {
-        "op": "all",
-        "args": []
+        "op": "owns",
+        "ref": "archive_key"
       }
     },
     {
@@ -58,8 +58,9 @@
   "objects": [
     {
       "id": "letter",
-      "label": "未寄出的信",
+      "label": "母亲的旧信",
       "location": "office",
+      "description": "写给你的信，夹着一把档案室钥匙。那句“我会回来”，已经迟到了二十年。",
       "tags": [
         "inspectable"
       ]
@@ -68,14 +69,34 @@
       "id": "photo",
       "label": "泛黄的合照",
       "location": "office",
+      "description": "合照中的男孩握着一枚纸船徽章。照片背面写着“长河，八岁”。",
       "tags": [
         "inspectable"
       ]
     },
     {
+      "id": "archive_key",
+      "label": "黄铜钥匙",
+      "location": "office",
+      "description": "从信封里获得的旧钥匙。持有它就能通过地图进入档案室，不需要手动装备。",
+      "tags": [
+        "tool"
+      ]
+    },
+    {
       "id": "ledger",
-      "label": "投递簿",
+      "label": "雨夜投递簿",
       "location": "archive",
+      "description": "如果先抢救它，就能保存那夜邮车改道的记录。它会影响你最后如何讲述母亲的故事。",
+      "tags": [
+        "inspectable"
+      ]
+    },
+    {
+      "id": "tape",
+      "label": "母亲的录音带",
+      "location": "archive",
+      "description": "如果先抢救它，就能保住母亲最后一段声音。录音与投递簿无法同时完整保全。",
       "tags": [
         "inspectable"
       ]
@@ -84,6 +105,7 @@
       "id": "box",
       "label": "蓝色铁盒",
       "location": "archive",
+      "description": "铁盒的盖子没有上锁，盒底压着一张等了二十年的便条。",
       "tags": [
         "inspectable"
       ]
@@ -92,22 +114,56 @@
   "clues": [
     {
       "id": "address",
-      "text": "信上的地址早已拆迁。落款是母亲的名字，日期是她离开邮局的前一天。她写道：如果你看到这封信，先去找蓝色铁盒。",
+      "label": "未寄出的承诺",
+      "text": "信纸上的日期是母亲离开的雨夜。“我会回来，你先睡。”信封里夹着档案室钥匙。你曾以为这是一句被遗忘的承诺。",
       "shareable": false
     },
     {
       "id": "memory",
-      "text": "合照背面写着：每一次离开，都可以是为了回来。照片里，年幼的你紧握母亲的手。",
+      "label": "合照里的男孩",
+      "text": "你在母亲身边认出一个陌生男孩。他的胸前别着纸船徽章，照片背面写着“长河，八岁”。母亲的手正护着他的肩。",
+      "shareable": false
+    },
+    {
+      "id": "postmark",
+      "label": "今夜的新邮戳",
+      "text": "旧信纸上有二十年前的日期，外面的邮戳却是今夜。盖章人的落款只有“长河”。这封信是有人特意送来的。",
+      "shareable": false
+    },
+    {
+      "id": "damage",
+      "label": "漏水的档案室",
+      "text": "雨水将漫过桌面。你只有时间先保护一件东西：邮车投递簿，或者母亲留下的录音带。另一样会被水浸坏。",
       "shareable": false
     },
     {
       "id": "record",
-      "text": "投递簿记载：那一夜桥梁被洪水冲断。母亲留下信件，带着最后一辆邮车去疏散居民，此后再没有回来。",
+      "label": "邮车为什么改道",
+      "text": "投递簿里，母亲的末班邮车取消了原投递路线，转向学校。备注写着“桥断，二十八名孩子，必须赶在水涨前接走”。最后的签收栏：长河。",
+      "shareable": false
+    },
+    {
+      "id": "voice",
+      "label": "录音中的呼救",
+      "text": "杂音中你听见母亲的声音：“长河，带孩子们上车。不要回去找书包。”接着她轻声说：“要是回不来，把信交给我的孩子。”她最后提到的是你的名字。",
+      "shareable": false
+    },
+    {
+      "id": "last_note",
+      "label": "铁盒底的便条",
+      "text": "便条写着：“活下来的人，请把这封信送回家。不要让我的孩子以为，我是不想回来。”末尾画着一只小纸船。",
+      "shareable": false
+    },
+    {
+      "id": "doubt",
+      "label": "还没解释的矛盾",
+      "text": "“她抛下了我”无法解释：为什么邮车去了学校，为什么旧信偏偏在今夜送来。你需要把抢救的证据与新邮戳联系起来。",
       "shareable": false
     },
     {
       "id": "truth",
-      "text": "铁盒里是一份救援名单和母亲留下的录音文字：不是不想回来，是有人需要我。等你长大，就替我把这些信送到吧。",
+      "label": "迟到的归途",
+      "text": "母亲离开是为了救人。长河活了下来，终于把她留下的信送到你的门前。眼前的证据让你重新理解了那句“我会回来”。",
       "shareable": false
     }
   ],
@@ -122,10 +178,27 @@
         "op": "all",
         "args": []
       },
+      "display_condition": {
+        "op": "all",
+        "args": []
+      },
       "effects": [
         {
           "op": "reveal",
           "ref": "address",
+          "audience": "self"
+        },
+        {
+          "op": "grant",
+          "ref": "letter"
+        },
+        {
+          "op": "grant",
+          "ref": "archive_key"
+        },
+        {
+          "op": "discover",
+          "ref": "archive",
           "audience": "self"
         },
         {
@@ -139,7 +212,7 @@
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "信封已经受潮，慢慢展开它。"
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
     },
     {
       "id": "inspect_photo",
@@ -151,11 +224,20 @@
         "op": "all",
         "args": []
       },
+      "display_condition": {
+        "op": "all",
+        "args": []
+      },
       "effects": [
         {
           "op": "reveal",
           "ref": "memory",
           "audience": "self"
+        },
+        {
+          "op": "set",
+          "ref": "world.remembered",
+          "value": true
         },
         {
           "op": "cue",
@@ -168,27 +250,31 @@
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "照片背面似乎还有一行字。"
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
     },
     {
-      "id": "read_ledger",
-      "label": "查阅雨夜投递簿",
-      "location": "archive",
-      "target": "ledger",
+      "id": "inspect_postmark",
+      "label": "辨认新邮戳",
+      "location": "office",
+      "target": "letter",
       "cost": 1,
       "condition": {
+        "op": "has_knowledge",
+        "ref": "address"
+      },
+      "display_condition": {
         "op": "has_knowledge",
         "ref": "address"
       },
       "effects": [
         {
           "op": "reveal",
-          "ref": "record",
+          "ref": "postmark",
           "audience": "self"
         },
         {
           "op": "cue",
-          "ref": "echo_read_ledger",
+          "ref": "echo_inspect_postmark",
           "audience": "self",
           "blocking": true
         }
@@ -197,22 +283,243 @@
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "沿着信件上的日期寻找记录。"
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
     },
     {
-      "id": "open_box",
-      "label": "打开蓝色铁盒",
+      "id": "inspect_damage",
+      "label": "查看漏水的桌面",
       "location": "archive",
       "target": "box",
       "cost": 1,
       "condition": {
-        "op": "has_knowledge",
-        "ref": "record"
+        "op": "all",
+        "args": []
+      },
+      "display_condition": {
+        "op": "all",
+        "args": []
       },
       "effects": [
         {
           "op": "reveal",
-          "ref": "truth",
+          "ref": "damage",
+          "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_inspect_damage",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
+    },
+    {
+      "id": "rescue_ledger",
+      "label": "先抢救投递簿",
+      "location": "archive",
+      "target": "ledger",
+      "cost": 2,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.saved",
+          "value": "ledger"
+        },
+        {
+          "op": "grant",
+          "ref": "ledger"
+        },
+        {
+          "op": "reveal",
+          "ref": "record",
+          "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_rescue_ledger",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "这是一次无法撤回的选择：录音带将受损，投递记录会被保存。"
+    },
+    {
+      "id": "rescue_tape",
+      "label": "先抢救录音带",
+      "location": "archive",
+      "target": "tape",
+      "cost": 2,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.saved",
+          "value": "tape"
+        },
+        {
+          "op": "grant",
+          "ref": "tape"
+        },
+        {
+          "op": "reveal",
+          "ref": "voice",
+          "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_rescue_tape",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "这是一次无法撤回的选择：投递簿将受损，母亲的声音会被保存。"
+    },
+    {
+      "id": "listen_rain",
+      "label": "停下来等一阵雨",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "lte",
+            "ref": "actor.ap",
+            "value": 1
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "has_knowledge",
+            "ref": "damage"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "lte",
+            "ref": "actor.ap",
+            "value": 1
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "echo_listen_rain",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 99,
+      "required_participants": 1,
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
+    },
+    {
+      "id": "open_box",
+      "label": "查看蓝色铁盒",
+      "location": "archive",
+      "target": "box",
+      "cost": 1,
+      "condition": {
+        "op": "ne",
+        "ref": "world.saved",
+        "value": "none"
+      },
+      "display_condition": {
+        "op": "ne",
+        "ref": "world.saved",
+        "value": "none"
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "last_note",
           "audience": "self"
         },
         {
@@ -226,65 +533,400 @@
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "你已经知道那一夜发生了什么。"
+      "risk_text": "每次调查都会让这个雨夜向前推进。"
+    },
+    {
+      "id": "deduce_abandon",
+      "label": "她最终还是离开了我",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "ne",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "last_note"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "postmark"
+          },
+          {
+            "op": "eq",
+            "ref": "world.understood",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "ne",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "last_note"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "postmark"
+          },
+          {
+            "op": "eq",
+            "ref": "world.understood",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "doubt",
+          "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_deduce_abandon",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "试着解释证据。判断不完整时，你仍然可以重新思考。"
+    },
+    {
+      "id": "deduce_rescue",
+      "label": "她那晚是去救人的",
+      "location": "archive",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "ne",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "last_note"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "postmark"
+          },
+          {
+            "op": "eq",
+            "ref": "world.understood",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "ne",
+            "ref": "world.saved",
+            "value": "none"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "last_note"
+          },
+          {
+            "op": "has_knowledge",
+            "ref": "postmark"
+          },
+          {
+            "op": "eq",
+            "ref": "world.understood",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "ref": "world.understood",
+          "value": true
+        },
+        {
+          "op": "reveal",
+          "ref": "truth",
+          "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_deduce_rescue",
+          "audience": "self",
+          "blocking": true
+        }
+      ],
+      "failure": [],
+      "threshold": null,
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "把线索联系起来，给这个雨夜一个解释。"
     },
     {
       "id": "deliver",
-      "label": "带上信件，继续她的投递",
+      "label": "带上旧信，找到长河",
       "location": "office",
       "target": "letter",
       "cost": 1,
       "condition": {
-        "op": "has_knowledge",
-        "ref": "truth"
+        "op": "eq",
+        "ref": "world.understood",
+        "value": true
+      },
+      "display_condition": {
+        "op": "eq",
+        "ref": "world.understood",
+        "value": true
       },
       "effects": [
         {
           "op": "set",
           "ref": "world.choice",
-          "value": "dawn"
+          "value": "deliver"
         }
       ],
       "failure": [],
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "最终选择：让这段故事走向天亮。"
+      "risk_text": "最终选择。你的抢救结果与是否认出合照中的人，会进入最后的告别。"
     },
     {
       "id": "keep",
-      "label": "将信件留在邮局，珍藏这段往事",
+      "label": "写下回信，珍藏这段往事",
       "location": "office",
       "target": "letter",
       "cost": 1,
       "condition": {
-        "op": "has_knowledge",
-        "ref": "truth"
+        "op": "eq",
+        "ref": "world.understood",
+        "value": true
+      },
+      "display_condition": {
+        "op": "eq",
+        "ref": "world.understood",
+        "value": true
       },
       "effects": [
         {
           "op": "set",
           "ref": "world.choice",
-          "value": "kept"
+          "value": "keep"
         }
       ],
       "failure": [],
       "threshold": null,
       "max_uses": 1,
       "required_participants": 1,
-      "risk_text": "最终选择：把思念留给自己。"
+      "risk_text": "最终选择。你的抢救结果与是否认出合照中的人，会进入最后的告别。"
     }
   ],
   "templates": [],
   "events": [
     {
+      "id": "rising_rain",
+      "trigger": "round_end",
+      "priority": 50,
+      "condition": {
+        "op": "gte",
+        "ref": "clock.round",
+        "value": 1
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "rising_rain",
+          "audience": "all",
+          "blocking": true
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "power_failure",
+      "trigger": "round_end",
+      "priority": 50,
+      "condition": {
+        "op": "gte",
+        "ref": "clock.round",
+        "value": 2
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "power_failure",
+          "audience": "all",
+          "blocking": true
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "ending_dawn_ledger",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "deliver"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "ledger"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "dawn_ledger"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "ending_dawn_ledger_memory",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "deliver"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "ledger"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "dawn_ledger_memory"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "ending_dawn",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "deliver"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "tape"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "dawn"
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "ending_dawn_tape_memory",
+      "trigger": "step_end",
+      "priority": 10,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "deliver"
+          },
+          {
+            "op": "eq",
+            "ref": "world.saved",
+            "value": "tape"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "end",
+          "value": "dawn_tape_memory"
+        }
+      ],
+      "once": true
+    },
+    {
       "id": "ending_kept",
       "trigger": "step_end",
       "priority": 10,
       "condition": {
-        "op": "eq",
-        "ref": "world.choice",
-        "value": "kept"
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "keep"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": false
+          }
+        ]
       },
       "effects": [
         {
@@ -295,18 +937,28 @@
       "once": true
     },
     {
-      "id": "ending_dawn",
+      "id": "ending_kept_memory",
       "trigger": "step_end",
       "priority": 10,
       "condition": {
-        "op": "eq",
-        "ref": "world.choice",
-        "value": "dawn"
+        "op": "all",
+        "args": [
+          {
+            "op": "eq",
+            "ref": "world.choice",
+            "value": "keep"
+          },
+          {
+            "op": "eq",
+            "ref": "world.remembered",
+            "value": true
+          }
+        ]
       },
       "effects": [
         {
           "op": "end",
-          "value": "dawn"
+          "value": "kept_memory"
         }
       ],
       "once": true
@@ -318,7 +970,7 @@
       "condition": {
         "op": "gte",
         "ref": "clock.round",
-        "value": 6
+        "value": 4
       },
       "effects": [
         {
@@ -331,6 +983,9 @@
   ],
   "initial": {
     "world": {
+      "saved": "none",
+      "remembered": false,
+      "understood": false,
       "choice": "none"
     },
     "inventory": {
@@ -343,28 +998,7 @@
       "kind": "text",
       "uri": "",
       "audience": "public",
-      "summary": "旧邮局即将停用，这是你最后一次值夜。午夜，一封没有邮票的信从门缝滑进来，收件人竟是你。你可以先拆信、翻看合照，再去档案室寻找那场雨夜的记录。调查消耗行动点；用尽后结束回合即可继续。"
-    },
-    {
-      "id": "dawn",
-      "kind": "text",
-      "uri": "",
-      "audience": "public",
-      "summary": "天亮时，你带着铁盒里的信件走出邮局。第一扇门打开，一位老人看着信上的字迹，忽然红了眼眶。原来，有些迟到的告别，仍然能够抵达。你终于理解了母亲，也开始了自己的第一趟投递。"
-    },
-    {
-      "id": "kept",
-      "kind": "text",
-      "uri": "",
-      "audience": "public",
-      "summary": "你把母亲的信放进蓝色铁盒，锁好档案柜。邮局即将消失，但那些被救下的人、那场雨和她的选择，都不会再被你忘记。你关上最后一盏灯，带着平静离开。"
-    },
-    {
-      "id": "unfinished",
-      "kind": "text",
-      "uri": "",
-      "audience": "public",
-      "summary": "清晨的拆迁通知打断了你的调查。你带走了桌上的信，谜底仍留在档案室里。或许有一天，你会重新回到这里，完成这次迟到的告别。"
+      "summary": "这是旧邮局最后一次亮灯。你一直相信，母亲在二十年前的雨夜抛下了你。午夜，门缝下出现一封旧信，收件人是你。你追到门边，送信的人已经走远。谁会在邮局关闭前送来这封信？先看看信与邮戳，也许桌上的合照会让你想起什么。"
     },
     {
       "id": "echo_read_letter",
@@ -373,7 +1007,7 @@
       "audience": [
         "keeper"
       ],
-      "summary": "你用指尖沿着信封的封口轻轻划开。纸页发出细小的响声。熟悉的笔迹像一道闪电，将你带回很久以前。"
+      "summary": "你展开信纸。熟悉的字迹让你停住了手。钥匙从信封里滑落，撞在桌面上。你记得小时候曾拿着这把钥匙，跟在母亲身后。"
     },
     {
       "id": "echo_inspect_photo",
@@ -382,16 +1016,52 @@
       "audience": [
         "keeper"
       ],
-      "summary": "你擦去相框上的灰尘。母亲年轻时的笑容慢慢清晰起来。照片翻到背面，那句一直被藏起来的话，终于落进你的眼里。"
+      "summary": "你擦去照片上的灰尘。母亲护着一个戴纸船徽章的男孩。很久以前，你曾嫉妒过她看向别人的那种温柔。此刻，照片里多了一张值得记住的脸。"
     },
     {
-      "id": "echo_read_ledger",
+      "id": "echo_inspect_postmark",
       "kind": "text",
       "uri": "",
       "audience": [
         "keeper"
       ],
-      "summary": "厚重的投递簿在桌面摊开。你沿着日期一行行寻找，雨声忽然变得遥远。一段从未有人讲完的往事，藏在最后一页。"
+      "summary": "你把信封举到灯下。纸是旧的，邮戳却没有褪色。你的目光停在盖章人的名字上：长河。这个名字为何会出现在母亲的旧信上？"
+    },
+    {
+      "id": "echo_inspect_damage",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "水滴打在桌面，声音越来越密。投递簿与录音带放在两端。你试着一手拿起一样，却发现录音机缠着电线，厚簿也已粘在潮湿的桌上。必须先保住其中一件。"
+    },
+    {
+      "id": "echo_rescue_ledger",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你用外套裹住投递簿，终于将它从湿桌面揭下。身后的录音机冒出一缕白烟，声音永远停了。但纸页上的路线，留下了母亲那一夜的选择。"
+    },
+    {
+      "id": "echo_rescue_tape",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你拔下电源，将录音带从机身中取出。纸页在另一侧的积水中散开，最后几行记录再也辨认不清。你按下播放键，第一次听见母亲在那个雨夜的声音。"
+    },
+    {
+      "id": "echo_listen_rain",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你靠在柜边，等那阵密集的水声过去。手指终于不再发抖。下一段时间里，你必须作出抢救的选择。"
     },
     {
       "id": "echo_open_box",
@@ -400,7 +1070,88 @@
       "audience": [
         "keeper"
       ],
-      "summary": "蓝色铁盒的锁扣已经松动。里面没有财物，只有一叠未寄出的信和一份救援名单。你读到母亲留下的话，手指不自觉地收紧。"
+      "summary": "你掀开铁盒，底下只有一张便条。它没有告诉你该如何原谅谁，却留下了一个请求。现在，你可以结合抢救的证据与今夜的邮戳，判断母亲为什么没有回来。"
+    },
+    {
+      "id": "echo_deduce_abandon",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你差点把熟悉的结论说出口。可手里的证据让这句话变得不完整。你不是必须原谅她，但至少应该先知道，她走向了哪里。"
+    },
+    {
+      "id": "echo_deduce_rescue",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你把那夜的证据、铁盒中的请求和新邮戳放在一起。“长河”连起了二十年前与今夜。母亲不是忘了回家，是有人替她完成了最后一段归途。"
+    },
+    {
+      "id": "rising_rain",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "第二阵急雨落下。档案室的屋顶开始漏水，窗外的路灯一盏盏暗下去。时间正在改变这座邮局。"
+    },
+    {
+      "id": "power_failure",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "台灯闪烁后熄灭，只有窗外的天色微微发白。你摸着手里抢救下来的东西，知道这个雨夜已经接近尾声。"
+    },
+    {
+      "id": "dawn_ledger",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "在街口，你拿着写有“长河”的信封询问。一位老人停下脚步，说起自己八岁时经历的那场洪水。他正是昨夜送信的人。\n\n你把投递簿摊开，第一次向别人讲起母亲改变邮车路线的那一夜。\n\n你带着其余旧信走向第一扇门。迟到的告别终于抵达，而你也开始了自己的投递。"
+    },
+    {
+      "id": "dawn_ledger_memory",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "在街口，你认出老人胸前的纸船徽章。你还记得合照里的那个男孩，于是先叫出了他的名字。他终于知道，你已经明白了。\n\n你把投递簿摊开，第一次向别人讲起母亲改变邮车路线的那一夜。\n\n你带着其余旧信走向第一扇门。迟到的告别终于抵达，而你也开始了自己的投递。"
+    },
+    {
+      "id": "dawn",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "在街口，你拿着写有“长河”的信封询问。一位老人停下脚步，说起自己八岁时经历的那场洪水。他正是昨夜送信的人。\n\n你播放那段幸存的录音。母亲的声音再次叫到“长河”，老人低下了头。\n\n你带着其余旧信走向第一扇门。迟到的告别终于抵达，而你也开始了自己的投递。"
+    },
+    {
+      "id": "dawn_tape_memory",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "在街口，你认出老人胸前的纸船徽章。你还记得合照里的那个男孩，于是先叫出了他的名字。他终于知道，你已经明白了。\n\n你播放那段幸存的录音。母亲的声音再次叫到“长河”，老人低下了头。\n\n你带着其余旧信走向第一扇门。迟到的告别终于抵达，而你也开始了自己的投递。"
+    },
+    {
+      "id": "kept",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "你在回信里写道：我终于知道，那句话并不是你不想兑现的承诺。\n\n你将回信与抢救下来的东西放进铁盒。母亲的选择属于那场雨，而是否原谅、怎样继续生活，仍然属于你。清晨，你锁好邮局，带着自己的答案离开。"
+    },
+    {
+      "id": "kept_memory",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "你在回信里写下了合照中那个男孩的名字。你不再嫉妒母亲护住他的那只手。\n\n你将回信与抢救下来的东西放进铁盒。母亲的选择属于那场雨，而是否原谅、怎样继续生活，仍然属于你。清晨，你锁好邮局，带着自己的答案离开。"
+    },
+    {
+      "id": "unfinished",
+      "kind": "text",
+      "uri": "",
+      "audience": "public",
+      "summary": "清晨，拆迁人员敲响了门。你带走旧信，却还没能拼起所有的证据。母亲的那一夜与送信人的名字，仍在等待一个完整的解释。"
     }
   ],
   "votes": []

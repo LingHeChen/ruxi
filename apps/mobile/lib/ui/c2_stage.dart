@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../data/c2_client.dart';
 import '../data/room_client.dart';
 import 'novel_widgets.dart';
+import 'game_inventory.dart';
 
 class C2Stage extends StatefulWidget {
   const C2Stage({
@@ -29,7 +30,6 @@ class _C2StageState extends State<C2Stage> {
   int? _round;
   final _results = <String>{}, _cues = <String>{}, _knowledge = <String>{};
   final _messages = <NovelMessage>[];
-  final _log = <NovelMessage>[];
   List<dynamic> items(String key) => client.view?[key] as List? ?? [];
   @override
   void initState() {
@@ -147,8 +147,16 @@ class _C2StageState extends State<C2Stage> {
         room['ending'] == null) {
       enqueue(
         NovelMessage(
-          title: '第 $round 回合',
-          text: '时间向前，故事继续。\n行动点已恢复，重新决定你的下一步。',
+          title: v['story_title'] == '雨夜最后一封信'
+              ? (round == 2
+                    ? '雨势渐急'
+                    : round == 3
+                    ? '灯光熄灭'
+                    : '天将破晓')
+              : '第 $round 回合',
+          text: v['story_title'] == '雨夜最后一封信'
+              ? '这个雨夜向前走了一段。\n留意场景的变化，再作出你的选择。'
+              : '时间向前，故事继续。\n行动点已恢复，重新决定你的下一步。',
           round: round,
         ),
       );
@@ -170,7 +178,6 @@ class _C2StageState extends State<C2Stage> {
 
   void enqueue(NovelMessage message) {
     _messages.add(message);
-    _log.add(message);
     WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(present()));
   }
 
@@ -231,7 +238,12 @@ class _C2StageState extends State<C2Stage> {
   }
 
   Future<void> choose(Json action) async {
-    if (!['deliver', 'keep'].contains(action['id'])) {
+    if (![
+      'deliver',
+      'keep',
+      'rescue_ledger',
+      'rescue_tape',
+    ].contains(action['id'])) {
       await send('action.submit', {
         'action_id': action['id'],
         'target_id': null,
@@ -345,89 +357,29 @@ class _C2StageState extends State<C2Stage> {
     }
   }
 
-  Future<void> journal() async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: const Color(0xff152127),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 650),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '旅途手记',
-                        style: TextStyle(fontSize: 24, fontFamily: 'Songti SC'),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      tooltip: '关闭手记',
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      for (final k in items('knowledge'))
-                        ListTile(
-                          leading: const Icon(
-                            Icons.mail_outline,
-                            color: novelGold,
-                          ),
-                          trailing:
-                              k['shareable'] == true &&
-                                  items('roles').length > 1
-                              ? IconButton(
-                                  tooltip: '分享线索',
-                                  icon: const Icon(Icons.ios_share, size: 18),
-                                  onPressed: client.busy
-                                      ? null
-                                      : () {
-                                          Navigator.pop(context);
-                                          unawaited(
-                                            share(Map<String, dynamic>.from(k)),
-                                          );
-                                        },
-                                )
-                              : null,
-                          title: Text(
-                            k['text'],
-                            style: const TextStyle(height: 1.8),
-                          ),
-                        ),
-                      if (items('knowledge').isEmpty)
-                        const Text('还没有线索。尝试与场景中的事物互动。'),
-                      const Divider(height: 40),
-                      const Text('随身物品', style: TextStyle(color: novelGold)),
-                      for (final i in items('inventory'))
-                        ListTile(title: Text(i['label'])),
-                      const Divider(height: 32),
-                      const Text('本次阅读记录', style: TextStyle(color: novelGold)),
-                      for (final m in _log.reversed)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            '${m.title}\n${m.text}',
-                            style: const TextStyle(height: 1.8),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Future<void> openPanel(GamePanel panel) async {
+    if (_presenting || !mounted) return;
+    _presenting = true;
+    try {
+      final clue = await showDialog<Json>(
+        context: context,
+        builder: (dialogContext) => GameInventory(
+          initialPanel: panel,
+          clues: items('knowledge').cast<Json>(),
+          inventory: items('inventory').cast<Json>(),
+          history:
+              (client.view?['action_history'] as List? ?? items('own_results'))
+                  .cast<Json>(),
+          onShare: !client.busy && items('roles').length > 1
+              ? (clue) => Navigator.pop(dialogContext, clue)
+              : null,
         ),
-      ),
-    );
+      );
+      if (clue != null && mounted) await share(clue);
+    } finally {
+      _presenting = false;
+      if (mounted) unawaited(present());
+    }
   }
 
   @override
@@ -470,6 +422,34 @@ class _C2StageState extends State<C2Stage> {
         .where((m) => m['member_id'] == v['own_member_id'])
         .firstOrNull;
     final solo = items('roles').length == 1;
+    final cinematic = solo && v['story_title'] == '雨夜最后一封信';
+    final clues = items('knowledge').map((k) => k['id']).toSet();
+    final chapter = clues.contains('truth')
+        ? '第三幕 · 迟到的告别'
+        : self?['location'] == 'archive' || clues.contains('damage')
+        ? '第二幕 · 雨水中的选择'
+        : '第一幕 · 雨夜来信';
+    var sceneText = location?['description'] ?? '留意周围的细节，选择你的下一步。';
+    if (cinematic && self?['location'] == 'archive') {
+      if (clues.contains('truth')) {
+        sceneText = '你已经把那夜的证据与今夜的邮戳联系起来。回到值班室，决定怎样完成这次迟到的告别。';
+      } else if (clues.contains('last_note')) {
+        sceneText = clues.contains('postmark')
+            ? '抢救的证据与铁盒中的便条已经摆在面前。母亲为什么没回来？又是谁送来了这封信？'
+            : '便条提到一个活下来的人。回值班室看看信封的新邮戳，也许能找到连接过去与今夜的名字。';
+      } else if (clues.contains('record') || clues.contains('voice')) {
+        sceneText = '你抢救下来的证据已经放入背包。雨水漫过桌面，蓝色铁盒的盖子仍然紧闭着。';
+      }
+    } else if (cinematic) {
+      if (clues.contains('truth')) {
+        sceneText = '天色正在发白。你可以带着旧信去找到长河，也可以写下自己的回信。手里的证据与记忆，会陪你完成最后的选择。';
+      } else if (clues.contains('address')) {
+        sceneText = '黄铜钥匙已经放入背包。信封的新邮戳和桌上的旧合照，也许藏着值得带进档案室的线索。';
+      }
+    }
+    final visibleActions = items('actions')
+        .where((a) => (a['remaining_uses'] ?? 1) > 0)
+        .toList();
     final lobby = room['status'] == 'lobby';
     final active = room['status'] == 'active';
     final ended = room['ending'] != null;
@@ -499,15 +479,23 @@ class _C2StageState extends State<C2Stage> {
                           ),
                         ),
                       )
-                    : Image.asset(
-                        background,
-                        key: ValueKey(background),
-                        fit: BoxFit.cover,
-                        alignment: Alignment(narrow ? .45 : 0, 0),
-                        width: size.maxWidth,
-                        height: size.maxHeight,
-                        errorBuilder: (_, _, _) =>
-                            const ColoredBox(color: Color(0xff1a2a32)),
+                    : AnimatedOpacity(
+                        opacity: cinematic
+                            ? ((room['round'] ?? 1) >= 3 ? .65 : 1)
+                            : 1,
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : const Duration(milliseconds: 900),
+                        child: Image.asset(
+                          background,
+                          key: ValueKey(background),
+                          fit: BoxFit.cover,
+                          alignment: Alignment(narrow ? .45 : 0, 0),
+                          width: size.maxWidth,
+                          height: size.maxHeight,
+                          errorBuilder: (_, _, _) =>
+                              const ColoredBox(color: Color(0xff1a2a32)),
+                        ),
                       ),
               ),
               const DecoratedBox(
@@ -553,15 +541,26 @@ class _C2StageState extends State<C2Stage> {
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: journal,
-                            tooltip: '旅途手记',
-                            icon: Badge(
-                              label: Text('${items('knowledge').length}'),
-                              isLabelVisible: items('knowledge').isNotEmpty,
-                              child: const Icon(Icons.menu_book_outlined),
+                          for (final panel in GamePanel.values)
+                            IconButton(
+                              onPressed: () => unawaited(openPanel(panel)),
+                              tooltip: panel.title,
+                              icon: Badge(
+                                label: Text(
+                                  '${panel == GamePanel.clues
+                                      ? items('knowledge').length
+                                      : panel == GamePanel.inventory
+                                      ? items('inventory').length
+                                      : (v['action_history'] as List? ?? items('own_results')).length}',
+                                ),
+                                isLabelVisible: panel == GamePanel.clues
+                                    ? items('knowledge').isNotEmpty
+                                    : panel == GamePanel.inventory
+                                    ? items('inventory').isNotEmpty
+                                    : false,
+                                child: Icon(panel.icon, size: narrow ? 20 : 22),
+                              ),
                             ),
-                          ),
                           IconButton(
                             onPressed: client.busy
                                 ? null
@@ -591,6 +590,8 @@ class _C2StageState extends State<C2Stage> {
                                 Text(
                                   lobby
                                       ? '故事即将开始'
+                                      : cinematic
+                                      ? chapter
                                       : '第 ${room['round'] ?? 1} 回合',
                                   style: const TextStyle(
                                     color: novelGold,
@@ -631,7 +632,7 @@ class _C2StageState extends State<C2Stage> {
                                                 : novelGold,
                                           ),
                                         Text(
-                                          '  ${self?['ap_remaining'] ?? 0} 行动点',
+                                          '  ${self?['ap_remaining'] ?? 0} ${cinematic ? '余力' : '行动点'}',
                                           style: const TextStyle(
                                             color: Color(0xffe5dcc5),
                                             fontSize: 12,
@@ -733,8 +734,7 @@ class _C2StageState extends State<C2Stage> {
                                               : '选择你的角色。每个人的视角，都可能改变故事的方向。'
                                         : ended
                                         ? room['ending']['summary']
-                                        : location?['description'] ??
-                                              '留意周围的细节，选择你的下一步。',
+                                        : sceneText,
                                     style: TextStyle(
                                       fontSize: narrow ? 15 : 18,
                                       height: 1.9,
@@ -847,7 +847,7 @@ class _C2StageState extends State<C2Stage> {
                                       spacing: 12,
                                       runSpacing: 10,
                                       children: [
-                                        for (final a in items('actions'))
+                                        for (final a in visibleActions)
                                           NovelChoice(
                                             label: a['label'],
                                             cost: a['cost'],
@@ -868,39 +868,43 @@ class _C2StageState extends State<C2Stage> {
                                       spacing: 16,
                                       runSpacing: 8,
                                       children: [
-                                        TextButton.icon(
-                                          onPressed:
-                                              client.busy ||
-                                                  client.pending != null ||
-                                                  items('narrative_cues').any(
-                                                    (c) =>
-                                                        c['blocking'] == true &&
-                                                        !(v['acknowledged_cues']
-                                                                    as List? ??
-                                                                [])
-                                                            .contains(c['id']),
-                                                  )
-                                              ? null
-                                              : () => unawaited(() async {
-                                                  final yes = await ask(
-                                                    NovelMessage(
-                                                      title: '让时间继续',
-                                                      text: '结束本回合会放弃剩余行动点。所有参与者结束后，进入下一回合并恢复行动点。',
-                                                      subtitle:
-                                                          '当前剩余 ${self?['ap_remaining'] ?? 0} 行动点',
-                                                      confirm: true,
-                                                    ),
-                                                  );
-                                                  if (yes == true) {
-                                                    await send('round.end');
-                                                  }
-                                                }()),
-                                          icon: const Icon(
-                                            Icons.nights_stay_outlined,
-                                            size: 16,
+                                        if (!cinematic)
+                                          TextButton.icon(
+                                            onPressed:
+                                                client.busy ||
+                                                    client.pending != null ||
+                                                    items('narrative_cues').any(
+                                                      (c) =>
+                                                          c['blocking'] ==
+                                                              true &&
+                                                          !(v['acknowledged_cues']
+                                                                      as List? ??
+                                                                  [])
+                                                              .contains(
+                                                                c['id'],
+                                                              ),
+                                                    )
+                                                ? null
+                                                : () => unawaited(() async {
+                                                    final yes = await ask(
+                                                      NovelMessage(
+                                                        title: '让时间继续',
+                                                        text: '结束本回合会放弃剩余行动点。所有参与者结束后，进入下一回合并恢复行动点。',
+                                                        subtitle:
+                                                            '当前剩余 ${self?['ap_remaining'] ?? 0} 行动点',
+                                                        confirm: true,
+                                                      ),
+                                                    );
+                                                    if (yes == true) {
+                                                      await send('round.end');
+                                                    }
+                                                  }()),
+                                            icon: const Icon(
+                                              Icons.nights_stay_outlined,
+                                              size: 16,
+                                            ),
+                                            label: const Text('结束本回合'),
                                           ),
-                                          label: const Text('结束本回合'),
-                                        ),
                                         if (v['own_intent'] != null)
                                           TextButton(
                                             onPressed: client.busy
@@ -915,13 +919,15 @@ class _C2StageState extends State<C2Stage> {
                                           ),
                                         if (items('knowledge').isNotEmpty)
                                           TextButton.icon(
-                                            onPressed: journal,
+                                            onPressed: () => unawaited(
+                                              openPanel(GamePanel.clues),
+                                            ),
                                             icon: const Icon(
                                               Icons.mail_outline,
                                               size: 16,
                                             ),
                                             label: Text(
-                                              '${items('knowledge').length} 条线索 · 查看手记',
+                                              '${items('knowledge').length} 条线索 · 打开线索册',
                                             ),
                                           ),
                                       ],
