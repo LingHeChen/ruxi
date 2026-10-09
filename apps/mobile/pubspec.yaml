@@ -66,6 +66,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/stories/tide_hotel/
     - assets/stories/last_letter/office.png
     - assets/stories/last_letter/archive.png
     - assets/stories/last_letter/arrival.png

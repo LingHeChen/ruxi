@@ -347,7 +347,7 @@ class _PortalState extends State<Portal> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    '${story['seat_count']} 人协作  /  ${story['estimated_minutes'] ?? 15} 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
+                    '${story['seat_count'] == 1 ? '单人游玩' : "${story['seat_count']} 人协作"}  /  ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟  /  ${categories[story['category']] ?? '悬疑推理'}',
                     style: const TextStyle(color: _muted),
                   ),
                   const SizedBox(height: 24),
@@ -457,6 +457,16 @@ class _PortalState extends State<Portal> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
+              image: story['cover_uri'] == null
+                  ? null
+                  : DecorationImage(
+                      image: AssetImage(story['cover_uri']),
+                      fit: BoxFit.cover,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0x55000000),
+                        BlendMode.darken,
+                      ),
+                    ),
               gradient: LinearGradient(
                 colors: [
                   switch (story['category']) {
@@ -478,7 +488,9 @@ class _PortalState extends State<Portal> {
                 ),
                 const Spacer(),
                 Text(
-                  '${story['seat_count']}\n人协作',
+                  story['seat_count'] == 1
+                      ? '单人\n故事'
+                      : '${story['seat_count']}\n人协作',
                   textAlign: TextAlign.right,
                   style: const TextStyle(fontSize: 18, color: Colors.white70),
                 ),
@@ -513,7 +525,7 @@ class _PortalState extends State<Portal> {
                 Row(
                   children: [
                     Text(
-                      '${story['estimated_minutes'] ?? 15} 分钟',
+                      '${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟',
                       style: TextStyle(color: _muted, fontSize: 12),
                     ),
                     Spacer(),
@@ -975,10 +987,22 @@ class _PortalState extends State<Portal> {
               ),
               const SizedBox(height: 12),
               Text(
-                '${story['seat_count']} 名角色 · 私人房间 · ${story['estimated_minutes'] ?? 15} 分钟',
+                '${story['seat_count']} 名角色 · 私人房间 · ${story['playtime_minutes'] == null ? (story['estimated_minutes'] ?? 15) : "${story['playtime_minutes']['min']}～${story['playtime_minutes']['max']}"} 分钟',
                 style: const TextStyle(color: _muted),
               ),
               const Divider(height: 40),
+              if (story['cover_uri'] != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    story['cover_uri'],
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
               const Text('故事简介', style: TextStyle(fontSize: 20)),
               const SizedBox(height: 12),
               Text(
@@ -989,7 +1013,9 @@ class _PortalState extends State<Portal> {
               const Text('如何开始', style: TextStyle(fontSize: 20)),
               const SizedBox(height: 10),
               Text(
-                '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。',
+                story['seat_count'] == 1
+                    ? '创建单人故事，选择角色后点击走进故事。阅读、回看线索不消耗余力；可按自己的节奏调查和询问NPC。'
+                    : '创建私人房间，把邀请码发给 ${story['seat_count'] - 1} 位朋友。大家选好角色并准备后，由房主开始故事。可先以游客体验，也可以登录保存记录。',
                 style: const TextStyle(color: _muted, height: 1.8),
               ),
               const SizedBox(height: 28),

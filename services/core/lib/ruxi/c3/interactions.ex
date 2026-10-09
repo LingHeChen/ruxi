@@ -339,7 +339,8 @@ defmodule Ruxi.C3.Interactions do
       "target" => q["target"],
       "attempts_remaining" => max(0, i["attempts"]["max"] - c["used"]),
       "actor" => r,
-      "cost" => i["cost"]
+      "cost" => i["cost"],
+      "image_uri" => Engine.image_uri(s["content"], "item_" <> i["target_id"], r)
     }
 
     s =
@@ -380,7 +381,8 @@ defmodule Ruxi.C3.Interactions do
         "label" => label(s, i),
         "kind" => i["kind"],
         "cost" => i["cost"],
-        "target_id" => i["target_id"]
+        "target_id" => i["target_id"],
+        "image_uri" => Engine.image_uri(s["content"], "item_" <> i["target_id"], r)
       }
     end)
   end

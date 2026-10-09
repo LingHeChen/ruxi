@@ -1,0 +1,211 @@
+{
+  "blocks": {
+    "acknowledged_cues": [
+      "9ecbbfe0-051c-48a9-aedd-0f9b64b2fe2f"
+    ],
+    "action_history": [],
+    "actions": [
+      {
+        "allowed_now": true,
+        "cost": 1,
+        "id": "read_receipt",
+        "label": "查看江临的收据",
+        "remaining_uses": 1,
+        "required_participants": 1,
+        "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
+        "target": null
+      },
+      {
+        "allowed_now": true,
+        "cost": 1,
+        "id": "talk_lin",
+        "label": "问林素：最后见到江临是什么时候？",
+        "remaining_uses": 1,
+        "required_participants": 1,
+        "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
+        "target": "lin"
+      },
+      {
+        "allowed_now": true,
+        "cost": 1,
+        "id": "leave_early",
+        "label": "停止追查，等待天亮离岛",
+        "remaining_uses": 1,
+        "required_participants": 1,
+        "risk_text": "确认将结束本次故事；返回可继续调查。停止追查，等待天亮离岛。",
+        "target": null
+      }
+    ],
+    "host_member_id": "fixture",
+    "interaction_results": [],
+    "interactions": [],
+    "inventory": [],
+    "knowledge": [],
+    "map": {
+      "links": [
+        {
+          "allowed_now": true,
+          "cost": 1,
+          "from": "lobby",
+          "id": "lobby_lounge_ab",
+          "last_seen_tick": 1,
+          "needs_confirmation": false,
+          "observed_state": "open",
+          "passage_id": "lobby_lounge",
+          "to": "lounge"
+        },
+        {
+          "allowed_now": true,
+          "cost": 1,
+          "from": "lobby",
+          "id": "lobby_corridor_ab",
+          "last_seen_tick": 1,
+          "needs_confirmation": false,
+          "observed_state": "open",
+          "passage_id": "lobby_corridor",
+          "to": "corridor"
+        },
+        {
+          "allowed_now": true,
+          "cost": 1,
+          "from": "lobby",
+          "id": "lobby_infirmary_ab",
+          "last_seen_tick": 1,
+          "needs_confirmation": false,
+          "observed_state": "open",
+          "passage_id": "lobby_infirmary",
+          "to": "infirmary"
+        },
+        {
+          "allowed_now": true,
+          "cost": 1,
+          "from": "lobby",
+          "id": "lobby_generator_ab",
+          "last_seen_tick": 1,
+          "needs_confirmation": false,
+          "observed_state": "open",
+          "passage_id": "lobby_generator",
+          "to": "generator"
+        }
+      ],
+      "locations": [
+        {
+          "description": "雨从门缝里渗进来。黄铜铃上覆着一层盐霜，钥匙板的第九个挂钩空着。林素站在登记台后，灯照着她的双手，却照不到她的眼睛。你可以先问她江临的下落，也可以独自查看登记台。",
+          "id": "lobby",
+          "image_uri": "assets/stories/tide_hotel/lobby-v2.png",
+          "label": "接待厅"
+        },
+        {
+          "description": "摆钟的指针停在九点十七分。茶还留在杯底，麻将桌上却没有牌。这里能看见码头，窗玻璃把每一道闪电都复制成第二道。你记得自己进门时听到的九声钟响；一个停住的钟，为什么还会报时？",
+          "id": "lounge",
+          "image_uri": "assets/stories/tide_hotel/lounge-v2.png",
+          "label": "海景餐厅"
+        },
+        {
+          "description": "地毯已被搬走，湿脚印留在瓷砖上。清洁车停在209号房门外，轮下却是干的。尽头的应急灯每隔几秒暗一下。这里没有搏斗声，只有一扇门被反复开关后留下的轻响。",
+          "id": "corridor",
+          "image_uri": "assets/stories/tide_hotel/corridor.png",
+          "label": "二楼走廊"
+        },
+        {
+          "description": "陈雾把药柜擦得一尘不染。旧病历的封皮卷起，柜里有三瓶没有拆封的镇静药。她说自己只是来替旅馆老人换药，可她比任何人都熟悉这里的抽屉。",
+          "id": "infirmary",
+          "image_uri": "assets/stories/tide_hotel/infirmary.png",
+          "label": "护理室"
+        },
+        {
+          "description": "机房的水只没过鞋底，供电柜已断开。赵朔用手电照着一根整齐断掉的控制线。工具箱里什么都没少。他看你的第一眼并不是防备，而是想确认你到底带没带录音设备。",
+          "id": "generator",
+          "image_uri": "assets/stories/tide_hotel/generator.png",
+          "label": "地下机房"
+        }
+      ]
+    },
+    "members": [
+      {
+        "display_name": "徐闻",
+        "member_id": "fixture",
+        "ready": true,
+        "role_id": "reporter"
+      }
+    ],
+    "narrative_cues": [
+      {
+        "blocking": true,
+        "id": "9ecbbfe0-051c-48a9-aedd-0f9b64b2fe2f",
+        "image_uri": "assets/stories/tide_hotel/lobby-v2.png",
+        "kind": "image",
+        "media_id": "opening",
+        "text": "你叫徐闻，给一家地方电台做声音纪录。今晚，你带着录音笔来到潮汐旅馆，赴作家江临的约。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的林素说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。"
+      }
+    ],
+    "npcs": [
+      {
+        "description": "48岁，旅馆经营者。克制、礼貌，习惯替别人把话说完。你可以询问她的证词，也可以在掌握新证据后回访。",
+        "id": "lin",
+        "image_uri": "assets/stories/tide_hotel/npc-lin.png",
+        "label": "林素"
+      }
+    ],
+    "offers": [],
+    "own_intent": null,
+    "own_member_id": "fixture",
+    "own_results": [],
+    "roles": [
+      {
+        "id": "reporter",
+        "label": "徐闻 · 声音记者"
+      }
+    ],
+    "room": {
+      "deadline_at": 300001,
+      "ending": null,
+      "phase": "planning",
+      "round": 1,
+      "status": "active",
+      "step": 1,
+      "step_id": "0d47ce83-4b29-485a-9a95-6afa802390b5"
+    },
+    "self": {
+      "ap_remaining": 6,
+      "ap_reserved": 0,
+      "ended": false,
+      "faction": null,
+      "goals": [
+        "查明江临失踪与第九声钟响的关系。",
+        "区分证词与实证，重建十五年前的救援时间线。",
+        "决定怎样保存证据，以及怎样让活着的人开口。"
+      ],
+      "location": "lobby",
+      "objectives": [
+        {
+          "id": "find_jiang",
+          "label": "确认江临此刻安全",
+          "layer": "personal",
+          "result": "in_progress"
+        },
+        {
+          "id": "keep_records",
+          "label": "保存旧案互证副本",
+          "layer": "personal",
+          "result": "in_progress"
+        }
+      ],
+      "role_id": "reporter"
+    },
+    "story_title": "潮汐旅馆：第九声钟响",
+    "team": [
+      {
+        "label": "徐闻 · 声音记者",
+        "location_id": "lobby",
+        "ready": false,
+        "role_id": "reporter"
+      }
+    ],
+    "vote": null
+  },
+  "control_epoch": 1,
+  "protocol_version": 3,
+  "stream_id": "fixture",
+  "view_seq": 1
+}

@@ -151,6 +151,9 @@ defmodule Ruxi.C3.Domain do
     Enum.filter(get_in(s, ["content", "c3_settings", "npcs"]) || [], fn n ->
       get_in(s, ["npc_states", n["id"], "location"]) == s["actors"][r]["location"]
     end)
-    |> Enum.map(&Map.take(&1, ~w(id label description)))
+    |> Enum.map(
+      &(Map.take(&1, ~w(id label description))
+        |> Map.put("image_uri", Engine.image_uri(s["content"], "portrait_" <> &1["id"], r)))
+    )
   end
 end

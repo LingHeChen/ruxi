@@ -1,0 +1,109 @@
+{
+  "provider": "built-in image_gen",
+  "assets": [
+    {
+      "id": "lobby",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a 1990s Chinese island guesthouse reception at midnight during a storm, brass service bell, nine-hook key board, damp tiled entrance, warm amber desk lamp, dark teal rainy windows, no people."
+    },
+    {
+      "id": "lounge",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a coastal guesthouse dining lounge, stopped pendulum clock, empty mahjong table, cold tea cups, rain lashes sea-facing windows, dim amber sconces, no people."
+    },
+    {
+      "id": "corridor",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of an upstairs guesthouse corridor, peeling sea-green wallpaper, closed wooden room doors, a red emergency light, wet footprints end beside a housekeeping trolley, no people."
+    },
+    {
+      "id": "room209",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a guesthouse room where a writer vanished, unmade single bed, typewriter, black cassette player, suitcase, half-open window overlooking a stormy sea, no people, no gore."
+    },
+    {
+      "id": "infirmary",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of an old guesthouse caretaker infirmary, medicine cupboard, folded gauze, washbasin, locked prescription drawer, cold fluorescent light and amber lamp, no people."
+    },
+    {
+      "id": "generator",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a guesthouse basement generator room, switchboard, thick insulated cables, workbench and hanging tools, standing shallow water, safely isolated equipment, no people."
+    },
+    {
+      "id": "archive",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a guesthouse attic archive, old guest registries, fishing charts, rusted cabinet, red wax-sealed envelope, storm light through round window, no people."
+    },
+    {
+      "id": "boathouse",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide 16:9 background of a weathered island boathouse before dawn, moored wooden rescue boat, rope winch, cracked foghorn, stone steps to black water, pale mist, no people."
+    },
+    {
+      "id": "npc-lin",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Portrait illustration waist-up of a Chinese woman guesthouse owner aged 48, short black hair with silver strands, dark moss cardigan over cream blouse, composed face with restrained grief, holds a brass key, guesthouse reception blurred behind. No text."
+    },
+    {
+      "id": "npc-chen",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Portrait illustration waist-up of a Chinese woman nurse aged 34, tied back hair, navy raincoat over ivory shirt, wary empathetic expression, hands folded around an old notebook, infirmary blurred behind. No text."
+    },
+    {
+      "id": "npc-zhao",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Portrait illustration waist-up of a Chinese male electrician aged 27, cropped black hair, worn indigo work jacket, faint grease on sleeve, tense honest gaze, holding a switched-off flashlight, generator room blurred behind. No text."
+    },
+    {
+      "id": "npc-he",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Portrait illustration waist-up of a Chinese elderly male retired ferry captain aged 67, weathered kind face, grey hair, olive fisherman's coat, wooden walking cane, quiet sea-worn dignity, boathouse blurred behind. No text."
+    },
+    {
+      "id": "evidence-key",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of a tarnished brass guesthouse room key and a rain-damaged guest receipt on a dark wood reception desk, warm lamp, no legible writing."
+    },
+    {
+      "id": "evidence-clock",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of an open antique pendulum clock showing a loose mechanical chime wire and a small hidden black audio speaker, seaside lounge, meaningful precise objects, no writing."
+    },
+    {
+      "id": "evidence-footprints",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of wet boot prints on guesthouse corridor tiles next to a trolley wheel's dry clean track, cool emergency light, no people."
+    },
+    {
+      "id": "evidence-tape",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of a black cassette recorder and one cassette beside an open writer's notebook in guesthouse room, small red indicator illuminated, no readable writing."
+    },
+    {
+      "id": "evidence-photo",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of an old faded group photograph on wood table, four Chinese island residents beside a rescue boat years ago, one corner torn away, no text."
+    },
+    {
+      "id": "evidence-medical",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of an old handwritten medical notebook, amber medicine bottle with blank label, neatly folded gauze, handwritten marks illegible, restrained mystery, no gore."
+    },
+    {
+      "id": "evidence-fuse",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of a cut insulated wire, an intact ceramic fuse, and a stamped maintenance card on a dusty electrical workbench, unplugged equipment, no legible text."
+    },
+    {
+      "id": "evidence-registry",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of two old guest registration ledgers with differing ink marks, brass magnifying glass, page pressed dried saltwater flower, handwriting illegible."
+    },
+    {
+      "id": "evidence-letter",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of a red wax-sealed letter opened beside a tarnished lighthouse charm, warm attic light, handwriting illegible."
+    },
+    {
+      "id": "evidence-rope",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Close-up illustration of a weathered rescue rope with recently cut clean end beside old rusty boat winch, pre-dawn teal mist, no people."
+    },
+    {
+      "id": "cg-blackout",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide cinematic illustration of an empty guesthouse lounge plunged into darkness during rain, emergency red light and reflected lightning illuminate the stopped clock; a shadow behind frosted glass suggests a person but no horror monster."
+    },
+    {
+      "id": "cg-confrontation",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide cinematic illustration of four Chinese island residents confronting the truth around a guesthouse dining table before dawn: middle-aged woman owner in moss cardigan, young nurse in navy raincoat, young male electrician in indigo jacket, old captain with olive coat and cane. Documents and cassette on table, humane tense emotion."
+    },
+    {
+      "id": "cg-dawn",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Wide cinematic illustration of the island guesthouse and pier at first light after a storm, a small rescue boat arriving, silver sea and warm peach dawn, bittersweet hopeful atmosphere, no text."
+    },
+    {
+      "id": "cover",
+      "prompt": "Use case: illustration-story. Professional cohesive painterly semi-realistic visual novel game art, 1990s Chinese coastal island, rich environmental storytelling, subtle film grain, atmospheric teal shadows and amber practical lighting, believable perspective, not photorealistic, no UI, no watermark, no text. Vertical book-cover illustration for a Chinese suspense visual novel, lonely weathered island guesthouse above a dark stormy sea, one amber room window, brass service bell in foreground, elegant teal and amber palette, no text, no logos."
+    }
+  ]
+}

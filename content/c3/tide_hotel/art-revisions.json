@@ -1,0 +1,15 @@
+{
+  "provider": "built-in image_gen",
+  "edits": [
+    {
+      "id": "lounge-v2",
+      "reference": "lounge",
+      "prompt": "Change only the wall clock hands: the clock is stopped at exactly 9:17 PM (21:17). Short hour hand points slightly past nine toward ten; long minute hand points to minute 17, just past the numeral three toward four. Show no additional clock hands. Keep the rest of this coastal guesthouse lounge exactly unchanged: furniture, rainy sea window, palette, composition and realistic painterly texture. This is a mystery-game clue and the time must be accurate."
+    },
+    {
+      "id": "lobby-v2",
+      "reference": "lobby",
+      "prompt": "Change only the ninth/lower-right key hook on the wall key board: it is visibly EMPTY, with no key or hanging tag. Keep the other eight brass keys hanging and keep the whole reception room unchanged: desk, brass service bell, lamp, rainy sea doorway, composition, palette and painterly texture. The missing ninth key is a small mystery-game detail. No new text or objects."
+    }
+  ]
+}

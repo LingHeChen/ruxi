@@ -128,6 +128,14 @@ class _InteractionDialogState extends State<InteractionDialog> {
                 style: const TextStyle(color: novelGold, fontSize: 22),
               ),
               const SizedBox(height: 20),
+              if (widget.interaction['image_uri'] != null) ...[
+                Image.asset(
+                  widget.interaction['image_uri'],
+                  height: 150,
+                  fit: BoxFit.cover,
+                ),
+                const SizedBox(height: 16),
+              ],
               if (busy) const LinearProgressIndicator(),
               if (quote != null) ...[
                 Text(

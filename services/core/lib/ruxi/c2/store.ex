@@ -89,11 +89,14 @@ defmodule Ruxi.C2.Store do
         "schema_version" => p["content"]["schema_version"],
         "protocol_version" => if(p["content"]["schema_version"] == 4, do: 3, else: 2),
         "roles" => Enum.map(p["content"]["roles"], &Map.take(&1, ~w(id label))),
+        "cover_uri" => Engine.image_uri(p["content"], "cover", nil),
+        "playtime_minutes" => get_in(p, ["content", "c3_settings", "playtime_minutes"]),
         "estimated_minutes" =>
-          ceil(
-            p["content"]["rules"]["round_limit"] * p["content"]["rules"]["ap_per_round"] *
-              p["content"]["rules"]["step_timeout_s"] / 60
-          )
+          get_in(p, ["content", "c3_settings", "playtime_minutes", "max"]) ||
+            ceil(
+              p["content"]["rules"]["round_limit"] * p["content"]["rules"]["ap_per_round"] *
+                p["content"]["rules"]["step_timeout_s"] / 60
+            )
       })
 
   def create(ctx, p) do

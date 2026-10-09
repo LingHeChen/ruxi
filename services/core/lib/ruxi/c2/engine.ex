@@ -487,12 +487,19 @@ defmodule Ruxi.C2.Engine do
         else: is_nil(a["target"]) or (target && target["location"] == member["location"])
 
     tag = is_nil(a["required_tag"]) or (target && a["required_tag"] in target["tags"])
+
+    npc =
+      Enum.find(get_in(s, ["content", "c3_settings", "npcs"]) || [], &(&1["id"] == a["target"]))
+
+    npc_present =
+      is_nil(npc) or get_in(s, ["npc_states", npc["id"], "location"]) == member["location"]
+
     uses = is_nil(a["max_uses"]) or Map.get(member["used"], a["id"], 0) < a["max_uses"]
     grants = Enum.all?(a["effects"], &(&1["op"] != "grant" or is_nil(s["ownership"][&1["ref"]])))
 
     (is_nil(get_in(a, ["link", "direction"])) or Ruxi.C3.World.traversable?(s, a["link"], r, now)) and
       Ruxi.C3.Interactions.valid_action?(s, r, a, now) and located and known_target and tag and
-      uses and
+      npc_present and uses and
       grants and condition(s, a["condition"], r, now) and
       (is_nil(a["display_condition"]) or condition(s, a["display_condition"], r, now))
   end
@@ -911,6 +918,7 @@ defmodule Ruxi.C2.Engine do
       "media_id" => m["id"],
       "kind" => m["kind"],
       "text" => m["summary"],
+      "image_uri" => if(m["kind"] == "image", do: m["uri"], else: nil),
       "audience" => roles,
       "blocking" => blocking
     }
@@ -1034,7 +1042,10 @@ defmodule Ruxi.C2.Engine do
 
     locations =
       Enum.filter(story["locations"], &(&1["id"] in a["known_locations"]))
-      |> Enum.map(&Map.take(&1, ~w(id label description)))
+      |> Enum.map(
+        &(Map.take(&1, ~w(id label description))
+          |> Map.put("image_uri", image_uri(story, "scene_" <> &1["id"], r)))
+      )
 
     links =
       Enum.filter(story["links"], fn l ->
@@ -1058,7 +1069,7 @@ defmodule Ruxi.C2.Engine do
           (is_nil(x["display_condition"]) or condition(s, x["display_condition"], r, now))
       end)
       |> Enum.map(fn x ->
-        Map.merge(Map.take(x, ~w(id label cost risk_text required_participants)), %{
+        Map.merge(Map.take(x, ~w(id label target cost risk_text required_participants)), %{
           "remaining_uses" => max(0, (x["max_uses"] || 1) - Map.get(a["used"], x["id"], 0)),
           "allowed_now" =>
             valid?(s, r, x, now) and x["cost"] <= a["ap_remaining"] - a["ap_reserved"]
@@ -1069,6 +1080,7 @@ defmodule Ruxi.C2.Engine do
       Enum.filter(story["clues"], &(&1["id"] in a["knowledge"]))
       |> Enum.map(fn clue ->
         Map.take(clue, ~w(id label text shareable))
+        |> Map.put("image_uri", image_uri(story, "clue_" <> clue["id"], r))
         |> Map.merge(get_in(a, ["knowledge_records", clue["id"]]) || %{})
       end)
 
@@ -1098,6 +1110,7 @@ defmodule Ruxi.C2.Engine do
       end)
       |> Enum.map(fn item ->
         Map.merge(Map.take(item, ~w(id label description tags)), %{
+          "image_uri" => image_uri(story, "item_" <> item["id"], r),
           "version" => s["ownership"][item["id"]]["version"],
           "reserved" => reserved?(s, item["id"], now)
         })
@@ -1113,7 +1126,7 @@ defmodule Ruxi.C2.Engine do
 
     ending =
       if s["ending"],
-        do: Content.index(story, "media")[s["ending"]] |> Map.take(~w(id summary kind)),
+        do: Content.index(story, "media")[s["ending"]] |> Map.take(~w(id summary kind uri)),
         else: nil
 
     action_history =
@@ -1128,6 +1141,8 @@ defmodule Ruxi.C2.Engine do
           |> Map.put("round", settlement["round"])
           |> Map.put("step", settlement["step"])
           |> Map.put("label", get_in(settlement, ["intents", r, "action", "label"]))
+          |> Map.put("target", get_in(settlement, ["intents", r, "action", "target"]))
+          |> Map.put("image_uri", image_uri(story, "echo_" <> result["action_id"], r))
         end)
       end)
 
@@ -1164,5 +1179,14 @@ defmodule Ruxi.C2.Engine do
         Enum.filter(s["cues"], &(r in &1["audience"])) |> Enum.map(&Map.drop(&1, ["audience"])),
       "acknowledged_cues" => s["cue_acks"][r] || []
     }
+  end
+
+  # Return only the image bound to an already-visible entity, never a whole asset manifest.
+  def image_uri(story, id, role) do
+    m = Enum.find(story["media"], &(&1["id"] == id))
+
+    if m && m["kind"] == "image" && (m["audience"] == "public" or role in m["audience"]),
+      do: m["uri"],
+      else: nil
   end
 end

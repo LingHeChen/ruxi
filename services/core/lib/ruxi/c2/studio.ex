@@ -248,8 +248,13 @@ defmodule Ruxi.C2.Studio do
     )
 
     Content.compile!(p["content"])
-    Util.require!(Enum.all?(p["content"]["media"], &(&1["kind"] == "text")), "MEDIA_UNAVAILABLE")
-    # Text is fully usable; binary media must be project-bound before it can be published.
+
+    Util.require!(
+      Enum.all?(p["content"]["media"], &Ruxi.C3.Art.publishable?/1),
+      "MEDIA_UNAVAILABLE"
+    )
+
+    # Images must match the shipped bundle's SHA-256 manifest. Arbitrary URLs are never accepted.
     existing =
       DB.one("SELECT id FROM c2_releases WHERE project_id=$1 AND content_hash=$2", [
         DB.uuid(id),

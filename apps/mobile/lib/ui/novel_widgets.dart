@@ -225,6 +225,9 @@ class _NovelReaderState extends State<NovelReader> {
                                     m.illustration!,
                                     height: narrow ? 160 : 230,
                                     fit: BoxFit.cover,
+                                    alignment: m.illustration!.contains('/npc-')
+                                        ? const Alignment(0, -.5)
+                                        : Alignment.center,
                                     semanticLabel: '当前剧情插图',
                                     errorBuilder: (_, _, _) =>
                                         const SizedBox.shrink(),

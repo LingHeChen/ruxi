@@ -186,15 +186,23 @@ class _GameInventoryState extends State<GameInventory> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    panel == GamePanel.clues
-                        ? Icons.description_outlined
-                        : item['reserved'] == true
-                        ? Icons.lock_clock_outlined
-                        : Icons.inventory_2_outlined,
-                    color: active ? novelGold : const Color(0xffb3c2c5),
-                    size: 30,
-                  ),
+                  if (item['image_uri'] != null)
+                    Image.asset(
+                      item['image_uri'],
+                      height: 40,
+                      width: 64,
+                      fit: BoxFit.cover,
+                    )
+                  else
+                    Icon(
+                      panel == GamePanel.clues
+                          ? Icons.description_outlined
+                          : item['reserved'] == true
+                          ? Icons.lock_clock_outlined
+                          : Icons.inventory_2_outlined,
+                      color: active ? novelGold : const Color(0xffb3c2c5),
+                      size: 30,
+                    ),
                   const SizedBox(height: 10),
                   Text(
                     entryTitle(item),
@@ -237,6 +245,18 @@ class _GameInventoryState extends State<GameInventory> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (item['image_uri'] != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.asset(
+                      item['image_uri'],
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
                 Text(
                   entryTitle(item),
                   style: const TextStyle(

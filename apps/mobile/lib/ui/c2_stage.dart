@@ -65,6 +65,20 @@ class _C2StageState extends State<C2Stage> {
   }
 
   String? illustrationFor(Json v, String? media, [String? action]) {
+    final cue = items('narrative_cues')
+        .where((c) => c['media_id'] == media && c['image_uri'] != null)
+        .firstOrNull;
+    if (media != null && cue != null) return cue['image_uri'];
+    final result = items('own_results')
+        .where((r) => r['action_id'] == action && r['image_uri'] != null)
+        .lastOrNull;
+    if (result != null) return result['image_uri'];
+    if (action?.startsWith('move:') == true) {
+      final scene = (v['map']?['locations'] as List? ?? [])
+          .where((l) => l['id'] == v['self']?['location'])
+          .firstOrNull;
+      if (scene?['image_uri'] != null) return scene['image_uri'];
+    }
     if (v['story_title'] != '雨夜最后一封信') return null;
     if (media == 'opening' || action == 'read_letter') {
       return 'assets/stories/last_letter/arrival.png';
@@ -76,6 +90,28 @@ class _C2StageState extends State<C2Stage> {
   }
 
   List<Json> narrativeChoices(Json v, List<dynamic> clues, String? action) {
+    if (v['room']['status'] == 'active' && v['story_title'] == '潮汐旅馆：第九声钟响') {
+      final result = items('own_results')
+          .where((r) => r['action_id'] == action)
+          .lastOrNull;
+      final target = result?['target'];
+      return items('actions')
+          .where(
+            (a) =>
+                a['allowed_now'] == true &&
+                (a['remaining_uses'] ?? 0) > 0 &&
+                (action == 'reconstruct'
+                    ? {
+                        'publish_truth',
+                        'seal_handover',
+                        'accuse_murder',
+                      }.contains(a['id'])
+                    : target != null && a['target'] == target),
+          )
+          .take(3)
+          .map((a) => Map<String, dynamic>.from(a))
+          .toList();
+    }
     if (v['story_title'] != '雨夜最后一封信' || v['room']['status'] != 'active') {
       return [];
     }
@@ -139,6 +175,11 @@ class _C2StageState extends State<C2Stage> {
               ...freshCues.map((c) => '${c['summary'] ?? c['text'] ?? ''}'),
               ...freshKnowledge.map((k) => '${k['text']}'),
             ].join('\n\n'),
+            illustration:
+                freshCues
+                    .where((c) => c['image_uri'] != null)
+                    .firstOrNull?['image_uri'] ??
+                outcome['image_uri'],
           ),
         );
       }
@@ -239,6 +280,7 @@ class _C2StageState extends State<C2Stage> {
           text: '${ending['summary']}',
           subtitle: '你的选择，写下了这个结局。',
           ending: true,
+          illustration: ending['kind'] == 'image' ? ending['uri'] : null,
         ),
       );
     }
@@ -395,6 +437,10 @@ class _C2StageState extends State<C2Stage> {
       'keep',
       'rescue_ledger',
       'rescue_tape',
+      'leave_early',
+      'publish_truth',
+      'seal_handover',
+      'accuse_murder',
     ].contains(action['id'])) {
       await send('action.submit', {
         'action_id': action['id'],
@@ -423,6 +469,7 @@ class _C2StageState extends State<C2Stage> {
     final confirmed = await ask(
       NovelMessage(
         title: location['label'],
+        illustration: location['image_uri'],
         text: location['description'] ?? '安静地观察这个地点。',
         subtitle: current
             ? '你正在这里'
@@ -605,9 +652,11 @@ class _C2StageState extends State<C2Stage> {
     final lobby = room['status'] == 'lobby';
     final active = room['status'] == 'active';
     final ended = room['ending'] != null;
-    final background = v['story_title'] == '雨夜最后一封信'
-        ? 'assets/stories/last_letter/${self?['location'] == 'archive' ? 'archive' : 'office'}.png'
-        : null;
+    final background =
+        location?['image_uri'] ??
+        (v['story_title'] == '雨夜最后一封信'
+            ? 'assets/stories/last_letter/${self?['location'] == 'archive' ? 'archive' : 'office'}.png'
+            : null);
     return Scaffold(
       backgroundColor: const Color(0xff0b151d),
       body: LayoutBuilder(
@@ -900,7 +949,7 @@ class _C2StageState extends State<C2Stage> {
                                   Text(
                                     lobby
                                         ? solo
-                                              ? '一盏灯，一封信，一个等待揭开的雨夜。\n准备好之后，独自走进这个故事。'
+                                              ? '以你的角色视角探索场景、询问人物、查证线索。\n准备好之后，独自走进这个故事。'
                                               : '选择你的角色。每个人的视角，都可能改变故事的方向。'
                                         : ended
                                         ? room['ending']['summary']
@@ -912,6 +961,52 @@ class _C2StageState extends State<C2Stage> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
+                                  if (active && items('npcs').isNotEmpty)
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        for (final npc in items('npcs'))
+                                          ActionChip(
+                                            avatar: npc['image_uri'] == null
+                                                ? const Icon(
+                                                    Icons.person_outline,
+                                                  )
+                                                : ClipOval(
+                                                    child: Image.asset(
+                                                      npc['image_uri'],
+                                                      width: 30,
+                                                      height: 30,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                            label: Text('与${npc['label']}交谈'),
+                                            onPressed: () => enqueue(
+                                              NovelMessage(
+                                                title: npc['label'],
+                                                text: npc['description'] ?? '',
+                                                illustration: npc['image_uri'],
+                                                choices: visibleActions
+                                                    .where(
+                                                      (a) =>
+                                                          a['target'] ==
+                                                              npc['id'] &&
+                                                          a['allowed_now'] ==
+                                                              true,
+                                                    )
+                                                    .map(
+                                                      (a) =>
+                                                          Map<
+                                                            String,
+                                                            dynamic
+                                                          >.from(a),
+                                                    )
+                                                    .toList(),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   if (lobby) ...[
                                     if (!solo && v['invite_code'] != null)
                                       Padding(
