@@ -331,12 +331,36 @@ defmodule Ruxi.C2EngineTest do
                 state
               end
 
-            step(state, [{"keeper", action}])
+            next = step(state, [{"keeper", action}])
+
+            Enum.reduce(next["cues"], next, fn cue, state ->
+              {:ok, state, _} =
+                cmd(state, "keeper", "media.complete", %{
+                  "cue_id" => cue["id"],
+                  "mode" => "summary"
+                })
+
+              state
+            end)
           end
         )
 
       state = step(state, [{"keeper", choice}])
       assert state["ending"] == ending
+      own = Engine.project(state, "keeper", 4)["own_results"]
+      assert Enum.all?(own, &(&1["label"] != nil))
+      refute Enum.any?(own, &(Map.has_key?(&1, "actor") or Map.has_key?(&1, "roll")))
     end
+  end
+
+  test "action feedback exposes only the viewing actor's settled facts" do
+    state = step(initial(), [{"guest", "ask"}])
+    own = Engine.project(state, "guest", 4)["own_results"]
+    other = Engine.project(state, "doctor", 4)
+    assert [%{"action_id" => "ask", "success" => true, "cost" => 1}] = own
+    assert other["own_results"] == []
+    assert other["knowledge"] == []
+    refute Map.has_key?(hd(own), "roll")
+    refute Map.has_key?(hd(own), "actor")
   end
 end

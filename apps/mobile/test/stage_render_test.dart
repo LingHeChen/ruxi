@@ -22,7 +22,7 @@ class StageIdentity extends RoomClient {
     'view_seq': 1,
     'control_epoch': 1,
     'blocks': {
-      'story_title': '停电之前',
+      'story_title': '雨夜最后一封信',
       'own_member_id': 'm1',
       'host_member_id': 'm1',
       'room': {'status': 'active', 'round': 1, 'step': 1},
@@ -30,7 +30,7 @@ class StageIdentity extends RoomClient {
         'role_id': 'guest',
         'ap_remaining': 3,
         'ap_reserved': 0,
-        'location': 'dining',
+        'location': 'office',
         'goals': ['找到停电的原因，帮助同伴安全离开。'],
       },
       'roles': [
@@ -47,14 +47,18 @@ class StageIdentity extends RoomClient {
       ],
       'map': {
         'locations': [
-          {'id': 'dining', 'label': '餐厅'},
-          {'id': 'hall', 'label': '走廊'},
+          {
+            'id': 'office',
+            'label': '值班室',
+            'description': '雨水沿窗玻璃蜿蜒而下。桌上的旧信封没有邮票，收件人却写着你的名字。',
+          },
+          {'id': 'archive', 'label': '档案室', 'description': '二十年前的投递簿，就在最上层抽屉。'},
         ],
         'links': [
           {
             'id': 'dining_hall',
-            'from': 'dining',
-            'to': 'hall',
+            'from': 'office',
+            'to': 'archive',
             'cost': 1,
             'allowed_now': true,
           },
@@ -63,26 +67,20 @@ class StageIdentity extends RoomClient {
       'actions': [
         {
           'id': 'inspect',
-          'label': '检查餐具',
+          'label': '拆开未寄出的信',
           'cost': 1,
           'allowed_now': true,
           'risk_text': '留意餐具上不寻常的细节。',
         },
         {
           'id': 'ask',
-          'label': '询问服务员',
+          'label': '翻看旧合照',
           'cost': 1,
           'allowed_now': true,
           'risk_text': '也许他知道发生了什么。',
         },
       ],
-      'narrative_cues': [
-        {
-          'id': 'opening',
-          'summary': '窗外的雨越来越大，餐厅的灯闪了一下。每个人都抬起了头，等着谁先打破沉默。',
-          'blocking': true,
-        },
-      ],
+      'narrative_cues': [],
       'acknowledged_cues': [],
       'knowledge': [],
       'inventory': [],
@@ -127,7 +125,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('停电之前'), findsOneWidget);
+      await tester.runAsync(
+        () => precacheImage(
+          const AssetImage('assets/stories/last_letter/office.png'),
+          tester.element(find.byType(C2Stage)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('雨夜最后一封信'), findsOneWidget);
       expect(find.text('创作项目'), findsNothing);
       expect(tester.takeException(), isNull);
       if (capture) {
@@ -135,6 +140,20 @@ void main() {
           find.byType(C2Stage),
           matchesGoldenFile(
             '../../../.local/ui-review/player-stage-${size.width.toInt()}.png',
+          ),
+        );
+      }
+      if (capture) {
+        await tester.tap(find.text('档案室'));
+        await tester.pumpAndSettle();
+        if (find.text('显示全文').evaluate().isNotEmpty) {
+          await tester.tap(find.text('显示全文'));
+          await tester.pump();
+        }
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(
+            '../../../.local/ui-review/player-dialog-${size.width.toInt()}.png',
           ),
         );
       }

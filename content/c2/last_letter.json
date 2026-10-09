@@ -127,6 +127,12 @@
           "op": "reveal",
           "ref": "address",
           "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_read_letter",
+          "audience": "self",
+          "blocking": true
         }
       ],
       "failure": [],
@@ -150,6 +156,12 @@
           "op": "reveal",
           "ref": "memory",
           "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_inspect_photo",
+          "audience": "self",
+          "blocking": true
         }
       ],
       "failure": [],
@@ -173,6 +185,12 @@
           "op": "reveal",
           "ref": "record",
           "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_read_ledger",
+          "audience": "self",
+          "blocking": true
         }
       ],
       "failure": [],
@@ -196,6 +214,12 @@
           "op": "reveal",
           "ref": "truth",
           "audience": "self"
+        },
+        {
+          "op": "cue",
+          "ref": "echo_open_box",
+          "audience": "self",
+          "blocking": true
         }
       ],
       "failure": [],
@@ -341,6 +365,42 @@
       "uri": "",
       "audience": "public",
       "summary": "清晨的拆迁通知打断了你的调查。你带走了桌上的信，谜底仍留在档案室里。或许有一天，你会重新回到这里，完成这次迟到的告别。"
+    },
+    {
+      "id": "echo_read_letter",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你用指尖沿着信封的封口轻轻划开。纸页发出细小的响声。熟悉的笔迹像一道闪电，将你带回很久以前。"
+    },
+    {
+      "id": "echo_inspect_photo",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "你擦去相框上的灰尘。母亲年轻时的笑容慢慢清晰起来。照片翻到背面，那句一直被藏起来的话，终于落进你的眼里。"
+    },
+    {
+      "id": "echo_read_ledger",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "厚重的投递簿在桌面摊开。你沿着日期一行行寻找，雨声忽然变得遥远。一段从未有人讲完的往事，藏在最后一页。"
+    },
+    {
+      "id": "echo_open_box",
+      "kind": "text",
+      "uri": "",
+      "audience": [
+        "keeper"
+      ],
+      "summary": "蓝色铁盒的锁扣已经松动。里面没有财物，只有一叠未寄出的信和一份救援名单。你读到母亲留下的话，手指不自觉地收紧。"
     }
   ],
   "votes": []

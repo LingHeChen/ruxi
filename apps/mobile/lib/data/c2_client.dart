@@ -183,13 +183,16 @@ class C2Client extends ChangeNotifier {
       'body': body,
     };
     pending = envelope;
+    error = null;
     busy = true;
     notifyListeners();
     try {
       final result = await request('POST', '/rooms/$roomId/commands', envelope);
       pending = null;
       if (result['status'] == 'rejected') {
-        throw ApiError(result['error']['code']);
+        throw ApiError(
+          result['error']?['code'] ?? result['code'] ?? 'COMMAND_REJECTED',
+        );
       }
       await refresh();
     } on ApiError catch (e) {
@@ -234,7 +237,9 @@ class C2Client extends ChangeNotifier {
       final result = await request('POST', '/rooms/$roomId/commands', pending);
       pending = null;
       if (result['status'] == 'rejected') {
-        throw ApiError(result['error']['code']);
+        throw ApiError(
+          result['error']?['code'] ?? result['code'] ?? 'COMMAND_REJECTED',
+        );
       }
       await refresh();
     } catch (e) {

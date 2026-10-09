@@ -767,7 +767,11 @@ defmodule Ruxi.C2.Engine do
 
   defp cue(s, m, audience, r, blocking, now) do
     roles = if audience == "all", do: Map.keys(s["actors"]), else: [r]
-    ensure(m["audience"] == "public" or roles == [m["audience"]], "UNSAFE_AUDIENCE")
+
+    ensure(
+      m["audience"] == "public" or Enum.all?(roles, &(&1 in m["audience"])),
+      "UNSAFE_AUDIENCE"
+    )
 
     c = %{
       "id" => U.id(),
@@ -966,6 +970,20 @@ defmodule Ruxi.C2.Engine do
         do: Content.index(story, "media")[s["ending"]] |> Map.take(~w(id summary kind)),
         else: nil
 
+    own_results =
+      s["settlements"]
+      |> Enum.take(-8)
+      |> Enum.flat_map(fn settlement ->
+        settlement["results"]
+        |> Enum.filter(&(&1["actor"] == r and &1["status"] != "passed"))
+        |> Enum.map(fn result ->
+          Map.take(result, ~w(intent_id action_id status cost success))
+          |> Map.put("step_id", settlement["step_id"])
+          |> Map.put("round", settlement["round"])
+          |> Map.put("label", get_in(settlement, ["intents", r, "action", "label"]))
+        end)
+      end)
+
     %{
       "room" =>
         Map.take(s, ~w(status phase round step step_id))
@@ -981,6 +999,8 @@ defmodule Ruxi.C2.Engine do
       "map" => %{"locations" => locations, "links" => links},
       "actions" => actions,
       "knowledge" => knowledge,
+      "own_results" => own_results,
+      "own_intent" => if(s["intents"][r], do: Map.take(s["intents"][r], ~w(id)), else: nil),
       "inventory" => inventory,
       "offers" => s["offers"] |> Map.values() |> Enum.filter(&(r in [&1["from"], &1["to"]])),
       "team" => team,

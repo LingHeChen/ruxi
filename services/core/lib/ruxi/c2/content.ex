@@ -148,7 +148,8 @@ defmodule Ruxi.C2.Content do
         audience =
           if m["audience"] == "public",
             do: [],
-            else: require_ref(m["audience"], ids["roles"], "/media/#{i}/audience")
+            else:
+              Enum.flat_map(m["audience"], &require_ref(&1, ids["roles"], "/media/#{i}/audience"))
 
         audience ++
           if String.trim(m["summary"]) == "",

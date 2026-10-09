@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/c2_client.dart';
 import '../data/room_client.dart';
+import 'novel_widgets.dart';
 
 class C2Stage extends StatefulWidget {
   const C2Stage({
@@ -23,19 +24,18 @@ class C2Stage extends StatefulWidget {
 class _C2StageState extends State<C2Stage> {
   late final identity = widget.identity ?? RoomClient();
   late final client = C2Client(identity);
-  final invite = TextEditingController();
-  List<dynamic> stories = [];
-  bool loading = true;
-  String? error;
+  bool loading = true, _seeded = false, _presenting = false;
+  String? error, _ending;
+  int? _round;
+  final _results = <String>{}, _cues = <String>{}, _knowledge = <String>{};
+  final _messages = <NovelMessage>[];
+  final _log = <NovelMessage>[];
+  List<dynamic> items(String key) => client.view?[key] as List? ?? [];
   @override
   void initState() {
     super.initState();
     client.addListener(changed);
     unawaited(initialize());
-  }
-
-  void changed() {
-    if (mounted) setState(() {});
   }
 
   Future<void> initialize() async {
@@ -48,8 +48,6 @@ class _C2StageState extends State<C2Stage> {
           client.roomId = widget.roomId;
           await client.refresh();
         }
-      } else {
-        stories = (await client.request('GET', '/stories'))['items'];
       }
     } catch (e) {
       error = RoomClient.explain(e);
@@ -58,70 +56,271 @@ class _C2StageState extends State<C2Stage> {
     }
   }
 
-  Future<void> enter({String? release}) async {
-    try {
-      final data = await client.request(
-        'POST',
-        release == null ? '/rooms/join' : '/rooms',
-        release == null
-            ? {'invite_code': invite.text.trim()}
-            : {'release_id': release},
+  void changed() {
+    if (!mounted) return;
+    final v = client.view;
+    if (v != null) observe(v);
+    setState(() {});
+  }
+
+  void observe(Json v) {
+    final room = v['room'];
+    final round = room['round'] as int?;
+    final results = items('own_results');
+    final knowledge = items('knowledge');
+    if (!_seeded) {
+      _results.addAll(results.map((r) => '${r['intent_id']}'));
+      _knowledge.addAll(knowledge.map((k) => '${k['id']}'));
+      _seeded = true;
+    }
+    final freshCues = items('narrative_cues')
+        .where(
+          (c) =>
+              !(v['acknowledged_cues'] as List? ?? []).contains(c['id']) &&
+              !_cues.contains(c['id']),
+        )
+        .toList();
+    final freshResults = results
+        .where((r) => !_results.contains('${r['intent_id']}'))
+        .toList();
+    final freshKnowledge = knowledge
+        .where((k) => !_knowledge.contains('${k['id']}'))
+        .toList();
+    _knowledge.addAll(knowledge.map((k) => '${k['id']}'));
+    _cues.addAll(freshCues.map((c) => '${c['id']}'));
+    for (final result in freshResults) {
+      _results.add('${result['intent_id']}');
+      final invalid = result['status'] == 'invalidated';
+      final success = result['success'] != false && !invalid;
+      final location = (v['map']?['locations'] as List? ?? [])
+          .where((l) => l['id'] == v['self']?['location'])
+          .firstOrNull;
+      final moved = '${result['action_id']}'.startsWith('move:');
+      final details = [
+        if (invalid) '行动条件发生了变化，这次行动未执行，预留的行动点已退回。',
+        if (!invalid && !success) '这次尝试没有成功。你可以整理思路，再寻找其他办法。',
+        if (success && moved)
+          '你来到${location?['label'] ?? '新的地点'}。\n${location?['description'] ?? ''}',
+        if (success && !moved && freshCues.isEmpty && freshKnowledge.isEmpty)
+          '你的行动已经完成。环顾四周，看看接下来还能做些什么。',
+        if (success)
+          ...freshCues.map((c) => '${c['summary'] ?? c['text'] ?? ''}'),
+        if (success) ...freshKnowledge.map((k) => '${k['text']}'),
+      ].join('\n\n');
+      enqueue(
+        NovelMessage(
+          title: moved
+              ? '场景抵达'
+              : success
+              ? '行动回响'
+              : '行动结果',
+          text: details,
+          subtitle: '${result['label'] ?? '你的选择'} · ${result['cost'] ?? 0} 行动点',
+          clue: freshKnowledge.isNotEmpty,
+          acknowledge: freshCues.map((c) => '${c['id']}').toList(),
+        ),
       );
-      if (mounted) context.go('/rooms/${data['room_id']}');
-    } catch (e) {
-      if (mounted) setState(() => error = RoomClient.explain(e));
+    }
+    if (freshResults.isEmpty) {
+      if (freshKnowledge.isNotEmpty) {
+        enqueue(
+          NovelMessage(
+            title: '一条新的线索',
+            text: freshKnowledge.map((k) => '${k['text']}').join('\n\n'),
+            clue: true,
+          ),
+        );
+      }
+      for (final cue in freshCues) {
+        enqueue(
+          NovelMessage(
+            title: '故事 · 旁白',
+            text: '${cue['summary'] ?? cue['text'] ?? ''}',
+            acknowledge: ['${cue['id']}'],
+          ),
+        );
+      }
+    }
+    if (_round != null &&
+        round != null &&
+        round > _round! &&
+        room['ending'] == null) {
+      enqueue(
+        NovelMessage(
+          title: '第 $round 回合',
+          text: '时间向前，故事继续。\n行动点已恢复，重新决定你的下一步。',
+          round: round,
+        ),
+      );
+    }
+    _round = round;
+    final ending = room['ending'];
+    if (ending != null && _ending != ending['id']) {
+      _ending = ending['id'];
+      enqueue(
+        NovelMessage(
+          title: '故事的最后一页',
+          text: '${ending['summary']}',
+          subtitle: '你的选择，写下了这个结局。',
+          ending: true,
+        ),
+      );
     }
   }
 
-  @override
-  void dispose() {
-    client.removeListener(changed);
-    client.dispose();
-    if (widget.identity == null) identity.dispose();
-    invite.dispose();
-    super.dispose();
+  void enqueue(NovelMessage message) {
+    _messages.add(message);
+    _log.add(message);
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(present()));
   }
 
-  List<dynamic> list(String key) => client.view?[key] as List? ?? [];
-  Widget panel(String title, List<Widget> children) => Card(
-    margin: const EdgeInsets.only(bottom: 20),
-    child: Padding(
-      padding: const EdgeInsets.all(26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          ...children,
-        ],
+  Future<void> present() async {
+    if (_presenting || !mounted) return;
+    _presenting = true;
+    while (_messages.isNotEmpty && mounted) {
+      if (!mounted) break;
+      final message = _messages.removeAt(0);
+      await showNovelMessage(context, message);
+      if (!mounted) break;
+      for (final cue in message.acknowledge) {
+        await client.command('media.complete', {
+          'cue_id': cue,
+          'mode': 'summary',
+        });
+        if (client.error != null || client.pending != null) {
+          _cues.remove(cue);
+          break;
+        }
+      }
+    }
+    _presenting = false;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> send(
+    String type, [
+    Json body = const {},
+    String? feedback,
+  ]) async {
+    if (client.busy || client.pending != null) return;
+    await client.command(type, body);
+    if (!mounted) return;
+    if (client.error != null) {
+      enqueue(NovelMessage(title: '这一步尚未完成', text: client.error!));
+    } else if (type == 'action.submit' && client.view?['own_intent'] != null) {
+      enqueue(
+        const NovelMessage(
+          title: '行动已提交',
+          text: '你已作出选择，行动点暂时预留。等其他参与者决定后，故事会给出结果。',
+        ),
+      );
+    } else if (feedback != null) {
+      enqueue(NovelMessage(title: '你的选择', text: feedback));
+    }
+  }
+
+  Future<bool?> ask(NovelMessage message) async {
+    if (_presenting || !mounted) return null;
+    _presenting = true;
+    try {
+      return await showNovelMessage(context, message);
+    } finally {
+      _presenting = false;
+      if (mounted) unawaited(present());
+    }
+  }
+
+  Future<void> choose(Json action) async {
+    if (!['deliver', 'keep'].contains(action['id'])) {
+      await send('action.submit', {
+        'action_id': action['id'],
+        'target_id': null,
+      });
+      return;
+    }
+    final confirmed = await ask(
+      NovelMessage(
+        title: action['label'],
+        text: '${action['risk_text'] ?? '仔细观察，或许能找到新的线索。'}',
+        subtitle: '消耗 ${action['cost']} 行动点',
+        confirm: true,
       ),
-    ),
-  );
+    );
+    if (confirmed == true && mounted) {
+      await send('action.submit', {
+        'action_id': action['id'],
+        'target_id': null,
+      });
+    }
+  }
+
+  Future<void> move(Json location, Json? link) async {
+    final current = client.view?['self']?['location'] == location['id'];
+    final confirmed = await ask(
+      NovelMessage(
+        title: location['label'],
+        text: location['description'] ?? '安静地观察这个地点。',
+        subtitle: current
+            ? '你正在这里'
+            : link == null
+            ? '这里没有直接相连的通路'
+            : '移动消耗 ${link['cost']} 行动点',
+        confirm:
+            !current &&
+            link?['allowed_now'] == true &&
+            !blocked &&
+            client.view?['room']['status'] == 'active' &&
+            (link?['cost'] ?? 0) <=
+                ((client.view?['self']['ap_remaining'] ?? 0) -
+                    (client.view?['self']['ap_reserved'] ?? 0)),
+      ),
+    );
+    if (confirmed == true && link != null && mounted) {
+      await send('action.submit', {
+        'action_id': 'move:${link['id']}',
+        'target_id': null,
+      });
+    }
+  }
+
+  bool get blocked =>
+      client.busy ||
+      client.pending != null ||
+      client.view?['own_intent'] != null ||
+      items('narrative_cues').any(
+        (c) =>
+            c['blocking'] == true &&
+            !(client.view?['acknowledged_cues'] as List? ?? []).contains(
+              c['id'],
+            ),
+      );
   Future<void> share(Json clue) async {
     final selected = <String>{};
-    final members = list('members')
+    final members = items('members')
         .where((m) => m['member_id'] != client.view?['own_member_id'])
         .toList();
-    final confirmed = await showDialog<bool>(
+    final yes = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, set) => AlertDialog(
-          title: const Text('分享知识'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('分享后，对方会永久获得这条知识。'),
-              for (final member in members)
-                CheckboxListTile(
-                  title: Text(member['display_name']),
-                  value: selected.contains(member['member_id']),
-                  onChanged: (v) => set(
-                    () => v == true
-                        ? selected.add(member['member_id'])
-                        : selected.remove(member['member_id']),
+          title: const Text('分享这条线索'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('选中的同伴会永久获得这条线索。'),
+                for (final m in members)
+                  CheckboxListTile(
+                    title: Text(m['display_name']),
+                    value: selected.contains(m['member_id']),
+                    onChanged: (v) => set(
+                      () => v == true
+                          ? selected.add(m['member_id'])
+                          : selected.remove(m['member_id']),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -132,560 +331,663 @@ class _C2StageState extends State<C2Stage> {
               onPressed: selected.isEmpty
                   ? null
                   : () => Navigator.pop(context, true),
-              child: const Text('确认分享'),
+              child: const Text('分享'),
             ),
           ],
         ),
       ),
     );
-    if (confirmed == true) {
-      await client.command('knowledge.share', {
+    if (yes == true && mounted) {
+      await send('knowledge.share', {
         'clue_id': clue['id'],
         'audience_member_ids': selected.toList(),
-      });
+      }, '这条线索已经分享给选中的同伴。');
     }
   }
 
-  Widget chip(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: const Color(0xffd8ab65).withValues(alpha: .09),
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: const Color(0xffd8ab65).withValues(alpha: .22)),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 12, color: Color(0xffdeb97d)),
-    ),
-  );
-  Widget teamPanel(Json v) => panel('同场的人', [
-    for (final member in list('members'))
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xff314b3e),
-          child: Text((member['display_name'] as String).characters.first),
-        ),
-        title: Text(member['display_name']),
-        subtitle: Text(
-          member['role_id'] == null
-              ? '等待选角'
-              : (list('roles')
-                        .where((r) => r['id'] == member['role_id'])
-                        .firstOrNull?['label'] ??
-                    member['role_id']),
-        ),
-        trailing: Icon(
-          member['online'] == true ? Icons.circle : Icons.circle_outlined,
-          size: 8,
-          color: member['online'] == true
-              ? const Color(0xff83ad8b)
-              : Colors.grey,
-        ),
-      ),
-  ]);
-  Widget knowledgePanel() => panel('我的线索', [
-    for (final k in list('knowledge'))
-      Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(k['text'], style: const TextStyle(height: 1.8)),
-            if (k['shareable'] == true)
-              TextButton.icon(
-                onPressed: client.busy
-                    ? null
-                    : () => unawaited(share(Map<String, dynamic>.from(k))),
-                icon: const Icon(Icons.ios_share, size: 16),
-                label: const Text('分享给同伴'),
-              ),
-          ],
-        ),
-      ),
-    if (list('knowledge').isEmpty)
-      const Text(
-        '留意周围的细节。新的线索会出现在这里。',
-        style: TextStyle(color: Colors.white54, height: 1.8),
-      ),
-  ]);
-  Widget mapPanel(Json v, bool disabled) => panel('探索地图', [
-    for (final l in v['map']['locations'])
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(
-          l['id'] == v['self']['location']
-              ? Icons.my_location
-              : Icons.place_outlined,
-          color: l['id'] == v['self']['location']
-              ? const Color(0xffdeb97d)
-              : Colors.white38,
-        ),
-        title: Text(l['label']),
-        subtitle: l['id'] == v['self']['location'] ? const Text('你在这里') : null,
-      ),
-    for (final link in (v['map']['links'] as List).where(
-      (l) => l['from'] == v['self']['location'],
-    ))
-      Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: OutlinedButton(
-          onPressed:
-              disabled ||
-                  link['allowed_now'] != true ||
-                  v['room']['status'] != 'active'
-              ? null
-              : () => unawaited(
-                  client.command('action.submit', {
-                    'action_id': 'move:${link['id']}',
-                    'target_id': null,
-                  }),
+  Future<void> journal() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xff152127),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 650),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '旅途手记',
+                        style: TextStyle(fontSize: 24, fontFamily: 'Songti SC'),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: '关闭手记',
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
-          child: Text(
-            '前往 ${((v['map']['locations'] as List).firstWhere((l) => l['id'] == link['to']))['label']} · ${link['cost']} 点',
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      for (final k in items('knowledge'))
+                        ListTile(
+                          leading: const Icon(
+                            Icons.mail_outline,
+                            color: novelGold,
+                          ),
+                          trailing:
+                              k['shareable'] == true &&
+                                  items('roles').length > 1
+                              ? IconButton(
+                                  tooltip: '分享线索',
+                                  icon: const Icon(Icons.ios_share, size: 18),
+                                  onPressed: client.busy
+                                      ? null
+                                      : () {
+                                          Navigator.pop(context);
+                                          unawaited(
+                                            share(Map<String, dynamic>.from(k)),
+                                          );
+                                        },
+                                )
+                              : null,
+                          title: Text(
+                            k['text'],
+                            style: const TextStyle(height: 1.8),
+                          ),
+                        ),
+                      if (items('knowledge').isEmpty)
+                        const Text('还没有线索。尝试与场景中的事物互动。'),
+                      const Divider(height: 40),
+                      const Text('随身物品', style: TextStyle(color: novelGold)),
+                      for (final i in items('inventory'))
+                        ListTile(title: Text(i['label'])),
+                      const Divider(height: 32),
+                      const Text('本次阅读记录', style: TextStyle(color: novelGold)),
+                      for (final m in _log.reversed)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            '${m.title}\n${m.text}',
+                            style: const TextStyle(height: 1.8),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-  ]);
+    );
+  }
+
+  @override
+  void dispose() {
+    client.removeListener(changed);
+    client.dispose();
+    if (widget.identity == null) identity.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final v = client.view;
-    final room = v?['room'] as Json?;
-    final disabled = client.busy || client.pending != null;
-    final active = room?['status'] == 'active';
-    final lobby = room?['status'] == 'lobby';
-    final self = v?['self'];
-    final cues = list('narrative_cues')
-        .where(
-          (c) => !(v?['acknowledged_cues'] as List? ?? []).contains(c['id']),
-        )
-        .toList();
-    final title = v?['story_title'] ?? '故事现场';
-    final ownMember = list('members')
-        .where((m) => m['member_id'] == v?['own_member_id'])
-        .firstOrNull;
-    final ownRole = list('roles')
-        .where((r) => r['id'] == ownMember?['role_id'])
-        .firstOrNull;
-    final main = <Widget>[
-      if (lobby)
-        panel('选择你的角色', [
-          const Text(
-            '每个人都有自己的视角。选好角色，故事就从你们之间开始。',
-            style: TextStyle(color: Colors.white54, height: 1.8),
-          ),
-          const SizedBox(height: 20),
-          for (final r in list('roles'))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Material(
-                color: ownMember?['role_id'] == r['id']
-                    ? const Color(0xff344b3c)
-                    : const Color(0xff222e29),
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: disabled
-                      ? null
-                      : () => unawaited(
-                          client.command('role.select', {'role_id': r['id']}),
-                        ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.person_outline,
-                          color: Color(0xffb6c5b7),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            r['label'],
-                            style: const TextStyle(fontSize: 18),
-                          ),
-                        ),
-                        if (ownMember?['role_id'] == r['id'])
-                          const Icon(
-                            Icons.check_circle,
-                            color: Color(0xffcfb378),
-                          ),
-                      ],
+    if (loading || v == null) {
+      return Scaffold(
+        body: Center(
+          child: error == null
+              ? const CircularProgressIndicator()
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(error!),
+                    TextButton(
+                      onPressed: initialize,
+                      child: const Text('重新连接'),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: disabled || ownMember?['role_id'] == null
-                ? null
-                : () => unawaited(
-                    client.command('member.ready', {'ready': true}),
-                  ),
-            child: Text(ownMember?['ready'] == true ? '已准备，等待同伴' : '我准备好了'),
-          ),
-          if (v?['host_member_id'] == v?['own_member_id'])
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: OutlinedButton(
-                onPressed:
-                    disabled ||
-                        !list('members').every((m) => m['ready'] == true)
-                    ? null
-                    : () => unawaited(client.command('room.start')),
-                child: const Text('全员就绪，开始故事'),
-              ),
-            ),
-        ]),
-      if (room?['status'] == 'suspended')
-        panel('故事暂停在这里', [
-          const Text(
-            '等同伴回来。所有参与者确认后，将从原处继续。',
-            style: TextStyle(height: 1.8, color: Colors.white60),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: disabled
-                ? null
-                : () => unawaited(client.command('room.resume')),
-            child: const Text('我已回来，确认继续'),
-          ),
-        ]),
-      if (room?['ending'] != null)
-        panel('故事的最后一页', [
-          const Icon(
-            Icons.auto_stories_outlined,
-            size: 40,
-            color: Color(0xffd4b782),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            room!['ending']['summary'],
-            style: const TextStyle(fontSize: 18, height: 2),
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton(
-            onPressed: () => context.go('/discover'),
-            child: const Text('发现下一部剧目'),
-          ),
-        ]),
-      for (final cue in cues)
-        panel('此刻的故事', [
-          Text(
-            cue['summary'] ?? '',
-            style: const TextStyle(
-              fontSize: 17,
-              height: 2,
-              color: Color(0xffe3e1d5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: disabled
-                ? null
-                : () => unawaited(
-                    client.command('media.complete', {
-                      'cue_id': cue['id'],
-                      'mode': 'summary',
-                    }),
-                  ),
-            child: const Text('读完，继续故事'),
-          ),
-        ]),
-      if (active)
-        panel('接下来，你会怎么做？', [
-          for (final a in list('actions'))
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xff24332b),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xff38493d)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          a['label'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 17,
+        ),
+      );
+    }
+    final room = v['room'];
+    final self = v['self'];
+    final locations = (v['map']?['locations'] as List? ?? []).cast<Json>();
+    final links = (v['map']?['links'] as List? ?? []).cast<Json>();
+    final location = locations
+        .where((l) => l['id'] == self?['location'])
+        .firstOrNull;
+    final member = items('members')
+        .where((m) => m['member_id'] == v['own_member_id'])
+        .firstOrNull;
+    final solo = items('roles').length == 1;
+    final lobby = room['status'] == 'lobby';
+    final active = room['status'] == 'active';
+    final ended = room['ending'] != null;
+    final background = v['story_title'] == '雨夜最后一封信'
+        ? 'assets/stories/last_letter/${self?['location'] == 'archive' ? 'archive' : 'office'}.png'
+        : null;
+    return Scaffold(
+      backgroundColor: const Color(0xff0b151d),
+      body: LayoutBuilder(
+        builder: (context, size) {
+          final narrow = size.maxWidth < 700;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedSwitcher(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 700),
+                child: background == null
+                    ? Container(
+                        key: const ValueKey('fallback'),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xff33505c), Color(0xff0d1922)],
                           ),
                         ),
+                      )
+                    : Image.asset(
+                        background,
+                        key: ValueKey(background),
+                        fit: BoxFit.cover,
+                        alignment: Alignment(narrow ? .45 : 0, 0),
+                        width: size.maxWidth,
+                        height: size.maxHeight,
+                        errorBuilder: (_, _, _) =>
+                            const ColoredBox(color: Color(0xff1a2a32)),
                       ),
-                      chip('${a['cost']} 行动点'),
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0, .32, .68, 1],
+                    colors: [
+                      Color(0xaa07131c),
+                      Colors.transparent,
+                      Color(0x5507131c),
+                      Color(0xff07131c),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    a['risk_text'] ?? '',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      height: 1.7,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.tonal(
-                      onPressed:
-                          disabled ||
-                              a['allowed_now'] != true ||
-                              cues.any((c) => c['blocking'] == true)
-                          ? null
-                          : () => unawaited(
-                              client.command('action.submit', {
-                                'action_id': a['id'],
-                                'target_id': null,
-                              }),
-                            ),
-                      child: const Text('选择这个行动 →'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (list('actions').isEmpty)
-            const Text(
-              '这里暂时没有可执行的行动。可以看看地图，前往别的地点。',
-              style: TextStyle(height: 1.8, color: Colors.white54),
-            ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 16,
-            runSpacing: 12,
-            children: [
-              if (v?['own_intent_id'] != null)
-                OutlinedButton(
-                  onPressed: disabled
-                      ? null
-                      : () => unawaited(
-                          client.command('action.cancel', {
-                            'intent_id': v!['own_intent_id'],
-                          }),
-                        ),
-                  child: const Text('取消本步行动'),
                 ),
-              TextButton(
-                onPressed: disabled
-                    ? null
-                    : () => unawaited(client.command('round.end')),
-                child: const Text('结束本回合'),
               ),
-            ],
-          ),
-        ]),
-      if (v?['vote'] != null)
-        panel('共同作出决定', [
-          for (final option in v!['vote']['options'])
-            ListTile(
-              title: Text(option['label']),
-              leading: Icon(
-                v['vote']['own_ballot'] == option['id']
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-              ),
-              onTap: disabled
-                  ? null
-                  : () => unawaited(
-                      client.command('vote.cast', {
-                        'vote_id': v['vote']['id'],
-                        'option_id': option['id'],
-                      }),
-                    ),
-            ),
-        ]),
-    ];
-    final aside = <Widget>[
-      if (lobby && v?['invite_code'] != null)
-        panel('邀请同伴入戏', [
-          const Text(
-            '把邀请码发给朋友，一起走进这部故事。',
-            style: TextStyle(color: Colors.white54, height: 1.8),
-          ),
-          const SizedBox(height: 20),
-          SelectableText(
-            v!['invite_code'],
-            style: const TextStyle(
-              fontSize: 26,
-              letterSpacing: 5,
-              color: Color(0xffdeb97d),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${list('members').length} / ${v['seat_count']} 人已加入',
-            style: const TextStyle(color: Colors.white54),
-          ),
-        ]),
-      if (self != null)
-        panel('你的角色', [
-          Text(
-            ownRole?['label'] ?? self['role_id'],
-            style: const TextStyle(fontSize: 20),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              chip('剩余 ${self['ap_remaining']} 点'),
-              chip('预留 ${self['ap_reserved']} 点'),
-            ],
-          ),
-          for (final goal in self['goals'] ?? [])
-            Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child: Text(
-                '$goal',
-                style: const TextStyle(height: 1.7, color: Colors.white60),
-              ),
-            ),
-        ]),
-      if (v?['map'] != null) mapPanel(v!, disabled),
-      if (!lobby) knowledgePanel(),
-      if (!lobby)
-        panel('随身物品', [
-          for (final item in list('inventory'))
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.inventory_2_outlined),
-              title: Text(item['label']),
-              subtitle: Text(item['reserved'] == true ? '等待交接' : '由你持有'),
-            ),
-          if (list('inventory').isEmpty)
-            const Text('暂时没有随身物品。', style: TextStyle(color: Colors.white54)),
-        ]),
-      if (v != null) teamPanel(v),
-    ];
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 76,
-        title: const Text(
-          '入戏',
-          style: TextStyle(
-            fontFamily: 'Songti SC',
-            letterSpacing: 5,
-            fontSize: 28,
-          ),
-        ),
-        leading: IconButton(
-          tooltip: '返回剧目',
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/discover'),
-        ),
-        actions: [
-          IconButton(
-            tooltip: '刷新房间',
-            onPressed: () => unawaited(client.refresh()),
-            icon: const Icon(Icons.refresh),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : LayoutBuilder(
-              builder: (context, box) => SingleChildScrollView(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1280),
-                    child: Padding(
-                      padding: EdgeInsets.all(box.maxWidth < 700 ? 16 : 32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: narrow ? 12 : 28,
+                        vertical: 12,
+                      ),
+                      child: Row(
                         children: [
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 10,
-                            children: [
-                              chip(
-                                lobby
-                                    ? '开场之前'
-                                    : room?['ending'] != null
-                                    ? '故事落幕'
-                                    : '故事进行中',
-                              ),
-                              chip(client.live ? '实时连接' : '正在恢复连接'),
-                              if (room?['round'] != null)
-                                chip(
-                                  '第 ${room!['round']} 回合 · 第 ${room['step']} 步',
-                                ),
-                            ],
+                          IconButton(
+                            onPressed: () => context.go('/discover'),
+                            tooltip: '返回剧目',
+                            icon: const Icon(Icons.arrow_back),
                           ),
-                          const SizedBox(height: 22),
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontFamily: 'Songti SC',
-                              fontSize: 34,
-                              height: 1.5,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              v['story_title'] ?? '故事现场',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Songti SC',
+                                fontSize: narrow ? 19 : 25,
+                                color: const Color(0xfff4ecd9),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            '你的选择，正在改变故事的方向。',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              height: 1.8,
+                          IconButton(
+                            onPressed: journal,
+                            tooltip: '旅途手记',
+                            icon: Badge(
+                              label: Text('${items('knowledge').length}'),
+                              isLabelVisible: items('knowledge').isNotEmpty,
+                              child: const Icon(Icons.menu_book_outlined),
                             ),
                           ),
-                          const SizedBox(height: 28),
-                          if (error != null || client.error != null)
-                            panel('操作提示', [Text(error ?? client.error!)]),
-                          if (client.pending != null)
-                            panel('上次行动尚待确认', [
-                              const Text('先检查结果，避免重复执行。'),
-                              Wrap(
-                                spacing: 12,
-                                children: [
-                                  TextButton(
-                                    onPressed: client.busy
-                                        ? null
-                                        : () => unawaited(
-                                            client.recoverCommand(),
-                                          ),
-                                    child: const Text('检查操作结果'),
-                                  ),
-                                  TextButton(
-                                    onPressed: client.busy
-                                        ? null
-                                        : () =>
-                                              unawaited(client.retryCommand()),
-                                    child: const Text('用原编号重新发送'),
-                                  ),
-                                ],
-                              ),
-                            ]),
-                          if (box.maxWidth >= 960)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: Column(children: main)),
-                                const SizedBox(width: 24),
-                                SizedBox(
-                                  width: 330,
-                                  child: Column(children: aside),
-                                ),
-                              ],
-                            )
-                          else ...[
-                            ...main,
-                            ...aside,
-                          ],
+                          IconButton(
+                            onPressed: client.busy
+                                ? null
+                                : () => unawaited(client.refresh()),
+                            tooltip: client.live ? '连接正常 · 刷新' : '正在连接 · 刷新',
+                            icon: Icon(
+                              client.live ? Icons.wifi : Icons.sync,
+                              size: 20,
+                              color: client.live
+                                  ? const Color(0xffb8cfbf)
+                                  : novelGold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: narrow ? 22 : 64,
+                            top: 12,
+                            right: narrow ? 170 : 350,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lobby
+                                      ? '故事即将开始'
+                                      : '第 ${room['round'] ?? 1} 回合',
+                                  style: const TextStyle(
+                                    color: novelGold,
+                                    letterSpacing: 2,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  lobby
+                                      ? (v['story_title'] == '雨夜最后一封信'
+                                            ? '最后一次值夜'
+                                            : '选择你的角色')
+                                      : location?['label'] ?? '故事现场',
+                                  style: TextStyle(
+                                    fontSize: narrow ? 26 : 44,
+                                    fontFamily: 'Songti SC',
+                                    color: const Color(0xfff6efd9),
+                                  ),
+                                ),
+                                if (!lobby)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 14),
+                                    child: Wrap(
+                                      spacing: 4,
+                                      children: [
+                                        for (
+                                          var i = 0;
+                                          i < (self?['ap_remaining'] ?? 0);
+                                          i++
+                                        )
+                                          Icon(
+                                            Icons.diamond_outlined,
+                                            size: narrow ? 15 : 19,
+                                            color:
+                                                i < (self?['ap_reserved'] ?? 0)
+                                                ? Colors.white38
+                                                : novelGold,
+                                          ),
+                                        Text(
+                                          '  ${self?['ap_remaining'] ?? 0} 行动点',
+                                          style: const TextStyle(
+                                            color: Color(0xffe5dcc5),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (!lobby && locations.isNotEmpty)
+                            Positioned(
+                              top: 4,
+                              right: narrow ? 12 : 40,
+                              child: SizedBox(
+                                width: narrow ? 146 : 250,
+                                height: narrow ? 155 : 210,
+                                child: NovelMap(
+                                  locations: locations,
+                                  links: links,
+                                  current: self?['location'],
+                                  onSelect: (l) => unawaited(
+                                    move(
+                                      l,
+                                      links
+                                          .where(
+                                            (e) =>
+                                                e['from'] ==
+                                                    self?['location'] &&
+                                                e['to'] == l['id'],
+                                          )
+                                          .firstOrNull,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        narrow ? 12 : 48,
+                        0,
+                        narrow ? 12 : 48,
+                        narrow ? 12 : 30,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 1100,
+                          maxHeight: size.maxHeight * (narrow ? .57 : .5),
+                        ),
+                        child: NovelPanel(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.all(narrow ? 20 : 28),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.auto_awesome_outlined,
+                                        size: 16,
+                                        color: novelGold,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          lobby
+                                              ? '选择你的视角'
+                                              : ended
+                                              ? '终章'
+                                              : '接下来，你会怎么做？',
+                                          style: const TextStyle(
+                                            color: novelGold,
+                                            fontSize: 13,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ),
+                                      if (client.busy)
+                                        const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    lobby
+                                        ? solo
+                                              ? '一盏灯，一封信，一个等待揭开的雨夜。\n准备好之后，独自走进这个故事。'
+                                              : '选择你的角色。每个人的视角，都可能改变故事的方向。'
+                                        : ended
+                                        ? room['ending']['summary']
+                                        : location?['description'] ??
+                                              '留意周围的细节，选择你的下一步。',
+                                    style: TextStyle(
+                                      fontSize: narrow ? 15 : 18,
+                                      height: 1.9,
+                                      color: const Color(0xffebe6d8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (lobby) ...[
+                                    if (!solo && v['invite_code'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 16,
+                                        ),
+                                        child: SelectableText(
+                                          '邀请同伴 · ${v['invite_code']}',
+                                          style: const TextStyle(
+                                            color: novelGold,
+                                          ),
+                                        ),
+                                      ),
+                                    if (!solo)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: Text(
+                                          items('members')
+                                              .map(
+                                                (m) =>
+                                                    '${m['display_name']} · ${m['ready'] == true ? '已准备' : '未准备'}',
+                                              )
+                                              .join(' / '),
+                                          style: const TextStyle(
+                                            color: Colors.white60,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        for (final r in items('roles'))
+                                          ChoiceChip(
+                                            label: Text(r['label']),
+                                            selected:
+                                                member?['role_id'] == r['id'],
+                                            onSelected: client.busy
+                                                ? null
+                                                : (_) => unawaited(
+                                                    send(
+                                                      'role.select',
+                                                      {'role_id': r['id']},
+                                                      '你将以${r['label']}的身份进入故事。',
+                                                    ),
+                                                  ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    FilledButton(
+                                      onPressed:
+                                          client.busy ||
+                                              member?['role_id'] == null
+                                          ? null
+                                          : () => unawaited(() async {
+                                              await send('member.ready', {
+                                                'ready': true,
+                                              });
+                                              if (solo &&
+                                                  client.error == null &&
+                                                  mounted) {
+                                                await send('room.start');
+                                              }
+                                            }()),
+                                      child: Text(
+                                        solo
+                                            ? '走进故事 →'
+                                            : member?['ready'] == true
+                                            ? '已准备，等待同伴'
+                                            : '我准备好了',
+                                      ),
+                                    ),
+                                    if (!solo &&
+                                        v['host_member_id'] ==
+                                            v['own_member_id'])
+                                      TextButton(
+                                        onPressed:
+                                            client.busy ||
+                                                !items('members').every(
+                                                  (m) => m['ready'] == true,
+                                                )
+                                            ? null
+                                            : () =>
+                                                  unawaited(send('room.start')),
+                                        child: const Text('全员就绪，开始故事'),
+                                      ),
+                                  ],
+                                  if (active) ...[
+                                    if (blocked && !client.busy)
+                                      Text(
+                                        client.view?['own_intent'] != null
+                                            ? '行动已提交，等待其他参与者。'
+                                            : '读完当前叙事后，继续探索。',
+                                        style: const TextStyle(
+                                          color: novelGold,
+                                        ),
+                                      ),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 10,
+                                      children: [
+                                        for (final a in items('actions'))
+                                          NovelChoice(
+                                            label: a['label'],
+                                            cost: a['cost'],
+                                            enabled:
+                                                !blocked &&
+                                                a['allowed_now'] == true,
+                                            onTap: () => unawaited(
+                                              choose(
+                                                Map<String, dynamic>.from(a),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Wrap(
+                                      alignment: WrapAlignment.spaceBetween,
+                                      spacing: 16,
+                                      runSpacing: 8,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed:
+                                              client.busy ||
+                                                  client.pending != null ||
+                                                  items('narrative_cues').any(
+                                                    (c) =>
+                                                        c['blocking'] == true &&
+                                                        !(v['acknowledged_cues']
+                                                                    as List? ??
+                                                                [])
+                                                            .contains(c['id']),
+                                                  )
+                                              ? null
+                                              : () => unawaited(() async {
+                                                  final yes = await ask(
+                                                    NovelMessage(
+                                                      title: '让时间继续',
+                                                      text: '结束本回合会放弃剩余行动点。所有参与者结束后，进入下一回合并恢复行动点。',
+                                                      subtitle:
+                                                          '当前剩余 ${self?['ap_remaining'] ?? 0} 行动点',
+                                                      confirm: true,
+                                                    ),
+                                                  );
+                                                  if (yes == true) {
+                                                    await send('round.end');
+                                                  }
+                                                }()),
+                                          icon: const Icon(
+                                            Icons.nights_stay_outlined,
+                                            size: 16,
+                                          ),
+                                          label: const Text('结束本回合'),
+                                        ),
+                                        if (v['own_intent'] != null)
+                                          TextButton(
+                                            onPressed: client.busy
+                                                ? null
+                                                : () => unawaited(
+                                                    send('action.cancel', {
+                                                      'intent_id':
+                                                          v['own_intent']['id'],
+                                                    }, '已取消等待中的行动。'),
+                                                  ),
+                                            child: const Text('取消待执行行动'),
+                                          ),
+                                        if (items('knowledge').isNotEmpty)
+                                          TextButton.icon(
+                                            onPressed: journal,
+                                            icon: const Icon(
+                                              Icons.mail_outline,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              '${items('knowledge').length} 条线索 · 查看手记',
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (v['vote'] != null) ...[
+                                    Text(v['vote']['label']),
+                                    for (final option in v['vote']['options'])
+                                      NovelChoice(
+                                        label: option['label'],
+                                        enabled: !client.busy,
+                                        onTap: () => unawaited(
+                                          send('vote.cast', {
+                                            'option_id': option['id'],
+                                          }, '你的投票已记录。'),
+                                        ),
+                                      ),
+                                  ],
+                                  if (room['status'] == 'suspended')
+                                    FilledButton(
+                                      onPressed: client.busy
+                                          ? null
+                                          : () => unawaited(
+                                              send(
+                                                'room.resume',
+                                                {},
+                                                '你已确认继续，等待所有参与者回来。',
+                                              ),
+                                            ),
+                                      child: const Text('故事已暂停 · 确认继续'),
+                                    ),
+                                  if (ended)
+                                    FilledButton(
+                                      onPressed: () => context.go('/discover'),
+                                      child: const Text('带着故事离开 →'),
+                                    ),
+                                  if (client.pending != null)
+                                    OutlinedButton(
+                                      onPressed: client.busy
+                                          ? null
+                                          : () => unawaited(
+                                              client.recoverCommand(),
+                                            ),
+                                      child: const Text('查询未确认的操作'),
+                                    ),
+                                  if (client.error != null)
+                                    Text(
+                                      client.error!,
+                                      style: const TextStyle(
+                                        color: Color(0xffe3ad98),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
