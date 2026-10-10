@@ -132,7 +132,7 @@ defmodule Ruxi.C2.Communication do
         end
       end)
 
-    if match?({:ok, _}, result), do: Ruxi.SceneVoice.Coordinator.notify(id)
+    if match?({:ok, _}, result), do: Ruxi.SceneVoice.Coordinator.notify(id, :chat)
     result
   end
 

@@ -49,7 +49,7 @@ async def post(client: httpx.AsyncClient, path: str, payload: dict) -> dict:
 async def heartbeat(client: httpx.AsyncClient, job: dict):
     while True:
         await asyncio.sleep(15)
-        await post(client, f'/internal/work/{job["job_id"]}/heartbeat', {
+        await post(client, f'/api/internal/work/{job["job_id"]}/heartbeat', {
             "attempt": job["attempt"], "lease_token": job["lease_token"]})
 
 
@@ -71,7 +71,7 @@ async def process(client: httpx.AsyncClient, job: dict):
         # Lost responses retry exactly the same completed attempt/hash.
         for retry in range(3):
             try:
-                reply = await post(client, f'/internal/work/{job["job_id"]}/complete', body)
+                reply = await post(client, f'/api/internal/work/{job["job_id"]}/complete', body)
                 stats[reply["status"]] += 1
                 return
             except httpx.TransportError:
@@ -80,7 +80,7 @@ async def process(client: httpx.AsyncClient, job: dict):
                 await asyncio.sleep(2 ** retry)
     except (ValueError, KeyError, OSError) as error:
         code = str(error) if str(error).isupper() and len(str(error)) <= 64 else 'PROCESSING_FAILED'
-        await post(client, f'/internal/work/{job["job_id"]}/fail', {
+        await post(client, f'/api/internal/work/{job["job_id"]}/fail', {
             'attempt': job['attempt'], 'lease_token': job['lease_token'], 'code': code, 'retryable': False})
         stats['errors'] += 1
     finally:
@@ -97,7 +97,7 @@ async def loop():
         "Authorization": f"Bearer {WORKER_TOKEN}", "X-Work-Protocol": "1"}) as client:
         while True:
             try:
-                job = await post(client, "/internal/work/claim", {
+                job = await post(client, "/api/internal/work/claim", {
                     "worker_id": WORKER_ID, "supported_kinds": SUPPORTED_KINDS, "claim_id": str(uuid.uuid4())})
                 if job.get("job_id"):
                     await process(client, job)

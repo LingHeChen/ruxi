@@ -91,11 +91,11 @@ defmodule Ruxi.Media do
         subtitle = Phoenix.Token.sign(RuxiWeb.Endpoint, "media", Map.put(cap, "kind", "subtitle"))
 
         %{
-          "url" => origin <> "/media/" <> video,
+          "url" => origin <> "/api/media/" <> video,
           "expires_at" => Util.iso(DB.time() + 120_000),
           "mime_type" => "video/mp4",
           "duration_ms" => asset["duration_ms"],
-          "subtitle" => %{"url" => origin <> "/media/" <> subtitle, "language" => "zh-CN"},
+          "subtitle" => %{"url" => origin <> "/api/media/" <> subtitle, "language" => "zh-CN"},
           "summary" => summary,
           "asset_status" =>
             if(asset["object_store"], do: "ready", else: "programmatic_demo_ready")

@@ -183,6 +183,40 @@ defmodule Ruxi.C2.Content do
     endings =
       Enum.flat_map(s["events"], fn e -> Enum.filter(e["effects"], &(&1["op"] == "end")) end)
 
+    role_media =
+      Enum.flat_map(s["roles"], fn role ->
+        epilogues = role["epilogues"] || %{}
+        overrides = role["epilogue_overrides"] || %{}
+
+        refs =
+          List.wrap(role["opening_media"]) ++
+            Map.values(epilogues) ++ Enum.map(Map.values(overrides), & &1["media"])
+
+        Enum.flat_map(refs, fn ref ->
+          asset = ids["media"][ref]
+
+          require_ref(ref, ids["media"], "/roles/#{role["id"]}") ++
+            if(asset && asset["audience"] != [role["id"]],
+              do: issue("UNSAFE_AUDIENCE", "/roles/#{role["id"]}"),
+              else: []
+            )
+        end) ++
+          Enum.flat_map(
+            Enum.uniq(Map.keys(epilogues) ++ Map.keys(overrides)),
+            &require_ref(&1, ids["media"], "/roles/#{role["id"]}/epilogues")
+          ) ++
+          Enum.flat_map(overrides, fn {ending, override} ->
+            condition(
+              override["condition"],
+              s,
+              ids,
+              "/roles/#{role["id"]}/epilogue_overrides/#{ending}",
+              false,
+              0
+            )
+          end)
+      end)
+
     fallback =
       if Enum.any?(s["events"], fn e ->
            e["trigger"] == "round_end" and
@@ -197,7 +231,8 @@ defmodule Ruxi.C2.Content do
 
     duplicate ++
       locations ++
-      links ++ knowledge ++ inventory ++ rules ++ votes ++ media ++ fallback ++ missing_end
+      links ++
+      knowledge ++ inventory ++ rules ++ votes ++ media ++ role_media ++ fallback ++ missing_end
   end
 
   defp type(v) when is_boolean(v), do: :boolean
@@ -250,9 +285,18 @@ defmodule Ruxi.C2.Content do
   defp ref_type(_, _), do: {false, :invalid}
 
   defp effect(e, owner, kind, s, ids, path, global) do
-    private = if global and e["audience"] == "self", do: issue("UNSAFE_AUDIENCE", path), else: []
+    private =
+      if global and e["audience"] in ["self", "scene"],
+        do: issue("UNSAFE_AUDIENCE", path),
+        else: []
+
+    audience_refs =
+      if is_list(e["audience"]),
+        do: Enum.flat_map(e["audience"], &require_ref(&1, ids["roles"], path)),
+        else: []
 
     private ++
+      audience_refs ++
       case e["op"] do
         "set" ->
           {exists, t} = ref_type(e["ref"], s)
@@ -303,7 +347,11 @@ defmodule Ruxi.C2.Content do
           asset = ids["media"][e["ref"]]
 
           require_ref(e["ref"], ids["media"], path) ++
-            if((asset && e["audience"] == "all") and asset["audience"] != "public",
+            if(
+              asset && asset["audience"] != "public" &&
+                (e["audience"] in ["all", "scene", "participants"] ||
+                   (is_list(e["audience"]) &&
+                      not Enum.all?(e["audience"], &(&1 in asset["audience"])))),
               do: issue("UNSAFE_AUDIENCE", path),
               else: []
             )

@@ -11,9 +11,9 @@
     }
   ],
   "paths": {
-    "/health": {
+    "/api/health": {
       "get": {
-        "summary": "/health",
+        "summary": "/api/health",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -36,9 +36,9 @@
         }
       }
     },
-    "/v1/auth/guest": {
+    "/api/v1/auth/guest": {
       "post": {
-        "summary": "/v1/auth/guest",
+        "summary": "/api/v1/auth/guest",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -86,9 +86,9 @@
         }
       }
     },
-    "/v1/auth/register": {
+    "/api/v1/auth/register": {
       "post": {
-        "summary": "/v1/auth/register",
+        "summary": "/api/v1/auth/register",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -156,9 +156,9 @@
         }
       }
     },
-    "/v1/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
-        "summary": "/v1/auth/login",
+        "summary": "/api/v1/auth/login",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -220,9 +220,9 @@
         }
       }
     },
-    "/v1/admin/auth/login": {
+    "/api/v1/admin/auth/login": {
       "post": {
-        "summary": "/v1/admin/auth/login",
+        "summary": "/api/v1/admin/auth/login",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -284,9 +284,9 @@
         }
       }
     },
-    "/v1/auth/password-reset": {
+    "/api/v1/auth/password-reset": {
       "post": {
-        "summary": "/v1/auth/password-reset",
+        "summary": "/api/v1/auth/password-reset",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -347,9 +347,9 @@
         }
       }
     },
-    "/v1/me": {
+    "/api/v1/me": {
       "put": {
-        "summary": "/v1/me",
+        "summary": "/api/v1/me",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -408,7 +408,7 @@
         }
       },
       "get": {
-        "summary": "/v1/me",
+        "summary": "/api/v1/me",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -436,9 +436,9 @@
         ]
       }
     },
-    "/v1/me/password": {
+    "/api/v1/me/password": {
       "post": {
-        "summary": "/v1/me/password",
+        "summary": "/api/v1/me/password",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -500,9 +500,9 @@
         }
       }
     },
-    "/v1/me/favorites": {
+    "/api/v1/me/favorites": {
       "get": {
-        "summary": "/v1/me/favorites",
+        "summary": "/api/v1/me/favorites",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -530,9 +530,9 @@
         ]
       }
     },
-    "/v1/stories/{story_id}/favorite": {
+    "/api/v1/stories/{story_id}/favorite": {
       "post": {
-        "summary": "/v1/stories/{story_id}/favorite",
+        "summary": "/api/v1/stories/{story_id}/favorite",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -595,9 +595,9 @@
         ]
       }
     },
-    "/v1/admin/me": {
+    "/api/v1/admin/me": {
       "get": {
-        "summary": "/v1/admin/me",
+        "summary": "/api/v1/admin/me",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -625,9 +625,9 @@
         ]
       }
     },
-    "/v1/admin/users": {
+    "/api/v1/admin/users": {
       "get": {
-        "summary": "/v1/admin/users",
+        "summary": "/api/v1/admin/users",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -655,9 +655,9 @@
         ]
       }
     },
-    "/v1/admin/users/{user_id}/roles": {
+    "/api/v1/admin/users/{user_id}/roles": {
       "post": {
-        "summary": "/v1/admin/users/{user_id}/roles",
+        "summary": "/api/v1/admin/users/{user_id}/roles",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -729,9 +729,9 @@
         ]
       }
     },
-    "/v1/admin/stories/{story_id}/metadata": {
+    "/api/v1/admin/stories/{story_id}/metadata": {
       "put": {
-        "summary": "/v1/admin/stories/{story_id}/metadata",
+        "summary": "/api/v1/admin/stories/{story_id}/metadata",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -812,9 +812,9 @@
         ]
       }
     },
-    "/v1/auth/recover": {
+    "/api/v1/auth/recover": {
       "post": {
-        "summary": "/v1/auth/recover",
+        "summary": "/api/v1/auth/recover",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -866,9 +866,9 @@
         }
       }
     },
-    "/v1/auth/refresh": {
+    "/api/v1/auth/refresh": {
       "post": {
-        "summary": "/v1/auth/refresh",
+        "summary": "/api/v1/auth/refresh",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -920,9 +920,9 @@
         }
       }
     },
-    "/v1/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
-        "summary": "/v1/auth/logout",
+        "summary": "/api/v1/auth/logout",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -963,9 +963,9 @@
         }
       }
     },
-    "/v1/admin/auth/refresh": {
+    "/api/v1/admin/auth/refresh": {
       "post": {
-        "summary": "/v1/admin/auth/refresh",
+        "summary": "/api/v1/admin/auth/refresh",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1017,9 +1017,9 @@
         }
       }
     },
-    "/v1/admin/auth/logout": {
+    "/api/v1/admin/auth/logout": {
       "post": {
-        "summary": "/v1/admin/auth/logout",
+        "summary": "/api/v1/admin/auth/logout",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1060,9 +1060,9 @@
         }
       }
     },
-    "/v1/admin/auth/exchange": {
+    "/api/v1/admin/auth/exchange": {
       "post": {
-        "summary": "/v1/admin/auth/exchange",
+        "summary": "/api/v1/admin/auth/exchange",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1114,9 +1114,9 @@
         }
       }
     },
-    "/v1/stories": {
+    "/api/v1/stories": {
       "get": {
-        "summary": "/v1/stories",
+        "summary": "/api/v1/stories",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1195,9 +1195,9 @@
         ]
       }
     },
-    "/v1/stories/{story_id}": {
+    "/api/v1/stories/{story_id}": {
       "get": {
-        "summary": "/v1/stories/{story_id}",
+        "summary": "/api/v1/stories/{story_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1231,9 +1231,9 @@
         ]
       }
     },
-    "/v1/rooms": {
+    "/api/v1/rooms": {
       "get": {
-        "summary": "/v1/rooms",
+        "summary": "/api/v1/rooms",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1261,7 +1261,7 @@
         ]
       },
       "post": {
-        "summary": "/v1/rooms",
+        "summary": "/api/v1/rooms",
         "responses": {
           "201": {
             "description": "C1 JSON envelope"
@@ -1314,7 +1314,7 @@
         }
       }
     },
-    "/v1/me/erase": {
+    "/api/v1/me/erase": {
       "post": {
         "summary": "Irreversible authenticated erasure; revokes identity, preserves deidentified joint results and records an independent restore ledger",
         "responses": {
@@ -1368,7 +1368,7 @@
         }
       }
     },
-    "/v1/analytics/batches": {
+    "/api/v1/analytics/batches": {
       "post": {
         "summary": "Optional bounded diagnostics; at most 64 KiB; accepted_ids and rejected event IDs; not business success metrics",
         "responses": {
@@ -1658,9 +1658,9 @@
         }
       }
     },
-    "/v1/rooms/join": {
+    "/api/v1/rooms/join": {
       "post": {
-        "summary": "/v1/rooms/join",
+        "summary": "/api/v1/rooms/join",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1713,7 +1713,7 @@
         }
       }
     },
-    "/v1/rooms/{room_id}/chat/reports": {
+    "/api/v1/rooms/{room_id}/chat/reports": {
       "post": {
         "summary": "Reports only an authorized retained public message; server retrieves its text",
         "responses": {
@@ -1807,7 +1807,7 @@
         ]
       }
     },
-    "/v1/admin/chat/reports": {
+    "/api/v1/admin/chat/reports": {
       "get": {
         "summary": "Reviewer-only queue of explicitly reported public messages",
         "responses": {
@@ -1837,7 +1837,7 @@
         ]
       }
     },
-    "/v1/admin/chat/reports/{report_id}": {
+    "/api/v1/admin/chat/reports/{report_id}": {
       "post": {
         "summary": "Reviewer-only auditable disposition; optional removal forces clean snapshots and invalidates historical chat projections",
         "responses": {
@@ -1908,9 +1908,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/socket-ticket": {
+    "/api/v1/rooms/{room_id}/socket-ticket": {
       "post": {
-        "summary": "/v1/rooms/{room_id}/socket-ticket",
+        "summary": "/api/v1/rooms/{room_id}/socket-ticket",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -1977,9 +1977,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/invites": {
+    "/api/v1/rooms/{room_id}/invites": {
       "post": {
-        "summary": "/v1/rooms/{room_id}/invites",
+        "summary": "/api/v1/rooms/{room_id}/invites",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2038,9 +2038,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/snapshot": {
+    "/api/v1/rooms/{room_id}/snapshot": {
       "get": {
-        "summary": "/v1/rooms/{room_id}/snapshot",
+        "summary": "/api/v1/rooms/{room_id}/snapshot",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2098,9 +2098,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/events": {
+    "/api/v1/rooms/{room_id}/events": {
       "get": {
-        "summary": "/v1/rooms/{room_id}/events",
+        "summary": "/api/v1/rooms/{room_id}/events",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2196,9 +2196,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/commands/{command_id}": {
+    "/api/v1/rooms/{room_id}/commands/{command_id}": {
       "get": {
-        "summary": "/v1/rooms/{room_id}/commands/{command_id}",
+        "summary": "/api/v1/rooms/{room_id}/commands/{command_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2265,9 +2265,9 @@
         ]
       }
     },
-    "/v1/rooms/{room_id}/watermark": {
+    "/api/v1/rooms/{room_id}/watermark": {
       "get": {
-        "summary": "/v1/rooms/{room_id}/watermark",
+        "summary": "/api/v1/rooms/{room_id}/watermark",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2333,7 +2333,7 @@
         ]
       }
     },
-    "/v1/media/access": {
+    "/api/v1/media/access": {
       "post": {
         "summary": "Authorized 120-second signed video/subtitle URLs and same-view summary; development uses original procedural sample clips",
         "responses": {
@@ -2399,9 +2399,9 @@
         }
       }
     },
-    "/v1/admin/stories": {
+    "/api/v1/admin/stories": {
       "post": {
-        "summary": "/v1/admin/stories",
+        "summary": "/api/v1/admin/stories",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2467,7 +2467,7 @@
         }
       },
       "get": {
-        "summary": "/v1/admin/stories",
+        "summary": "/api/v1/admin/stories",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2495,9 +2495,9 @@
         ]
       }
     },
-    "/v1/admin/stories/{story_id}/versions": {
+    "/api/v1/admin/stories/{story_id}/versions": {
       "post": {
-        "summary": "/v1/admin/stories/{story_id}/versions",
+        "summary": "/api/v1/admin/stories/{story_id}/versions",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2560,7 +2560,7 @@
         ]
       },
       "get": {
-        "summary": "/v1/admin/stories/{story_id}/versions",
+        "summary": "/api/v1/admin/stories/{story_id}/versions",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2599,9 +2599,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}": {
+    "/api/v1/admin/versions/{version_id}": {
       "get": {
-        "summary": "/v1/admin/versions/{version_id}",
+        "summary": "/api/v1/admin/versions/{version_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2640,7 +2640,7 @@
         ]
       },
       "put": {
-        "summary": "/v1/admin/versions/{version_id}",
+        "summary": "/api/v1/admin/versions/{version_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2704,9 +2704,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/validate": {
+    "/api/v1/admin/versions/{version_id}/validate": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/validate",
+        "summary": "/api/v1/admin/versions/{version_id}/validate",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2771,9 +2771,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/approve": {
+    "/api/v1/admin/versions/{version_id}/approve": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/approve",
+        "summary": "/api/v1/admin/versions/{version_id}/approve",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2842,9 +2842,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/publish": {
+    "/api/v1/admin/versions/{version_id}/publish": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/publish",
+        "summary": "/api/v1/admin/versions/{version_id}/publish",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2913,9 +2913,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/availability": {
+    "/api/v1/admin/versions/{version_id}/availability": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/availability",
+        "summary": "/api/v1/admin/versions/{version_id}/availability",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -2988,9 +2988,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/preview": {
+    "/api/v1/admin/versions/{version_id}/preview": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/preview",
+        "summary": "/api/v1/admin/versions/{version_id}/preview",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3055,9 +3055,9 @@
         ]
       }
     },
-    "/v1/admin/previews/step": {
+    "/api/v1/admin/previews/step": {
       "post": {
-        "summary": "/v1/admin/previews/step",
+        "summary": "/api/v1/admin/previews/step",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3129,9 +3129,9 @@
         }
       }
     },
-    "/v1/admin/jobs/{job_id}": {
+    "/api/v1/admin/jobs/{job_id}": {
       "get": {
-        "summary": "/v1/admin/jobs/{job_id}",
+        "summary": "/api/v1/admin/jobs/{job_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3170,9 +3170,9 @@
         ]
       }
     },
-    "/internal/work/claim": {
+    "/api/internal/work/claim": {
       "post": {
-        "summary": "/internal/work/claim",
+        "summary": "/api/internal/work/claim",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3243,9 +3243,9 @@
         }
       }
     },
-    "/internal/work/{job_id}/heartbeat": {
+    "/api/internal/work/{job_id}/heartbeat": {
       "post": {
-        "summary": "/internal/work/{job_id}/heartbeat",
+        "summary": "/api/internal/work/{job_id}/heartbeat",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3311,9 +3311,9 @@
         ]
       }
     },
-    "/internal/work/{job_id}/complete": {
+    "/api/internal/work/{job_id}/complete": {
       "post": {
-        "summary": "/internal/work/{job_id}/complete",
+        "summary": "/api/internal/work/{job_id}/complete",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3482,9 +3482,9 @@
         ]
       }
     },
-    "/internal/work/{job_id}/fail": {
+    "/api/internal/work/{job_id}/fail": {
       "post": {
-        "summary": "/internal/work/{job_id}/fail",
+        "summary": "/api/internal/work/{job_id}/fail",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3559,7 +3559,7 @@
         ]
       }
     },
-    "/v1/admin/operations": {
+    "/api/v1/admin/operations": {
       "get": {
         "summary": "Reviewer-only deidentified committed room outcomes and operational gauges",
         "responses": {
@@ -3589,7 +3589,7 @@
         ]
       }
     },
-    "/v1/admin/assets/{asset_id}/captions": {
+    "/api/v1/admin/assets/{asset_id}/captions": {
       "post": {
         "summary": "Validate plain timed VTT and create a new immutable asset; published subtitle bytes remain frozen",
         "responses": {
@@ -3655,7 +3655,7 @@
         ]
       }
     },
-    "/v1/admin/assets/{asset_id}/preview": {
+    "/api/v1/admin/assets/{asset_id}/preview": {
       "get": {
         "summary": "Editor-owned 60-second first-frame preview, revoked with the session",
         "responses": {
@@ -3696,7 +3696,7 @@
         ]
       }
     },
-    "/v1/admin/assets": {
+    "/api/v1/admin/assets": {
       "get": {
         "summary": "Editor-owned production assets and transcode state",
         "responses": {
@@ -3726,9 +3726,9 @@
         ]
       }
     },
-    "/v1/admin/assets/upload-intents": {
+    "/api/v1/admin/assets/upload-intents": {
       "post": {
-        "summary": "/v1/admin/assets/upload-intents",
+        "summary": "/api/v1/admin/assets/upload-intents",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3801,9 +3801,9 @@
         }
       }
     },
-    "/v1/admin/assets/{asset_id}/complete": {
+    "/api/v1/admin/assets/{asset_id}/complete": {
       "post": {
-        "summary": "/v1/admin/assets/{asset_id}/complete",
+        "summary": "/api/v1/admin/assets/{asset_id}/complete",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3879,9 +3879,9 @@
         ]
       }
     },
-    "/v1/admin/versions/{version_id}/ai": {
+    "/api/v1/admin/versions/{version_id}/ai": {
       "post": {
-        "summary": "/v1/admin/versions/{version_id}/ai",
+        "summary": "/api/v1/admin/versions/{version_id}/ai",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -3964,9 +3964,9 @@
         ]
       }
     },
-    "/v1/admin/ai/jobs/{job_id}": {
+    "/api/v1/admin/ai/jobs/{job_id}": {
       "get": {
-        "summary": "/v1/admin/ai/jobs/{job_id}",
+        "summary": "/api/v1/admin/ai/jobs/{job_id}",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -4005,7 +4005,7 @@
         ]
       }
     },
-    "/v1/admin/ai/jobs/{job_id}/apply": {
+    "/api/v1/admin/ai/jobs/{job_id}/apply": {
       "post": {
         "summary": "Explicit human acceptance bound to the frozen proposal revision and hash",
         "responses": {
@@ -4072,9 +4072,9 @@
         ]
       }
     },
-    "/internal/work/{job_id}/output-intents": {
+    "/api/internal/work/{job_id}/output-intents": {
       "post": {
-        "summary": "/internal/work/{job_id}/output-intents",
+        "summary": "/api/internal/work/{job_id}/output-intents",
         "responses": {
           "200": {
             "description": "C1 JSON envelope"
@@ -4173,7 +4173,7 @@
         ]
       }
     },
-    "/internal/work/{job_id}/source": {
+    "/api/internal/work/{job_id}/source": {
       "get": {
         "summary": "Worker-only source stream; X-Work-Attempt and X-Lease-Token required",
         "responses": {

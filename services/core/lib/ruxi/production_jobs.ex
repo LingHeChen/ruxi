@@ -83,7 +83,7 @@ defmodule Ruxi.ProductionJobs do
             "object_key" => key,
             "mime_type" => mime,
             "upload_url" =>
-              origin <> "/uploads/" <> Phoenix.Token.sign(RuxiWeb.Endpoint, "upload", cap)
+              origin <> "/api/uploads/" <> Phoenix.Token.sign(RuxiWeb.Endpoint, "upload", cap)
           }
         end)
     }

@@ -1,7 +1,7 @@
 defmodule RuxiWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :ruxi
 
-  socket("/socket", RuxiWeb.Socket,
+  socket("/api/socket", RuxiWeb.Socket,
     websocket: [timeout: 60_000, compress: false, serializer: [{RuxiWeb.Serializer, "~> 2.0.0"}]],
     longpoll: false
   )

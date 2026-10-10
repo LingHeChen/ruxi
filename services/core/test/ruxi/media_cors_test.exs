@@ -4,7 +4,7 @@ defmodule Ruxi.MediaCORSTest do
 
   test "allowed player origins can preflight ranged media without exposing credentials" do
     conn =
-      Plug.Test.conn("OPTIONS", "/media/synthetic-capability")
+      Plug.Test.conn("OPTIONS", "/api/media/synthetic-capability")
       |> put_req_header("origin", "http://localhost:8080")
       |> put_req_header("access-control-request-method", "GET")
       |> put_req_header("access-control-request-headers", "range")

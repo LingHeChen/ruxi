@@ -156,9 +156,11 @@ defmodule Ruxi.SceneVoice.Coordinator do
       get_in(location, ["voice", "mode"]) != "disabled"
   end
 
-  defp reason(r, m, p) do
+  defp reason(r, m, p), do: reason(r, m, p, Communication.members(r), lease(r, m))
+
+  defp reason(r, m, p, members, current_lease) do
     cond do
-      length(Communication.members(r)) < 2 -> "SINGLE_PLAYER"
+      length(members) < 2 -> "SINGLE_PLAYER"
       r["status"] == "lobby" -> "LOBBY"
       r["status"] != "active" -> "SUSPENDED"
       p && p["restricted"] -> "RESTRICTED"
@@ -166,7 +168,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
       not scene_enabled?(r, m) -> "STORY_DISABLED"
       pending(r) || member_pending?(r, m) -> "RETIRING"
       not gateway().configured?() -> "RTC_NOT_CONFIGURED"
-      Ruxi.SceneVoice.Budget.exhausted?() && lease(r, m) == nil -> "BUDGET_EXHAUSTED"
+      Ruxi.SceneVoice.Budget.exhausted?() && current_lease == nil -> "BUDGET_EXHAUSTED"
       not gateway().ready?() -> "FENCE_NOT_VERIFIED"
       true -> nil
     end
@@ -178,10 +180,44 @@ defmodule Ruxi.SceneVoice.Coordinator do
   end
 
   def state_for(r, m) do
-    p = participation(r, m)
+    # One room-scoped read instead of repeated HTTP SQL per participant.
+    members =
+      DB.rows(
+        """
+        SELECT m.*,u.display_name,to_jsonb(p) AS participation,to_jsonb(l) AS voice_lease
+        FROM c2_room_members m JOIN users u ON u.id=m.user_id
+        LEFT JOIN c2_voice_participation p ON p.room_id=m.room_id AND p.member_id=m.id
+        LEFT JOIN LATERAL (
+          SELECT l.*,c.generation,c.rtc_room_id,c.status AS channel_status
+          FROM c2_voice_leases l JOIN c2_voice_channels c ON c.id=l.channel_id
+          WHERE l.room_id=m.room_id AND l.member_id=m.id
+            AND l.state IN ('issued','connected') AND l.expires_at>$2
+          ORDER BY l.expires_at DESC,l.id LIMIT 1
+        ) l ON true WHERE m.room_id=$1 ORDER BY m.id
+        """,
+        [r["id"], DB.time()]
+      )
+
+    members =
+      Enum.map(members, fn member ->
+        case member["participation"] do
+          nil -> member
+          p -> Map.put(member, "participation", Map.update!(p, "device_id", &DB.uuid/1))
+        end
+      end)
+
+    own = Enum.find(members, &(&1["id"] == m["id"])) || %{}
+    p = own["participation"]
     enabled = active?(p, m)
-    why = reason(r, m, p)
-    l = lease(r, m)
+    l = own["voice_lease"]
+    why = reason(r, m, p, members, l)
+    location = Communication.actor(r, m)["location"]
+
+    eligible =
+      Enum.filter(members, fn other ->
+        location && Communication.actor(r, other)["location"] == location &&
+          active?(other["participation"], other) && other["last_seen_at"] > DB.time() - 30_000
+      end)
 
     status =
       cond do
@@ -191,11 +227,11 @@ defmodule Ruxi.SceneVoice.Coordinator do
         why -> "unavailable"
         enabled != true -> "off"
         l && l["channel_status"] == "active" && l["state"] == "connected" -> "connected"
-        length(eligible(r, m)) < 2 -> "waiting"
+        length(eligible) < 2 -> "waiting"
         true -> "connecting"
       end
 
-    peers = if why || enabled != true, do: [], else: eligible(r, m)
+    peers = if why || enabled != true, do: [], else: eligible
 
     %{
       "voice_protocol_version" => 1,
@@ -209,12 +245,11 @@ defmodule Ruxi.SceneVoice.Coordinator do
       "lease_id" => if(l, do: DB.str(l["id"]), else: nil),
       "members" =>
         Enum.map(peers, fn other ->
-          ol = lease(r, other)
-          user = DB.one("SELECT display_name FROM users WHERE id=$1", [other["user_id"]])
+          ol = other["voice_lease"]
 
           %{
             "member_id" => DB.str(other["id"]),
-            "display_name" => user["display_name"],
+            "display_name" => other["display_name"],
             "rtc_uid" => if(ol, do: ol["rtc_uid"], else: nil),
             "mic_state" => "unknown",
             "connection_state" =>
@@ -283,7 +318,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
         end
       end)
 
-    if match?({:ok, _}, result), do: notify(id)
+    if match?({:ok, _}, result) and p["action"] not in ~w(heartbeat renew), do: notify(id)
     result
   end
 
@@ -320,7 +355,10 @@ defmodule Ruxi.SceneVoice.Coordinator do
     Util.require!(channel != nil || length(peers) >= 2, "NOT_READY")
 
     if channel && channel["roster"] != roster do
-      DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [channel["id"], roster])
+      DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [
+        channel["id"],
+        DB.json(roster)
+      ])
     end
 
     channel = channel || create_channel(r, scene, roster)
@@ -423,7 +461,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
 
     DB.one(
       "INSERT INTO c2_voice_channels(id,room_id,scene_id,generation,rtc_room_id,status,roster) VALUES($1,$2,$3,$4,$5,'active',$6) RETURNING *",
-      [DB.uuid(Util.id()), r["id"], scene, gen, Util.id(), roster]
+      [DB.uuid(Util.id()), r["id"], scene, gen, Util.id(), DB.json(roster)]
     )
   end
 
@@ -514,15 +552,15 @@ defmodule Ruxi.SceneVoice.Coordinator do
   # This does not retire the shared scene channel or pause other players.
   def retire_for(r, m) do
     jobs =
-      DB.query(
+      DB.checked_query(
         """
         INSERT INTO c2_voice_revocations(id,room_id,member_id,channel_id,rtc_uid,token_expires_at,created_at)
-        SELECT gen_random_uuid(),room_id,member_id,channel_id,rtc_uid,max(token_expires_at),$3
+        SELECT md5($4 || channel_id::text || rtc_uid)::uuid,room_id,member_id,channel_id,rtc_uid,max(token_expires_at),$3
         FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND token_expires_at+30000>$3
           AND state NOT IN ('closed','revoked') GROUP BY room_id,member_id,channel_id,rtc_uid
         ON CONFLICT(channel_id,rtc_uid) DO UPDATE SET token_expires_at=greatest(c2_voice_revocations.token_expires_at,excluded.token_expires_at)
         """,
-        [r["id"], m["id"], DB.time()]
+        [r["id"], m["id"], DB.time(), Util.id()]
       )
 
     detach_member(r, m)
@@ -678,7 +716,11 @@ defmodule Ruxi.SceneVoice.Coordinator do
           retire_channels(r, [c], nil)
         else
           if roster != c["roster"],
-            do: DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [c["id"], roster])
+            do:
+              DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [
+                c["id"],
+                DB.json(roster)
+              ])
 
           Code.ensure_loaded!(gateway())
 
@@ -803,13 +845,13 @@ defmodule Ruxi.SceneVoice.Coordinator do
     end
   end
 
-  def notify(id) do
+  def notify(id, kind \\ :voice) do
     for m <- DB.rows("SELECT id FROM c2_room_members WHERE room_id=$1", [DB.uuid(id)]),
         do:
-          RuxiWeb.Endpoint.broadcast(
+          Ruxi.DB.broadcast(
             "room:#{id}:member:#{DB.str(m["id"])}",
             "communication.changed",
-            %{}
+            %{kind: kind}
           )
   end
 end

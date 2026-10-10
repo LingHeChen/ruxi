@@ -1,11 +1,17 @@
 defmodule Ruxi.Application do
   use Application
 
-  def start(_, _),
-    do:
-      Supervisor.start_link(
+  def start(_, _) do
+    if Ruxi.DB.cloud?() do
+      # HTTP SQL, storage, maintenance, and player sockets share this profile.
+      # The default two connections otherwise queue unrelated player requests.
+      :ok = :httpc.set_options(max_sessions: 32, max_keep_alive_length: 1000)
+      Ruxi.CloudDB.verify!()
+    end
+
+    Supervisor.start_link(
+      database_children() ++
         [
-          Ruxi.Repo,
           Ruxi.Privacy,
           Ruxi.Limiter,
           Ruxi.AuthGuard,
@@ -17,12 +23,21 @@ defmodule Ruxi.Application do
           Ruxi.C2.Maintenance,
           {Task.Supervisor, name: Ruxi.VoiceTasks},
           Ruxi.SceneVoice.Maintenance,
-          {Oban, Application.fetch_env!(:ruxi, Oban)},
+          maintenance_child(),
           RuxiWeb.Endpoint
         ],
-        strategy: :one_for_one,
-        name: Ruxi.Supervisor
-      )
+      strategy: :one_for_one,
+      name: Ruxi.Supervisor
+    )
+  end
+
+  defp database_children, do: if(Ruxi.DB.cloud?(), do: [], else: [Ruxi.Repo])
+
+  defp maintenance_child do
+    if Ruxi.DB.cloud?(),
+      do: Ruxi.CloudMaintenance,
+      else: {Oban, Application.fetch_env!(:ruxi, Oban)}
+  end
 end
 
 defmodule Ruxi.Repo do

@@ -17,28 +17,28 @@ async function api(method, path, body, expectedError) {
   assert.ok(response.ok, JSON.stringify(result.error));
   return result.data;
 }
-const login = await api('POST', '/v1/admin/auth/exchange', {
+const login = await api('POST', '/api/v1/admin/auth/exchange', {
   login_code: loginCode, device_id: randomUUID(), login_request_id: randomUUID(),
 });
 token = login.access_token;
 const story = '11111111-1111-4111-8111-111111111111';
-const stories = await api('GET', '/v1/admin/stories');
+const stories = await api('GET', '/api/v1/admin/stories');
 assert.ok(stories.items.some(s => s.story_id === story));
-const versions = await api('GET', `/v1/admin/stories/${story}/versions`);
+const versions = await api('GET', `/api/v1/admin/stories/${story}/versions`);
 assert.ok(versions.items.length > 0);
-const draft = await api('POST', `/v1/admin/stories/${story}/versions`, {
+const draft = await api('POST', `/api/v1/admin/stories/${story}/versions`, {
   base_version_id: '11111111-1111-4111-8111-333333333333', command_id: randomUUID(),
 });
-const version = await api('GET', `/v1/admin/versions/${draft.version_id}`);
-const validation = await api('POST', `/v1/admin/versions/${draft.version_id}/validate`, {revision: 1, command_id: randomUUID()});
-const report = await api('GET', `/v1/admin/jobs/${validation.job_id}`);
+const version = await api('GET', `/api/v1/admin/versions/${draft.version_id}`);
+const validation = await api('POST', `/api/v1/admin/versions/${draft.version_id}/validate`, {revision: 1, command_id: randomUUID()});
+const report = await api('GET', `/api/v1/admin/jobs/${validation.job_id}`);
 assert.equal(report.valid, true);
 assert.deepEqual(report.reachable_endings, ['E1','E2','E3']);
 const previewRequest = {revision: 1, command_id: randomUUID()};
-let preview = await api('POST', `/v1/admin/versions/${draft.version_id}/preview`, previewRequest);
-assert.deepEqual(await api('POST', `/v1/admin/versions/${draft.version_id}/preview`, previewRequest), preview);
+let preview = await api('POST', `/api/v1/admin/versions/${draft.version_id}/preview`, previewRequest);
+assert.deepEqual(await api('POST', `/api/v1/admin/versions/${draft.version_id}/preview`, previewRequest), preview);
 async function step(role, type, payload={}, extra={}) {
-  preview = await api('POST', '/v1/admin/previews/step', {
+  preview = await api('POST', '/api/v1/admin/previews/step', {
     preview_token: preview.preview_token, actor_role: role, type, payload, command_id: randomUUID(), ...extra,
   });
 }
@@ -62,7 +62,7 @@ for (const role of roles) await step(role,'media_complete',{media_id:'interlude'
 for (const role of roles.slice(0,2)) await step(role,'vote',{round_id:preview.views[role].vote_round.round_id,option_id:'publish'});
 await step('investigator','advance_time',{delta_ms:45000});
 assert.equal(preview.views.conductor.room.ending_code,'E1');
-await api('PUT', `/v1/admin/versions/${draft.version_id}`, {revision:1,graph:{...version.graph,title:'末班车的第七位乘客 · 制作预览验证'}});
-await api('POST','/v1/admin/previews/step', {preview_token:preview.preview_token, actor_role:'investigator', type:'advance_time',payload:{delta_ms:1},command_id:randomUUID()},'REVISION_CONFLICT');
-await api('POST','/v1/admin/auth/logout',{});
+await api('PUT', `/api/v1/admin/versions/${draft.version_id}`, {revision:1,graph:{...version.graph,title:'末班车的第七位乘客 · 制作预览验证'}});
+await api('POST','/api/v1/admin/previews/step', {preview_token:preview.preview_token, actor_role:'investigator', type:'advance_time',payload:{delta_ms:1},command_id:randomUUID()},'REVISION_CONFLICT');
+await api('POST','/api/v1/admin/auth/logout',{});
 console.log('PASS: controlled admin CLI login, catalog, version draft, compiler, private multi-role preview, transfer, hint, E1, idempotency and revision invalidation. No live rooms or publication modified.');

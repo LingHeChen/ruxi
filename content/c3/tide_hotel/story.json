@@ -2,6 +2,12 @@
   "schema_version": 4,
   "id": "tide_hotel",
   "title": "潮汐旅馆：第九声钟响",
+  "communication": {
+    "voice": {
+      "enabled": true,
+      "scope": "scene"
+    }
+  },
   "rules": {
     "ap_per_round": 6,
     "step_timeout_s": 300,
@@ -12,69 +18,273 @@
     {
       "id": "reporter",
       "label": "徐闻 · 声音记者",
+      "description": "徐闻，地方电台声音记者。江临约你来录一次采访，却要求从踏进旅馆起就别关录音。",
       "location": "lobby",
       "knowledge": [
         "brief_reporter"
       ],
       "goals": [
-        "确认江临安全，核对今晚与旧案的两条时间线。",
-        "与同伴交换调查发现，保存证据并共同决定交接方式。"
-      ]
+        "找到江临，核对他今晚的行踪。",
+        "记录旧采访的删节，留下完整录音的来历。"
+      ],
+      "opening_media": "role_opening_reporter",
+      "epilogues": {
+        "shore_names": "epilogue_reporter_shore_names",
+        "seven_days": "epilogue_reporter_seven_days",
+        "loud_error": "epilogue_reporter_loud_error",
+        "unanswered": "epilogue_reporter_unanswered",
+        "storm_passed": "epilogue_reporter_storm_passed"
+      },
+      "epilogue_overrides": {
+        "shore_names": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": true
+          },
+          "media": "epilogue_reporter_shore_names_shared"
+        },
+        "seven_days": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": true
+          },
+          "media": "epilogue_reporter_seven_days_shared"
+        },
+        "loud_error": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": true
+          },
+          "media": "epilogue_reporter_loud_error_shared"
+        },
+        "unanswered": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": true
+          },
+          "media": "epilogue_reporter_unanswered_shared"
+        },
+        "storm_passed": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": true
+          },
+          "media": "epilogue_reporter_storm_passed_shared"
+        }
+      }
     },
     {
       "id": "archivist",
       "label": "沈砚 · 地方档案研究员",
+      "description": "沈砚，地方档案研究员。你整理过这场海难的名录，江临却说，你采用的那份可能不是原件。",
       "location": "lobby",
       "knowledge": [
         "brief_archivist"
       ],
       "goals": [
-        "确认江临安全，核对今晚与旧案的两条时间线。",
-        "与同伴交换调查发现，保存证据并共同决定交接方式。"
-      ]
+        "找到江临，核对他今晚的行踪。",
+        "说明旧名录的来源缺口，将原册线索写入勘误记录。"
+      ],
+      "opening_media": "role_opening_archivist",
+      "epilogues": {
+        "shore_names": "epilogue_archivist_shore_names",
+        "seven_days": "epilogue_archivist_seven_days",
+        "loud_error": "epilogue_archivist_loud_error",
+        "unanswered": "epilogue_archivist_unanswered",
+        "storm_passed": "epilogue_archivist_storm_passed"
+      },
+      "epilogue_overrides": {
+        "shore_names": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": true
+          },
+          "media": "epilogue_archivist_shore_names_shared"
+        },
+        "seven_days": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": true
+          },
+          "media": "epilogue_archivist_seven_days_shared"
+        },
+        "loud_error": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": true
+          },
+          "media": "epilogue_archivist_loud_error_shared"
+        },
+        "unanswered": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": true
+          },
+          "media": "epilogue_archivist_unanswered_shared"
+        },
+        "storm_passed": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": true
+          },
+          "media": "epilogue_archivist_storm_passed_shared"
+        }
+      }
     },
     {
       "id": "volunteer",
       "label": "许澄 · 救援志愿者",
+      "description": "许澄，救援志愿者。你熟悉岛上的避风路线，也听何泊讲过很多次那场风暴。",
       "location": "lobby",
       "knowledge": [
         "brief_volunteer"
       ],
       "goals": [
-        "确认江临安全，核对今晚与旧案的两条时间线。",
-        "与同伴交换调查发现，保存证据并共同决定交接方式。"
-      ]
+        "找到江临，核对他今晚的行踪。",
+        "留下船屋后间钥匙的见闻，不再省去与何泊有关的部分。"
+      ],
+      "opening_media": "role_opening_volunteer",
+      "epilogues": {
+        "shore_names": "epilogue_volunteer_shore_names",
+        "seven_days": "epilogue_volunteer_seven_days",
+        "loud_error": "epilogue_volunteer_loud_error",
+        "unanswered": "epilogue_volunteer_unanswered",
+        "storm_passed": "epilogue_volunteer_storm_passed"
+      },
+      "epilogue_overrides": {
+        "shore_names": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": true
+          },
+          "media": "epilogue_volunteer_shore_names_shared"
+        },
+        "seven_days": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": true
+          },
+          "media": "epilogue_volunteer_seven_days_shared"
+        },
+        "loud_error": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": true
+          },
+          "media": "epilogue_volunteer_loud_error_shared"
+        },
+        "unanswered": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": true
+          },
+          "media": "epilogue_volunteer_unanswered_shared"
+        },
+        "storm_passed": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": true
+          },
+          "media": "epilogue_volunteer_storm_passed_shared"
+        }
+      }
     },
     {
       "id": "photographer",
       "label": "陆遥 · 纪实摄影师",
+      "description": "陆遥，纪实摄影师。江临请你来拍旧船屋。你以前拍过这里，也认得合照中的丁远。",
       "location": "lobby",
       "knowledge": [
         "brief_photographer"
       ],
       "goals": [
-        "确认江临安全，核对今晚与旧案的两条时间线。",
-        "与同伴交换调查发现，保存证据并共同决定交接方式。"
-      ]
+        "找到江临，核对他今晚的行踪。",
+        "交代未发表原片的来历，以及自己与丁远的旧交。"
+      ],
+      "opening_media": "role_opening_photographer",
+      "epilogues": {
+        "shore_names": "epilogue_photographer_shore_names",
+        "seven_days": "epilogue_photographer_seven_days",
+        "loud_error": "epilogue_photographer_loud_error",
+        "unanswered": "epilogue_photographer_unanswered",
+        "storm_passed": "epilogue_photographer_storm_passed"
+      },
+      "epilogue_overrides": {
+        "shore_names": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": true
+          },
+          "media": "epilogue_photographer_shore_names_shared"
+        },
+        "seven_days": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": true
+          },
+          "media": "epilogue_photographer_seven_days_shared"
+        },
+        "loud_error": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": true
+          },
+          "media": "epilogue_photographer_loud_error_shared"
+        },
+        "unanswered": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": true
+          },
+          "media": "epilogue_photographer_unanswered_shared"
+        },
+        "storm_passed": {
+          "condition": {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": true
+          },
+          "media": "epilogue_photographer_storm_passed_shared"
+        }
+      }
     }
   ],
   "locations": [
     {
       "id": "lobby",
       "label": "接待厅",
-      "description": "雨从门缝里渗进来。黄铜铃上覆着一层盐霜，钥匙板的第九个挂钩空着。**林素**站在登记台后，灯照着她的双手，却照不到她的眼睛。你可以先问她**江临**的下落，也可以独自查看登记台。",
+      "description": "雨从门缝里渗进来。黄铜铃上覆着一层盐霜，钥匙板的第九个挂钩空着。**林素**在登记台后整理收据，听见门响才抬起脸。",
       "discovered": true
     },
     {
       "id": "lounge",
       "label": "海景餐厅",
-      "description": "摆钟的指针停在九点十七分。茶还留在杯底，麻将桌上却没有牌。这里能看见码头，窗玻璃把每一道闪电都复制成第二道。你记得自己进门时听到的九声钟响；一个停住的钟，为什么还会报时？",
+      "description": "摆钟的指针停在九点十七分。茶还留在杯底，麻将桌上却没有牌。闪电照亮窗外空着的码头。你记得自己进门时听到的九声钟响；一个停住的钟，为什么还会报时？",
       "discovered": false
     },
     {
       "id": "corridor",
       "label": "二楼走廊",
-      "description": "地毯已被搬走，湿脚印留在瓷砖上。清洁车停在209号房门外，轮下却是干的。尽头的应急灯每隔几秒暗一下。这里没有搏斗声，只有一扇门被反复开关后留下的轻响。",
+      "description": "地毯已被搬走，湿脚印留在瓷砖上。清洁车停在209号房门外，轮下却是干的。尽头的应急灯每隔几秒暗一下。楼下有人放下杯子，声音沿着楼梯传上来。",
       "discovered": false
     },
     {
@@ -92,19 +302,19 @@
     {
       "id": "generator",
       "label": "地下机房",
-      "description": "机房的水只没过鞋底，供电柜已断开。**赵朔**用手电照着一根整齐断掉的控制线。工具箱里什么都没少。他看你的第一眼并不是防备，而是想确认你到底带没带录音设备。",
+      "description": "机房的水只没过鞋底，供电柜已断开。**赵朔**用手电照着一根整齐断掉的控制线。工具箱里什么都没少。他看了看你手里的录音笔，将手电转向断线。",
       "discovered": false
     },
     {
       "id": "archive",
       "label": "阁楼资料室",
-      "description": "灰尘把阁楼分成许多安静的层。旧客簿和港务记录被放在同一只铁柜里，柜门上是四位机械密码锁。靠窗有新近擦净的一块地板，那里曾放过一张椅子。",
+      "description": "阁楼里积着灰，窗下的地板有一块擦净的方印。旧客簿摞在铁柜旁，柜门上装着四位机械密码锁，门缝里夹着一角泛黄的纸。",
       "discovered": false
     },
     {
       "id": "boathouse",
       "label": "旧船屋",
-      "description": "**何泊**坐在绞盘边。他的拐杖靠着一条新切断的绳索，潮水已经落到石阶下。他不急着说话，像在等一个十五年前就该问出的问题。这里连通后山避风小径，渡船不是离岛的唯一办法。",
+      "description": "**何泊**坐在绞盘边。他的拐杖靠着一条新切断的绳索，潮水已经落到石阶下。他听见脚步声，把拐杖挪到身边。后墙有一扇小门，门缝里吹进带着草木气味的风。",
       "discovered": false
     }
   ],
@@ -115,14 +325,14 @@
       "label": "林素",
       "location": "lobby",
       "tags": [],
-      "description": "48岁，旅馆经营者。克制、礼貌，习惯替别人把话说完。你可以询问她的证词，也可以在掌握新证据后回访。"
+      "description": "48岁，旅馆经营者。客人还没开口，她往往就已递来热水。今晚水壶烧开了几次，她一杯也没喝。"
     },
     {
       "id": "chen",
       "label": "陈雾",
       "location": "infirmary",
       "tags": [],
-      "description": "34岁，护士。先问你的名字，再问你有没有得到当事人的同意。她愿意谈医学事实，对别的事很谨慎。"
+      "description": "34岁，护士。袖口挽得齐整，药柜钥匙一直放在衣袋里。提起江临，她先看了一眼你手里的录音笔。"
     },
     {
       "id": "zhao",
@@ -136,21 +346,21 @@
       "label": "何泊",
       "location": "boathouse",
       "tags": [],
-      "description": "67岁，退休渡船船长。说话很慢，对潮位和绳结比对人名更熟悉。他会明确告诉你哪些是亲眼看见，哪些只是猜测。"
+      "description": "67岁，退休渡船船长。拐杖柄磨出了深色的光。说话慢，提到旧船和潮水时，偶尔会抬手比画。"
     },
     {
       "id": "cabinet",
       "label": "旧港务铁柜",
       "location": "archive",
       "tags": [],
-      "description": "柜内保存着2008年的原始救援记录。密码可从完整档案日期推导；不会猜也能在掌握登记簿后拆锁。"
+      "description": "铁柜门上贴着“封存日，按月日”的便条。四只数字轮已经磨亮，柜侧有一个带螺钉的检修盖。"
     },
     {
       "id": "switchboard",
       "label": "供电柜",
       "location": "generator",
       "tags": [],
-      "description": "已隔离的供电控制柜。修复成功可得到一条额外时间记录；失败可手动读取封存表，不会堵住主线。"
+      "description": "供电控制柜已经隔离，控制线断口平整。柜旁挂着维护手册和封存的纸质计时卡。"
     },
     {
       "id": "tape",
@@ -165,6 +375,20 @@
       "location": "archive",
       "tags": [],
       "description": "原始救援页、登记簿和江临录音的相互印证副本。"
+    },
+    {
+      "id": "lin_documents",
+      "label": "林素交出的文件袋",
+      "location": "lobby",
+      "tags": [],
+      "description": "林素亲手交出的剩余档案原件。文件袋封口已打开，保留了她补交材料的出处。"
+    },
+    {
+      "id": "key",
+      "label": "209钥匙",
+      "location": "lobby",
+      "tags": [],
+      "description": "林素交出的209钥匙。她明确同意查看房间；不是偷取。"
     }
   ],
   "clues": [
@@ -175,45 +399,39 @@
       "shareable": true
     },
     {
-      "id": "key",
-      "label": "209钥匙",
-      "text": "**林素**交出的209钥匙。她明确同意查看房间；不是偷取。",
-      "shareable": true
-    },
-    {
       "id": "clock",
       "label": "停钟与隐藏音箱",
-      "text": "摆钟停在21:17，钟内没有上紧发条，却藏着音箱。第九声的尾音和前八声完全相同，是同一采样重复。停钟不是失踪发生时间。",
+      "text": "摆钟停在21:17，钟内没有上紧发条，却藏着音箱。第九声的尾音和前八声完全相同，是同一采样重复。钟面时间与23:40听见的钟声不一致。",
       "shareable": true
     },
     {
       "id": "footprints",
       "label": "脚印与轮痕",
-      "text": "湿脚印从楼梯走向209；清洁车干轮痕覆盖脚印边缘。有人在雨停的短暂间隙推过车。脚印不是从窗外爬入。",
+      "text": "湿脚印从楼梯走向209；清洁车干轮痕覆盖脚印边缘。有人在雨停的短暂间隙推过车。窗边没有延伸进房间的滴水线。",
       "shareable": true
     },
     {
       "id": "schedule",
       "label": "旅馆供电时间表",
-      "text": "控制柜断电登记为22:55。摆钟21:17就已停。它们是两件不同的事。**赵朔**23:12收到报修短信，早于你23:40听见钟声。",
+      "text": "控制柜断电登记为22:55。摆钟21:17就已停。两项记录相差一小时三十八分钟。**赵朔**23:12收到报修短信，早于你23:40听见钟声。",
       "shareable": true
     },
     {
       "id": "recording",
       "label": "预录的第九声",
-      "text": "磁带试音段里，第九声后能听见**江临**说“如果我临时不在，不要用这声钟来给任何人定罪”。这是一段给采访对象的保护安排。",
+      "text": "磁带试音段里，第九声后能听见**江临**说“如果我临时不在，不要用这声钟来给任何人定罪”。磁带里还录下了他准备离开的谈话。",
       "shareable": true
     },
     {
       "id": "draft",
       "label": "未完成的采访稿",
-      "text": "**江临**追查的是2008年9月21日的渡船事故。稿纸提出：落水者被送回岸上后，为何仍在海难名单里？它没有直接写谁杀了谁。",
+      "text": "**江临**追查的是2008年9月21日的渡船事故。稿纸提出：落水者被送回岸上后，为何仍在海难名单里？末句停在一个问号上。",
       "shareable": true
     },
     {
       "id": "photo",
       "label": "缺角的旧合照",
-      "text": "照片上有年轻的**何泊**、**林素**、丁远和**赵世衡**。丁远是林素的丈夫，2016年病逝。缺角来自折叠磨损，不是有人刮去第五张脸。",
+      "text": "照片上有年轻的**何泊**、**林素**、丁远和**赵世衡**。丁远是林素的丈夫，2016年病逝。照片缺角处纸边发白，折痕连续。",
       "shareable": true
     },
     {
@@ -224,14 +442,14 @@
     },
     {
       "id": "meds",
-      "label": "药物不是失踪证据",
-      "text": "**江临**取的是处理旧伤的抗生素，封口完整的镇静药没有减少。瓶子本身不能证明有人下药。",
+      "label": "药品领用记录",
+      "text": "**江临**取的是处理旧伤的抗生素，封口完整的镇静药没有减少。桌上空瓶的标签写着“消毒水”。",
       "shareable": true
     },
     {
       "id": "wire",
       "label": "人为切断的控制线",
-      "text": "控制线有平整剪口，不是水浸故障。剪口高度适合站在门口操作，工具不是**赵朔**专用；何时剪断要与短信及电表共同判断。",
+      "text": "控制线的剪口平整，站在门口就能够到。岛上常见的钳子都能剪断这根线。记录卡显示22:55断电，**赵朔**23:12才收到报修短信。",
       "shareable": true
     },
     {
@@ -243,25 +461,25 @@
     {
       "id": "rescue",
       "label": "迟到的救援命令",
-      "text": "==港务原始页==：22:10救回、22:35带离、23:05丁远命令暂停搜寻。备注提到船屋后间上锁。事故发生后人仍活着，后续拘留与延误需单独调查。",
+      "text": "==港务原始页==：22:10救回、22:35带离、23:05丁远命令暂停搜寻。备注提到船屋后间上锁。附注写着“船屋后间上锁，待问话”，末尾关于天亮后的记录已经洇坏。",
       "shareable": true
     },
     {
       "id": "letter",
       "label": "林素没有寄出的信",
-      "text": "未寄信里，**林素**写自己改了救援副本，以保护丈夫丁远。她知道**赵世衡**曾活着上岸。信承认掩盖，没有承认今晚杀害**江临**。",
+      "text": "未寄信里，**林素**写自己改了救援副本，以保护丈夫丁远。她知道**赵世衡**曾活着上岸。末尾提到**江临**又来问起这件事。",
       "shareable": true
     },
     {
       "id": "rope",
       "label": "最近切断的船绳",
-      "text": "绳索是为拖出淤沙中的小艇才切开，残留纤维仍卡在绞盘。它不是绑人的绳索。船屋后墙的小门通往避风小径。",
+      "text": "绳索是为拖出淤沙中的小艇才切开，残留纤维仍卡在绞盘。被割下的损坏段还扔在墙边。船屋后墙的小门通往避风小径。",
       "shareable": true
     },
     {
       "id": "witness",
       "label": "江临走的是后山",
-      "text": "**何泊**亲眼看到**江临**23:25披防水外套走向后山，左腿跛但能行走。何泊帮他取了外套，没有看见他到达山上。证词证明离开方式，不能单独证明此刻安全。",
+      "text": "**何泊**亲眼看到**江临**23:25披防水外套走向后山，左腿跛但能行走。何泊帮他取了外套，没有看见他到达山上。从旧水井往上的路被雾挡住了。",
       "shareable": true
     },
     {
@@ -285,7 +503,7 @@
     {
       "id": "chen_first",
       "label": "陈雾的第一份证词",
-      "text": "**陈雾**22:40给**江临**处理旧伤，23:15接到他提出的告别电话。她没有进209房间。她要求先区分真实药物记录和关于“下药”的想象。",
+      "text": "**陈雾**22:40给**江临**处理旧伤，23:15接到他提出的告别电话。她没有进209房间。药品领用册仍保存在护理室。",
       "shareable": true
     },
     {
@@ -297,7 +515,7 @@
     {
       "id": "he_first",
       "label": "何泊的第一份证词",
-      "text": "**何泊**说今晚潮位不允许大船离港，但后山小径可行。他不愿说替谁拿了外套，希望先看**江临**是否留了同意披露行踪的说明。",
+      "text": "**何泊**说今晚潮位不允许大船离港，但后山小径可行。他看着空衣钩，说**江临**托他办过事，要先听听江临留下的话。",
       "shareable": true
     },
     {
@@ -308,26 +526,74 @@
     },
     {
       "id": "brief_reporter",
-      "label": "徐闻 · 声音记者 · 私人行前笔记",
-      "text": "你带来**江临**的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。",
+      "label": "徐闻 · 声音记者 · 私人角色本",
+      "text": "你叫徐闻，在一家地方电台做声音报道。**江临**找上你，是因为你去年播过一段海难家属的采访。\n那段录音原本有十一分钟。节目最后只用了四十秒：一个年轻男人说，他父亲没能从海上回来。后面那句“可我总觉得名单有问题”，你剪掉了。没有材料能接上它，编辑也催着交片。\n江临听过完整版。他没有责怪你，只寄来一张旧名单，圈出**赵世衡**的名字。你这才知道，录音里的年轻人叫**赵朔**，失踪的是他父亲。\n来岛前，江临与你通了最后一次电话。他让你带足电池，说从进门起就开着录音。你问今晚要采访谁，他说：“先听，别急着替他们收尾。”\n你们还约了一个采访口令：“把名字留在岸上。”邀请信背面记着这句话。\n渡船上，你又听了一遍去年的原始录音。赵朔问名单的那句话还在。你没有告诉江临，当初删掉它的人就是你。\n现在，旅馆的门就在面前。你按下录音键。",
+      "shareable": true
+    },
+    {
+      "id": "memory_reporter_2",
+      "label": "徐闻 · 声音记者 · 第2幕回忆",
+      "text": "**江临**查的果然是**赵世衡**。你翻出那段旧采访，在耳机里听到**赵朔**说：“我问过是不是有人把名字记错了，他们叫我别再来。”\n去年这句话也没播。你当时记得的是交片时间，已经不记得他停顿了多久。\n你可以拿出完整录音，也可以继续只谈今晚。要说明旧报道为什么缺了一截，得由你自己开口。",
+      "shareable": true
+    },
+    {
+      "id": "memory_reporter_3",
+      "label": "徐闻 · 声音记者 · 第3幕回忆",
+      "text": "副本已经保存，你在文件目录里看见自己给旧采访起的名字：“海难家属补录”。\n这段录音不会补齐十五年前的经过，却能说明**赵朔**早就提出过异议。你一直留着它，只是从未将它交出去。\n如果要说清这件事，可以回餐厅录下说明，把旧采访的来历和删节一起留下。",
       "shareable": true
     },
     {
       "id": "brief_archivist",
-      "label": "沈砚 · 地方档案研究员 · 私人行前笔记",
-      "text": "你正整理2008年的海难目录，发现港务副本没有注明原始记录的保存地点。先寻找原件，再比较副本。",
+      "label": "沈砚 · 地方档案研究员 · 私人角色本",
+      "text": "你叫沈砚，正在整理地方海难档案。去年出版的名录里，2008年9月21日那一页由你校录，**赵世衡**被列作“海上失联”。\n当时能找到的只有港务副本。页边有人用很浅的字写“原册另存”，你看不清保存地点，便在整理说明中统一标注了资料来源。那行小字没有单独保留下来。\n**江临**半个月前寄来一张客簿照片。同一个名字后面，写的是“救回岸上”。照片没有拍全页码，你回信问他原件在哪儿。他只说：“来旅馆看，别再隔着复印件争。”\n你带了两份材料：自己整理的名录，以及江临寄来的照片。还带着一页尚未提交的勘误稿。稿上第一句“经查原始记录”被你划掉了，因为你其实还没见过原册。\n你与江临约在今晚核对材料。你们不算熟，他却知道你那本名录的每一条注释。\n有人若问你来做什么，你可以说来查档。至于名单经过你的手之后，又被多少人当成了最后的答案，你还不想在第一次见面时谈。",
+      "shareable": true
+    },
+    {
+      "id": "memory_archivist_2",
+      "label": "沈砚 · 地方档案研究员 · 第2幕回忆",
+      "text": "你又看了一遍自己的名录。纸面整洁，**赵世衡**的名字后只有四个字，没有任何存疑标记。\n当初那句“原册另存”并非毫无用处，只是你选择先把名录做完。眼下有人找到了当年的护理记录，原件之间终于有了核对的可能。\n你在勘误稿上添了一栏：原始材料所在位置。自己的旧整理说明，也该放进这次对照里。",
+      "shareable": true
+    },
+    {
+      "id": "memory_archivist_3",
+      "label": "沈砚 · 地方档案研究员 · 第3幕回忆",
+      "text": "材料副本已保存。你把旧名录与新的目录并排，发现自己的书页最好读，也最容易被人直接引用。\n要让后来的读者知道问题出在哪里，不能只留下一份新名单。你可以在餐厅说明旧名录的来源，以及当时省略的存疑注记。",
       "shareable": true
     },
     {
       "id": "brief_volunteer",
-      "label": "许澄 · 救援志愿者 · 私人行前笔记",
-      "text": "你在避风站协助值守，知道后山仍有一条通往避风站的步行小径。交通中断不代表所有离岛方式都消失。",
+      "label": "许澄 · 救援志愿者 · 私人角色本",
+      "text": "你叫许澄，做救援志愿服务三年。平时到岛上，你住避风站，帮着检查应急电话和雨具。\n**何泊**教过你系缆、看潮。他讲2008年那场风暴，总会说到第二趟船没能出去。你以前以为船被风浪困住，从没追问过是谁决定停船。\n上个月清点旧物，你在一只雨靴里找到一枚钥匙，铜牌刻着“船屋后间”。何泊看见后，把它收进抽屉，说那间屋子早就不用了。你没有再问。\n**江临**听说这件事，请你今晚来旅馆。他想知道后间的位置，也想请你确认后山的路还能不能走。你下午检查过：绕旧水井上山可到避风站，雨大时得沿内侧走。船屋、护理室和避风站的应急电话独立供电。\n你将路线图留给江临，也提醒过他山路不好走。你不知道他会不会用这条路。\n何泊曾把你从一次翻艇里拉回来。你愿意相信他，却开始在意他讲旧事时，每次都略过的那段停顿。",
+      "shareable": true
+    },
+    {
+      "id": "memory_volunteer_2",
+      "label": "许澄 · 救援志愿者 · 第2幕回忆",
+      "text": "旧案的记录被找出来，你想起那枚刻着“船屋后间”的钥匙。\n**何泊**收钥匙时并不意外。他知道是哪间屋，也知道钥匙为什么还在。你已经听过太多次第二趟船没能出去，却从没问那扇门当时关着什么。\n这件事你可以讲给同伴，也可以亲自去问他。",
+      "shareable": true
+    },
+    {
+      "id": "memory_volunteer_3",
+      "label": "许澄 · 救援志愿者 · 第3幕回忆",
+      "text": "你在路线图上找到旧船屋的位置。**何泊**教你画这张图时，连哪块石阶涨潮会滑都说了，后间却只画成一块没有名称的方格。\n副本已保存。回到餐厅，你可以把钥匙的事录下来，也可以继续让那个方格空着。",
       "shareable": true
     },
     {
       "id": "brief_photographer",
-      "label": "陆遥 · 纪实摄影师 · 私人行前笔记",
-      "text": "你为**江临**的采访拍摄现场。照片应保留位置、拍摄时刻与原始文件；不凭一张破损照片推定毁证。",
+      "label": "陆遥 · 纪实摄影师 · 私人角色本",
+      "text": "你叫陆遥，做纪实摄影。**江临**这次请你来，是想补拍一组旧船屋和旅馆的照片。\n你不是第一次上岛。学生时那次驻岛拍摄，住宿和来往船票都是丁远替你安排的。他笑着说年轻人来拍海岛不容易，让你以后寄一本画册给旅馆。\n那本画册后来寄到了。你选的是风景，船屋门口几个人争执的照片没有用。画面歪了，雨点糊在镜头上，丁远的脸也没拍清。你当时觉得没有留下的必要，却一直没删原片。\n江临看见你早年的作品，问有没有没发表的照片。你说回去找找，没有立刻把那张给他。直到出发前，你才将原文件复制进存储卡。\n你不知道争执与十五年前的事故有没有关系。照片只记住了一个瞬间，里面的人后来去了哪里，你没有跟拍。\n旅馆的灯从雨里亮起来。你摸了摸存储卡盒，想起丁远让你寄画册时站的位置。那面墙上的旧合照，江临也请你拍下来。",
+      "shareable": true
+    },
+    {
+      "id": "memory_photographer_2",
+      "label": "陆遥 · 纪实摄影师 · 第2幕回忆",
+      "text": "你将存储卡里的原片打开。画面里丁远背对镜头，**何泊**站在船屋门边；另一人的脸被雨点挡住，不能认清。\n原片日期是你学生时代那次驻岛拍摄，并非2008年事故当晚。它只能帮助核对后来的人物关系，不能补出当年的经过。\n你迟迟没给**江临**这张照片，是因为画面不清，也因为丁远曾帮过你。后一个理由，你没有说过。",
+      "shareable": true
+    },
+    {
+      "id": "memory_photographer_3",
+      "label": "陆遥 · 纪实摄影师 · 第3幕回忆",
+      "text": "材料目录已经整理好，旧照片仍在你的存储卡里。\n你重新写了图注：拍摄日期、地点、可辨认的人物。写到“丁远”时，你想起那本只收风景的画册。\n你可以在餐厅说明照片为什么没交出去。图像里看不清的部分，依然留着。",
       "shareable": true
     }
   ],
@@ -370,12 +636,12 @@
         {
           "op": "reveal",
           "ref": "receipt",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_read_receipt",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -428,17 +694,21 @@
         {
           "op": "reveal",
           "ref": "lin_first",
-          "audience": "all"
+          "audience": "scene"
         },
         {
-          "op": "reveal",
-          "ref": "key",
-          "audience": "all"
+          "op": "grant",
+          "ref": "key"
+        },
+        {
+          "op": "set",
+          "ref": "world.guest_room_access",
+          "value": true
         },
         {
           "op": "cue",
           "ref": "echo_talk_lin",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -501,12 +771,12 @@
         {
           "op": "reveal",
           "ref": "photo",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_ask_lin_family",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -559,12 +829,12 @@
         {
           "op": "reveal",
           "ref": "clock",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_clock",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -627,7 +897,7 @@
         {
           "op": "cue",
           "ref": "echo_listen_window",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -680,12 +950,12 @@
         {
           "op": "reveal",
           "ref": "footprints",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_tracks",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -738,12 +1008,12 @@
         {
           "op": "reveal",
           "ref": "draft",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_luggage",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -796,7 +1066,7 @@
         {
           "op": "reveal",
           "ref": "recording",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "grant",
@@ -805,7 +1075,7 @@
         {
           "op": "cue",
           "ref": "echo_play_tape",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -858,12 +1128,12 @@
         {
           "op": "reveal",
           "ref": "chen_first",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_talk_chen",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -926,12 +1196,12 @@
         {
           "op": "reveal",
           "ref": "meds",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_medicine",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1002,12 +1272,12 @@
         {
           "op": "reveal",
           "ref": "medical",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_ask_chen_oldcase",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1078,7 +1348,7 @@
         {
           "op": "cue",
           "ref": "echo_ask_chen_call",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1131,12 +1401,12 @@
         {
           "op": "reveal",
           "ref": "zhao_first",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_talk_zhao",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1199,17 +1469,17 @@
         {
           "op": "reveal",
           "ref": "wire",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "reveal",
           "ref": "schedule",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_wire",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1277,12 +1547,12 @@
         {
           "op": "reveal",
           "ref": "schedule",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_manual_log",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1353,7 +1623,7 @@
         {
           "op": "cue",
           "ref": "echo_tell_zhao_medical",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1406,12 +1676,12 @@
         {
           "op": "reveal",
           "ref": "register",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_read_register",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1489,7 +1759,7 @@
         {
           "op": "cue",
           "ref": "echo_bypass_cabinet",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1554,12 +1824,12 @@
         {
           "op": "reveal",
           "ref": "rescue",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_read_rescue",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1624,12 +1894,12 @@
         {
           "op": "reveal",
           "ref": "letter",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_read_unsent_letter",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1725,7 +1995,7 @@
         {
           "op": "cue",
           "ref": "echo_copy_evidence",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1778,12 +2048,12 @@
         {
           "op": "reveal",
           "ref": "he_first",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_talk_he",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1846,12 +2116,12 @@
         {
           "op": "reveal",
           "ref": "rope",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_inspect_rope",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -1922,12 +2192,12 @@
         {
           "op": "reveal",
           "ref": "witness",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_ask_he_departure",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2006,7 +2276,7 @@
         {
           "op": "cue",
           "ref": "echo_ask_he_rescue",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2077,7 +2347,7 @@
         {
           "op": "reveal",
           "ref": "contact",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "set",
@@ -2087,7 +2357,7 @@
         {
           "op": "cue",
           "ref": "echo_call_station",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2174,12 +2444,16 @@
         {
           "op": "reveal",
           "ref": "lin_confess",
-          "audience": "all"
+          "audience": "scene"
+        },
+        {
+          "op": "grant",
+          "ref": "lin_documents"
         },
         {
           "op": "cue",
           "ref": "echo_confront_lin",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2300,12 +2574,12 @@
         {
           "op": "reveal",
           "ref": "reconstruction",
-          "audience": "all"
+          "audience": "scene"
         },
         {
           "op": "cue",
           "ref": "echo_reconstruct",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2383,7 +2657,7 @@
         {
           "op": "cue",
           "ref": "echo_publish_truth",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2461,7 +2735,7 @@
         {
           "op": "cue",
           "ref": "echo_seal_handover",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2539,7 +2813,7 @@
         {
           "op": "cue",
           "ref": "echo_accuse_murder",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2597,7 +2871,7 @@
         {
           "op": "cue",
           "ref": "echo_leave_early",
-          "audience": "all",
+          "audience": "scene",
           "blocking": true
         },
         {
@@ -2610,6 +2884,258 @@
       "max_uses": 1,
       "required_participants": 1,
       "risk_text": "单人确认即可结束；多人需要全员在同一地点选择同一方案。一人提交不会单方面结束故事。停止追查，等待天亮离岛。",
+      "threshold": null
+    },
+    {
+      "id": "disclose_reporter",
+      "label": "说明旧采访为什么少了一段",
+      "location": "lounge",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_reporter_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_reporter_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_reporter",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "echo_disclose_reporter",
+          "audience": "scene",
+          "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_disclose_reporter",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
+      "threshold": null
+    },
+    {
+      "id": "disclose_archivist",
+      "label": "说明自己整理的名录存在缺口",
+      "location": "lounge",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_archivist_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_archivist_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_archivist",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "echo_disclose_archivist",
+          "audience": "scene",
+          "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_disclose_archivist",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
+      "threshold": null
+    },
+    {
+      "id": "disclose_volunteer",
+      "label": "说出船屋后间钥匙的事",
+      "location": "lounge",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_volunteer_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_volunteer_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_volunteer",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "echo_disclose_volunteer",
+          "audience": "scene",
+          "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_disclose_volunteer",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
+      "threshold": null
+    },
+    {
+      "id": "disclose_photographer",
+      "label": "拿出未发表的原片，说明与丁远的旧交",
+      "location": "lounge",
+      "target": null,
+      "cost": 1,
+      "condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_photographer_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": false
+          }
+        ]
+      },
+      "display_condition": {
+        "op": "all",
+        "args": [
+          {
+            "op": "all",
+            "args": [
+              {
+                "op": "has_knowledge",
+                "ref": "memory_photographer_3"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "ref": "world.done_disclose_photographer",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "echo_disclose_photographer",
+          "audience": "scene",
+          "blocking": true
+        },
+        {
+          "op": "set",
+          "ref": "world.done_disclose_photographer",
+          "value": true
+        }
+      ],
+      "failure": [],
+      "max_uses": 1,
+      "required_participants": 1,
+      "risk_text": "阅读与整理线索不消耗余力；本次调查推进一个行动。",
       "threshold": null
     }
   ],
@@ -2756,6 +3282,268 @@
           "blocking": true
         }
       ]
+    },
+    {
+      "id": "memory_reporter_2",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_ask_chen_oldcase",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_reporter_2",
+          "audience": [
+            "reporter"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_reporter_2",
+          "audience": [
+            "reporter"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_reporter_3",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_copy_evidence",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_reporter_3",
+          "audience": [
+            "reporter"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_reporter_3",
+          "audience": [
+            "reporter"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_archivist_2",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_ask_chen_oldcase",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_archivist_2",
+          "audience": [
+            "archivist"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_archivist_2",
+          "audience": [
+            "archivist"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_archivist_3",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_copy_evidence",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_archivist_3",
+          "audience": [
+            "archivist"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_archivist_3",
+          "audience": [
+            "archivist"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_volunteer_2",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_ask_chen_oldcase",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_volunteer_2",
+          "audience": [
+            "volunteer"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_volunteer_2",
+          "audience": [
+            "volunteer"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_volunteer_3",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_copy_evidence",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_volunteer_3",
+          "audience": [
+            "volunteer"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_volunteer_3",
+          "audience": [
+            "volunteer"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_photographer_2",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_ask_chen_oldcase",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_photographer_2",
+          "audience": [
+            "photographer"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_photographer_2",
+          "audience": [
+            "photographer"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "memory_photographer_3",
+      "trigger": "action_end",
+      "priority": 20,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_copy_evidence",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "reveal",
+          "ref": "memory_photographer_3",
+          "audience": [
+            "photographer"
+          ]
+        },
+        {
+          "op": "cue",
+          "ref": "memory_photographer_3",
+          "audience": [
+            "photographer"
+          ],
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "chapter_oldcase",
+      "trigger": "action_end",
+      "priority": 10,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_ask_chen_oldcase",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "chapter_oldcase",
+          "audience": "all",
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "chapter_handover",
+      "trigger": "action_end",
+      "priority": 10,
+      "once": true,
+      "condition": {
+        "op": "eq",
+        "ref": "world.done_copy_evidence",
+        "value": true
+      },
+      "effects": [
+        {
+          "op": "cue",
+          "ref": "chapter_handover",
+          "audience": "all",
+          "blocking": true
+        }
+      ]
     }
   ],
   "initial": {
@@ -2767,6 +3555,7 @@
       "copied": false,
       "protected": false,
       "blackout_seen": false,
+      "guest_room_access": false,
       "done_read_receipt": false,
       "done_talk_lin": false,
       "done_ask_lin_family": false,
@@ -2798,7 +3587,11 @@
       "done_publish_truth": false,
       "done_seal_handover": false,
       "done_accuse_murder": false,
-      "done_leave_early": false
+      "done_leave_early": false,
+      "done_disclose_reporter": false,
+      "done_disclose_archivist": false,
+      "done_disclose_volunteer": false,
+      "done_disclose_photographer": false
     },
     "inventory": {
       "reporter": [],
@@ -2813,7 +3606,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lobby-v2.png",
       "audience": "public",
-      "summary": "雨从门缝里渗进来。黄铜铃上覆着一层盐霜，钥匙板的第九个挂钩空着。**林素**站在登记台后，灯照着她的双手，却照不到她的眼睛。你可以先问她**江临**的下落，也可以独自查看登记台。",
+      "summary": "雨从门缝里渗进来。黄铜铃上覆着一层盐霜，钥匙板的第九个挂钩空着。**林素**在登记台后整理收据，听见门响才抬起脸。",
       "sha256": "21a55f8cb401378569ba0096c0284b791241424b3676efe630ae422f6b9ced46"
     },
     {
@@ -2821,7 +3614,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lounge-v2.png",
       "audience": "public",
-      "summary": "摆钟的指针停在九点十七分。茶还留在杯底，麻将桌上却没有牌。这里能看见码头，窗玻璃把每一道闪电都复制成第二道。你记得自己进门时听到的九声钟响；一个停住的钟，为什么还会报时？",
+      "summary": "摆钟的指针停在九点十七分。茶还留在杯底，麻将桌上却没有牌。闪电照亮窗外空着的码头。你记得自己进门时听到的九声钟响；一个停住的钟，为什么还会报时？",
       "sha256": "14b99274bc17da36a3aea26b80cdffa4cbf923207837a33745288a5316299127"
     },
     {
@@ -2829,7 +3622,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/corridor.png",
       "audience": "public",
-      "summary": "地毯已被搬走，湿脚印留在瓷砖上。清洁车停在209号房门外，轮下却是干的。尽头的应急灯每隔几秒暗一下。这里没有搏斗声，只有一扇门被反复开关后留下的轻响。",
+      "summary": "地毯已被搬走，湿脚印留在瓷砖上。清洁车停在209号房门外，轮下却是干的。尽头的应急灯每隔几秒暗一下。楼下有人放下杯子，声音沿着楼梯传上来。",
       "sha256": "8414413638f6ae0bd3179e6af09888f1997c4a337f9635b95bf3794500bb139b"
     },
     {
@@ -2853,7 +3646,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/generator.png",
       "audience": "public",
-      "summary": "机房的水只没过鞋底，供电柜已断开。**赵朔**用手电照着一根整齐断掉的控制线。工具箱里什么都没少。他看你的第一眼并不是防备，而是想确认你到底带没带录音设备。",
+      "summary": "机房的水只没过鞋底，供电柜已断开。**赵朔**用手电照着一根整齐断掉的控制线。工具箱里什么都没少。他看了看你手里的录音笔，将手电转向断线。",
       "sha256": "0874347caf02ea943eb4a3e1988ad2f91d4ca3c003ce9b4811c7f760c6a80b68"
     },
     {
@@ -2861,7 +3654,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/archive.png",
       "audience": "public",
-      "summary": "灰尘把阁楼分成许多安静的层。旧客簿和港务记录被放在同一只铁柜里，柜门上是四位机械密码锁。靠窗有新近擦净的一块地板，那里曾放过一张椅子。",
+      "summary": "阁楼里积着灰，窗下的地板有一块擦净的方印。旧客簿摞在铁柜旁，柜门上装着四位机械密码锁，门缝里夹着一角泛黄的纸。",
       "sha256": "3c3887908670b930d0cb81c750ab69be608123404826e9bbd95f046883952cd0"
     },
     {
@@ -2869,7 +3662,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/boathouse.png",
       "audience": "public",
-      "summary": "**何泊**坐在绞盘边。他的拐杖靠着一条新切断的绳索，潮水已经落到石阶下。他不急着说话，像在等一个十五年前就该问出的问题。这里连通后山避风小径，渡船不是离岛的唯一办法。",
+      "summary": "**何泊**坐在绞盘边。他的拐杖靠着一条新切断的绳索，潮水已经落到石阶下。他听见脚步声，把拐杖挪到身边。后墙有一扇小门，门缝里吹进带着草木气味的风。",
       "sha256": "610d718895fd2470cb8b56f64c9e8ce3faa406389e883db35310324fe4bb12d7"
     },
     {
@@ -2877,7 +3670,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-lin.png",
       "audience": "public",
-      "summary": "48岁，旅馆经营者。克制、礼貌，习惯替别人把话说完。你可以询问她的证词，也可以在掌握新证据后回访。",
+      "summary": "48岁，旅馆经营者。客人还没开口，她往往就已递来热水。今晚水壶烧开了几次，她一杯也没喝。",
       "sha256": "e255177b4af143beba5b4841c43f41b14bf1e96c27dab9ec7834dbf84348178f"
     },
     {
@@ -2885,7 +3678,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-lin.png",
       "audience": "public",
-      "summary": "48岁，旅馆经营者。克制、礼貌，习惯替别人把话说完。你可以询问她的证词，也可以在掌握新证据后回访。",
+      "summary": "48岁，旅馆经营者。客人还没开口，她往往就已递来热水。今晚水壶烧开了几次，她一杯也没喝。",
       "sha256": "e255177b4af143beba5b4841c43f41b14bf1e96c27dab9ec7834dbf84348178f"
     },
     {
@@ -2893,7 +3686,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "34岁，护士。先问你的名字，再问你有没有得到当事人的同意。她愿意谈医学事实，对别的事很谨慎。",
+      "summary": "34岁，护士。袖口挽得齐整，药柜钥匙一直放在衣袋里。提起**江临**，她先看了一眼你手里的录音笔。",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -2901,7 +3694,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "34岁，护士。先问你的名字，再问你有没有得到当事人的同意。她愿意谈医学事实，对别的事很谨慎。",
+      "summary": "34岁，护士。袖口挽得齐整，药柜钥匙一直放在衣袋里。提起**江临**，她先看了一眼你手里的录音笔。",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -2925,7 +3718,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "67岁，退休渡船船长。说话很慢，对潮位和绳结比对人名更熟悉。他会明确告诉你哪些是亲眼看见，哪些只是猜测。",
+      "summary": "67岁，退休渡船船长。拐杖柄磨出了深色的光。说话慢，提到旧船和潮水时，偶尔会抬手比画。",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -2933,7 +3726,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "67岁，退休渡船船长。说话很慢，对潮位和绳结比对人名更熟悉。他会明确告诉你哪些是亲眼看见，哪些只是猜测。",
+      "summary": "67岁，退休渡船船长。拐杖柄磨出了深色的光。说话慢，提到旧船和潮水时，偶尔会抬手比画。",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -2941,7 +3734,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "柜内保存着2008年的==原始救援记录==。密码可从完整档案日期推导；不会猜也能在掌握登记簿后拆锁。",
+      "summary": "铁柜门上贴着“封存日，按月日”的便条。四只数字轮已经磨亮，柜侧有一个带螺钉的检修盖。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -2949,7 +3742,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "已隔离的供电控制柜。修复成功可得到一条额外时间记录；失败可手动读取封存表，不会堵住主线。",
+      "summary": "供电控制柜已经隔离，控制线断口平整。柜旁挂着维护手册和封存的纸质计时卡。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -2969,6 +3762,22 @@
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
+      "id": "item_lin_documents",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": "public",
+      "summary": "**林素**亲手交出的剩余档案原件。文件袋封口已打开，保留了她补交材料的出处。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "item_key",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-key.png",
+      "audience": "public",
+      "summary": "**林素**交出的209钥匙。她明确同意查看房间；不是偷取。",
+      "sha256": "d15c898ad4c6d3b6c641fd1a864d8467ef8e1c8c2732138e9551f54f351255c3"
+    },
+    {
       "id": "clue_receipt",
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-key.png",
@@ -2977,19 +3786,11 @@
       "sha256": "d15c898ad4c6d3b6c641fd1a864d8467ef8e1c8c2732138e9551f54f351255c3"
     },
     {
-      "id": "clue_key",
-      "kind": "image",
-      "uri": "assets/stories/tide_hotel/evidence-key.png",
-      "audience": "public",
-      "summary": "**林素**交出的209钥匙。她明确同意查看房间；不是偷取。",
-      "sha256": "d15c898ad4c6d3b6c641fd1a864d8467ef8e1c8c2732138e9551f54f351255c3"
-    },
-    {
       "id": "clue_clock",
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-clock.png",
       "audience": "public",
-      "summary": "摆钟停在21:17，钟内没有上紧发条，却藏着音箱。第九声的尾音和前八声完全相同，是同一采样重复。停钟不是失踪发生时间。",
+      "summary": "摆钟停在21:17，钟内没有上紧发条，却藏着音箱。第九声的尾音和前八声完全相同，是同一采样重复。钟面时间与23:40听见的钟声不一致。",
       "sha256": "f8d99bf1ab11bd9a509b07a0836c2ba2601368278cac3c7e3555d139f1de82c7"
     },
     {
@@ -2997,7 +3798,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-footprints.png",
       "audience": "public",
-      "summary": "湿脚印从楼梯走向209；清洁车干轮痕覆盖脚印边缘。有人在雨停的短暂间隙推过车。脚印不是从窗外爬入。",
+      "summary": "湿脚印从楼梯走向209；清洁车干轮痕覆盖脚印边缘。有人在雨停的短暂间隙推过车。窗边没有延伸进房间的滴水线。",
       "sha256": "075c206ef446832aea43eaf1e3ccf719618de938e28456cef6c03d8a8e0868e7"
     },
     {
@@ -3005,7 +3806,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "控制柜断电登记为22:55。摆钟21:17就已停。它们是两件不同的事。**赵朔**23:12收到报修短信，早于你23:40听见钟声。",
+      "summary": "控制柜断电登记为22:55。摆钟21:17就已停。两项记录相差一小时三十八分钟。**赵朔**23:12收到报修短信，早于你23:40听见钟声。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -3013,7 +3814,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-tape.png",
       "audience": "public",
-      "summary": "磁带试音段里，第九声后能听见**江临**说“如果我临时不在，不要用这声钟来给任何人定罪”。这是一段给采访对象的保护安排。",
+      "summary": "磁带试音段里，第九声后能听见**江临**说“如果我临时不在，不要用这声钟来给任何人定罪”。磁带里还录下了他准备离开的谈话。",
       "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
     },
     {
@@ -3021,7 +3822,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-letter.png",
       "audience": "public",
-      "summary": "**江临**追查的是2008年9月21日的渡船事故。稿纸提出：落水者被送回岸上后，为何仍在海难名单里？它没有直接写谁杀了谁。",
+      "summary": "**江临**追查的是2008年9月21日的渡船事故。稿纸提出：落水者被送回岸上后，为何仍在海难名单里？末句停在一个问号上。",
       "sha256": "4902db4f60587ad4bc560e9ac2c84e48cabfb373839f6c3d4b2194636abe5983"
     },
     {
@@ -3029,7 +3830,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-photo.png",
       "audience": "public",
-      "summary": "照片上有年轻的**何泊**、**林素**、丁远和**赵世衡**。丁远是林素的丈夫，2016年病逝。缺角来自折叠磨损，不是有人刮去第五张脸。",
+      "summary": "照片上有年轻的**何泊**、**林素**、丁远和**赵世衡**。丁远是林素的丈夫，2016年病逝。照片缺角处纸边发白，折痕连续。",
       "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
     },
     {
@@ -3045,7 +3846,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-medical.png",
       "audience": "public",
-      "summary": "**江临**取的是处理旧伤的抗生素，封口完整的镇静药没有减少。瓶子本身不能证明有人下药。",
+      "summary": "**江临**取的是处理旧伤的抗生素，封口完整的镇静药没有减少。桌上空瓶的标签写着“消毒水”。",
       "sha256": "8e0d6fb1a32100623088e8df8fccc3a38ec562ad395fd1c55efeb637cc693110"
     },
     {
@@ -3053,7 +3854,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "控制线有平整剪口，不是水浸故障。剪口高度适合站在门口操作，工具不是**赵朔**专用；何时剪断要与短信及电表共同判断。",
+      "summary": "控制线的剪口平整，站在门口就能够到。岛上常见的钳子都能剪断这根线。记录卡显示22:55断电，**赵朔**23:12才收到报修短信。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -3069,7 +3870,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "==港务原始页==：22:10救回、22:35带离、23:05丁远命令暂停搜寻。备注提到船屋后间上锁。事故发生后人仍活着，后续拘留与延误需单独调查。",
+      "summary": "==港务原始页==：22:10救回、22:35带离、23:05丁远命令暂停搜寻。备注提到船屋后间上锁。附注写着“船屋后间上锁，待问话”，末尾关于天亮后的记录已经洇坏。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3077,7 +3878,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-letter.png",
       "audience": "public",
-      "summary": "未寄信里，**林素**写自己改了救援副本，以保护丈夫丁远。她知道**赵世衡**曾活着上岸。信承认掩盖，没有承认今晚杀害**江临**。",
+      "summary": "未寄信里，**林素**写自己改了救援副本，以保护丈夫丁远。她知道**赵世衡**曾活着上岸。末尾提到**江临**又来问起这件事。",
       "sha256": "4902db4f60587ad4bc560e9ac2c84e48cabfb373839f6c3d4b2194636abe5983"
     },
     {
@@ -3085,7 +3886,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-rope.png",
       "audience": "public",
-      "summary": "绳索是为拖出淤沙中的小艇才切开，残留纤维仍卡在绞盘。它不是绑人的绳索。船屋后墙的小门通往避风小径。",
+      "summary": "绳索是为拖出淤沙中的小艇才切开，残留纤维仍卡在绞盘。被割下的损坏段还扔在墙边。船屋后墙的小门通往避风小径。",
       "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
     },
     {
@@ -3093,7 +3894,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "**何泊**亲眼看到**江临**23:25披防水外套走向后山，左腿跛但能行走。何泊帮他取了外套，没有看见他到达山上。证词证明离开方式，不能单独证明此刻安全。",
+      "summary": "**何泊**亲眼看到**江临**23:25披防水外套走向后山，左腿跛但能行走。何泊帮他取了外套，没有看见他到达山上。从旧水井往上的路被雾挡住了。",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -3125,7 +3926,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "**陈雾**22:40给**江临**处理旧伤，23:15接到他提出的告别电话。她没有进209房间。她要求先区分真实药物记录和关于“下药”的想象。",
+      "summary": "**陈雾**22:40给**江临**处理旧伤，23:15接到他提出的告别电话。她没有进209房间。药品领用册仍保存在护理室。",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -3141,7 +3942,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "**何泊**说今晚潮位不允许大船离港，但后山小径可行。他不愿说替谁拿了外套，希望先看**江临**是否留了同意披露行踪的说明。",
+      "summary": "**何泊**说今晚潮位不允许大船离港，但后山小径可行。他看着空衣钩，说**江临**托他办过事，要先听听江临留下的话。",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -3157,7 +3958,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lobby-v2.png",
       "audience": "public",
-      "summary": "你们因各自的调查来到潮汐旅馆，赴作家**江临**的约。声音记者、档案研究员、救援志愿者和纪实摄影师，可由1～4人自由选择任意角色；独自到访也能完成全部调查。他在邀请信里只写了一句：“如果钟声响到第九下，请别相信第一个解释。”\n渡船在你到岛后停航。你进门时，海景餐厅传来九声缓慢的钟响。接待台的**林素**说，江临不见了。她伸手去关录音笔，你却发现她的手在抖。\n这不是限时逃生。你可以随时回看线索，逐个询问在场的人，按自己的节奏查证。天气推进采用调查回合，不等于现实分钟；阅读对话时不会扣行动点。先回看自己的行前笔记；多人可以分头探索，主线发现会同步到团队手记，私人笔记可自行分享。每个调查步等待同伴提交行动或结束回合；所有人在场并阅读完叙事后再继续。结局选择需要全员回到同一地点，选择同一个方案；意见不同时不会擅自结束故事。开场先问林素，再检查钟，能得到第一组相互矛盾的时间。\n你这次要找的也许不只是一个失踪的人。十五年前，有一个已经回到岸上的名字，被重新写回了海里。",
+      "summary": "第一幕 · 第九声钟响\n\n23:40，潮汐旅馆。\n雨横着打过门廊，海景餐厅里传来钟声。一下，又一下，第九下响过后，接待厅重新静下来。\n柜台上放着**江临**留的信封，封面写着：“如果钟声响到第九下，请别相信第一个解释。”\n**林素**从楼梯口下来，手里攥着209的钥匙。\n“江临不在房里。”\n她把钥匙收进掌心，望了一眼门外。渡船已经停航，码头的灯在雨里灭了。",
       "sha256": "21a55f8cb401378569ba0096c0284b791241424b3676efe630ae422f6b9ced46"
     },
     {
@@ -3165,7 +3966,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-key.png",
       "audience": "public",
-      "summary": "收据压在黄铜铃下面，纸边浸了水，中心却是干的。**林素**没有阻止你拿起来，只提醒不要把原件带走。金额、签名和23:05的时间都很清楚。背面那行“采访结束后，从后山走”用铅笔写得很轻。\n你翻到登记台背面，挂钩编号到九，209的钥匙却不在。**江临**交过房费，却没有退房；这可能意味着匆忙离开，也可能只是计划晚些回来。你把“没有退房”写成事实，把“被迫离开”留在问号下面。\n录音笔还在工作。远处的雨声比刚才小，你能听见林素用指甲轻敲桌面。这个动作没有证据价值，但你记住了它：接下来要询问的，不只是她知道什么，还有她为什么担心你正在记录。",
+      "summary": "黄铜铃下面压着一张收据，纸边被雨水洇湿了。**林素**见你伸手，按住纸角：“看可以，别拿走。”\n签名是**江临**，付款时间23:05。背面有一行很淡的铅笔字：采访结束后，从后山走。\n你把收据翻回来。房费已经付过，退房一栏却空着。林素的指甲在桌面上敲了两下，见录音笔还亮着，又把手收回柜台下面。",
       "sha256": "d15c898ad4c6d3b6c641fd1a864d8467ef8e1c8c2732138e9551f54f351255c3"
     },
     {
@@ -3173,7 +3974,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-lin.png",
       "audience": "public",
-      "summary": "“十一点二十分，我给他送热水。”**林素**答得很快，“他还说，明早要早一点起来。”你问房间里有没有别人，她摇头，又补了一句“至少我没看见”。这次她给自己留了余地。\n她说九声钟响后才察觉209的灯灭了。你抬头看钥匙板：“你用备用钥匙进去了？”她把一把钥匙放到台上，说自己只开门看了一眼，床边没有人，窗户开着。\n你明确问是否同意你查看房间。她迟疑后点头：“你别动他的稿子。也别让那个电工觉得这又和他父亲有关。”你没有问过电工的父亲。林素意识到说多了，转身把另一壶水倒进水槽。\n钥匙现在在你手边。209可以进入；她的时间只是第一份证词，还需要钟、机房和在场者的记录来核对。",
+      "summary": "“十一点二十，我给他送过热水。他说明早要早起。”**林素**答得很快。\n“房里还有别人吗？”\n“没有。”她顿了顿，“我没看见。”\n她说，钟响以后才发现209的灯灭了。你看了一眼钥匙板，她便从口袋里摸出钥匙，搁在台上：“我开门看过，床边没人，窗倒是开着。”\n你问能不能上去看看。她点头，手仍搭在钥匙上。\n“别弄乱他的稿子。还有，别让那个电工以为又跟他父亲有关。”\n你还没提过电工。她松开钥匙，转身将壶里的热水倒进水槽。",
       "sha256": "e255177b4af143beba5b4841c43f41b14bf1e96c27dab9ec7834dbf84348178f"
     },
     {
@@ -3181,7 +3982,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-photo.png",
       "audience": "public",
-      "summary": "“岛上都知道**赵世衡**。”**林素**说，“十五年前那场风暴，他没回来。”她指向楼梯边的旧合照，那里有人用照片修过的木框遮住了一角。你没有碰木框，只请她说出每个人的名字。\n她逐个念：**何泊**、她自己、丈夫丁远、赵世衡。提到丁远时她停了一下，说他已经去世七年。你问，丁远是船员吗？“港务值班。”她回答。一个发出救援指令的人，与一个执行指令的人，并不是同一种责任。\n“**江临**查这个，**赵朔**也查这个。”她说，“但他们不是一起上岛的。”你看着那张缺角照片，提醒自己不要把破损直接当作毁证。纸边的折痕连续，角上没有新鲜剪口。\n你记下照片能证明的关系：四个人曾一起站在船屋前。至于谁在事故夜做了什么，还在照片之外。",
+      "summary": "“**赵世衡**。岛上的老人都认得。”**林素**望着楼梯边的合照，“十五年前出事那晚，他没回来。”\n你请她认一认照片上的人。她依次点过去：**何泊**，她自己，丁远，赵世衡。\n“丁远是我丈夫，走了七年了。”\n“他也跑船？”\n“港务值班。”她将歪掉的相框扶正，“**江临**来问过，**赵朔**也来问。他们不是一起来的。”\n木框遮住了照片缺掉的一角。露出的纸边磨得发白，折痕一直延伸到背面。四个人站在船屋前，赵世衡的手还搭在丁远肩上。",
       "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
     },
     {
@@ -3189,7 +3990,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-clock.png",
       "audience": "public",
-      "summary": "摆钟停在九点十七分。你轻轻拨开玻璃门，钟摆没有移动。发条松着，击锤旁的细线也没有接上。这样的钟不可能在十一点四十分完整敲九下。\n你在钟底找到一个掌心大的音箱，它被布套包着，只露出电源指示灯。把录音笔贴近，你回放自己进门时收下的钟声。前八声之间有微小间隔，第九声的尾部却与第八声逐点重叠；是同一段声音复制，不是钟的机械余音。\n你没有立刻拆走音箱，因为那会改变现场。先拍照、标注位置、录下设备状态。钟面停在21:17，是钟本身的时间；扬声器在23:40播放，是另一条时间线。\n**林素**的“钟响才发现人不见”仍可能成立。但任何人都不能用这第九声，证明**江临**在那一刻还在房里。",
+      "summary": "钟面停在21:17。你打开玻璃门，拨了拨钟摆；它晃两下就停了，发条已经松到底，击锤旁的细线也断着。\n钟底塞着一个小音箱，外面裹了布，指示灯从布缝里透出来。\n你回放进门时录下的声音。第八声末尾有一小段沙响，第九声也有，连长短都一样。把两段来回听了几遍，你找到了同一处杂音。\n23:40响起的九声钟，来自这个音箱。你拍下它的位置，没有挪动。隔着餐厅的门，还能听见**林素**在接待台收拾杯子。",
       "sha256": "f8d99bf1ab11bd9a509b07a0836c2ba2601368278cac3c7e3555d139f1de82c7"
     },
     {
@@ -3197,7 +3998,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lounge-v2.png",
       "audience": "public",
-      "summary": "你把录音笔从钟边移到窗台，窗外的海很响，楼上却更安静。偶尔有轮子碾过瓷砖，随后是一声很短的门锁响。客房走廊没有地毯，脚步应该比轮声更明显。\n你推开一条窗缝，海风带来柴油味，眼前的码头没有亮灯。无论**江临**是自愿离开还是被迫离开，现在都不能简单说他“坐船走了”。**何泊**在旧船屋里，那是你能询问潮位的人。\n窗台上有一只杯子，杯底剩下冷茶。你没有凭气味猜药物，只记下杯子位置。若要判断身体状况，应去问真正处理过伤口的人，而不是把每一个陌生气味都写成毒。\n这一刻没有得到决定性证据，却得到了一种调查顺序：先查能复核的声音、通路与记录，再讨论谁有动机。",
+      "summary": "窗外浪声很大。你把录音笔移到窗台，楼上传来轮子碾过瓷砖的声音，接着是门锁轻轻一响。\n推开窗缝，海风夹着柴油味灌进来。码头上一片黑，系泊的船随浪起伏，没有一条正在出港。\n窗台留着半杯冷茶。你记下杯子的位置，朝旧船屋望去；那边还有灯，**何泊**的身影映在窗上。若有人知道今晚能不能走船，应该就是他。",
       "sha256": "14b99274bc17da36a3aea26b80cdffa4cbf923207837a33745288a5316299127"
     },
     {
@@ -3205,7 +4006,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-footprints.png",
       "audience": "public",
-      "summary": "脚印从楼梯方向过来，在209门前转身。鞋底花纹很常见，机房、船屋和旅馆储物柜里都可能有类似雨靴。你量了长度，没有把它直接对应到任何一个人。\n清洁车的左轮从脚印边缘压过，干燥的轮痕盖住一部分湿印。推车发生在脚印之后，而且轮子当时没有带水。这让“从窗外翻入再推走”的想象失去了支撑；窗台狭窄，地上也没有从窗边延伸出的滴水线。\n你在走廊尽头看见通往阁楼的折梯，灰尘里留下被椅脚压过的浅痕。门并没有锁，锁着的是里面的铁柜。\n这些细节只说明行动顺序。一个人可以在离开前换鞋，也可以托别人推车。你需要房内的录音与衣物，来确认**江临**有没有提前准备。",
+      "summary": "湿脚印从楼梯口一路到209，在门前转了个向。鞋底是常见的雨靴纹路。\n清洁车左轮压过一枚脚印，轮痕已经干了，脚印边缘还湿着。你蹲下来拍照，再看向门槛：水迹从楼梯来，没有通向窗边。\n走廊尽头通往阁楼的折梯放着，门虚掩。你探头看了一眼，里面堆着旧册子，靠墙有一只上锁的铁柜。",
       "sha256": "075c206ef446832aea43eaf1e3ccf719618de938e28456cef6c03d8a8e0868e7"
     },
     {
@@ -3213,7 +4014,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-letter.png",
       "audience": "public",
-      "summary": "行李箱里整齐叠着两件衬衫，少了能够挡雨的外套。窗台很窄，没有鞋印；床下那双鞋干着，鞋尖朝里，是脱下来摆放的样子。你没有发现明显搏斗痕迹。这不能证明没有发生争执，却削弱了“突然被人从窗户带走”的说法。\n打字机里夹着的稿纸以问句结束：**赵世衡**被救回岸上后，又去了哪里？下面有一行日期，2008年9月21日。**江临**不是在写鬼故事，他在追查一段救援记录被改写的经过。\n稿纸旁有今天的便签：“原件、护理页、名单，三份互证。”这给了你三个可验证的方向。你把稿纸放回滚轴原位，拍下完整页，再拍纸张边缘；不把半句话当成完整结论。\n江临留下了调查方法，也留下了明显的离开准备。现在要确定谁帮助过他，以及帮助发生在什么时间。",
+      "summary": "床下摆着一双干鞋，鞋尖朝里。行李箱摊在椅子上，两件衬衫叠得整齐，外套的位置空着。窗只开了三指宽，窗台积着雨水，没有鞋印。\n打字机里夹着半页稿纸，最后一句没有写完：**赵世衡**被救回岸上后，又去了哪里？\n下方标着日期——2008年9月21日。\n旁边的便签写着：“原件、护理页、名单，三份互证。”纸夹里另有邀请信的副本，背面记着采访口令：“把名字留在岸上。”你拍下稿纸和便签。箱子侧袋里还留着一只空衣架，衣架上的防水外套不在了。",
       "sha256": "4902db4f60587ad4bc560e9ac2c84e48cabfb373839f6c3d4b2194636abe5983"
     },
     {
@@ -3221,7 +4022,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-tape.png",
       "audience": "public",
-      "summary": "第一段是海风，第二段是试音。**江临**的声音很近：“不必把我的名字播出去，只要材料还在。”接着传来几声钟响，其中一声被他反复重放，最后拼成九声。\n录音里另一人问：“你这样走，他们会找你。”江临答：“那就让他们先找证据。告别电话我会打，后山有人接我。要是我临时不在，不要用这声钟给任何人定罪。”录音结束前，有纸张被装进防水袋的声音。\n你无法单凭这一段确认另一人的身份，也无法确认计划完全实现。但它解释了钟声：江临有意安排一个引人注意的时点，让资料不会在他离开后悄悄消失。\n你得到的是==原始磁带==，连同设备位置拍照保存。下一步应向**陈雾**核对告别电话，向**何泊**核对后山路。失踪可能是避险，不等于旅馆没有别的事需要解释。",
+      "summary": "磁带转起来，先是海风，然后有人试了两下话筒。\n**江临**的声音传出来：“不必把我的名字播出去，只要材料还在。”几声钟响过后，他倒带，将其中一声反复放了几遍，拼成九声。\n另一个人问：“你这么一走，他们会找你。”\n“那就让他们找。告别电话我会打，后山有人接我。”江临停了一会儿，“我临时不在，也别拿这声钟给谁定罪。”\n最后是一阵纸张摩擦声，像有人把东西装进袋子。你取下磁带，在盒上记好原来的位置。录音中的另一个声音听不清，江临说的后山，也还没去过。",
       "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
     },
     {
@@ -3229,7 +4030,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "**陈雾**先问你，采访材料会交给谁。你说，在确认事实之前不会播出任何名字。她才把药柜钥匙收进衣袋，告诉你**江临**左腿有旧伤，今晚22:40来换药。\n“他能自己走，不需要人扶。”她说，“我给了抗生素，没有给镇静药。”你问为什么桌上有空瓶，她把瓶底转给你看：那是早已洗净用来装消毒水的瓶子，不能凭外形认定内容。\n她23:15接到江临的电话，对方只说要离开一会儿，并请她不要把私人病历交给旅馆。陈雾记得电话里没有风声，像在室内。\n你问她是否愿意展示药品领用记录。她同意你核对与今晚有关的数量，但不允许翻看其他人的病历。你接受这个边界：有关案件的事实可以查证，无关病人的隐私不应成为调查代价。",
+      "summary": "**陈雾**没有立刻回答，先问：“这些话，你打算给谁听？”\n你说是来找**江临**的。她看了看录音笔，收起药柜钥匙。\n“十点四十来换的药，左腿旧伤。他自己走进来，也自己走出去。我给了抗生素。”\n你问起桌上的空瓶。她将瓶底转过来，标签下面还贴着一条手写纸：“消毒水。旧瓶洗干净装的。”\n23:15，江临给她打过电话，说要离开一会儿，嘱咐她别把病历交给旅馆。\n“领药记录可以看他的那一行。”陈雾将册子压在手下，“别的病人，跟这件事没关系。”",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -3237,7 +4038,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-medical.png",
       "audience": "public",
-      "summary": "三瓶镇静药的封口都完整，瓶号与上午库存一致。抗生素少了一盒，领用签名是**江临**。你看见他签字的笔迹和稿纸便签一致；这只是辅助核对，不把笔迹鉴定当作自己已经完成的事。\n**陈雾**说：“我知道别人想听到的故事。雨夜、空瓶、一个护士，合起来就像下药。但那不是记录。”你把结论写得很窄：现有库存不支持镇静药被领走，江临取用的是治疗旧伤的药。\n她指着抽屉里一本旧护理册，犹豫了很久，没有立刻拿给你。“里面还有一个人的名字。要是你确实在查2008年那天，我们可以只看对应的一页。”\n今晚的误导被拆掉一层，旧案的入口却露了出来。你需要用江临的采访稿说明查阅理由，不能把整本护理册当作可随意公开的战利品。",
+      "summary": "三瓶镇静药都没拆封，瓶号与上午的库存记录一一对得上。抗生素少了一盒，**江临**在领用栏签了名。\n“外面是不是已经有人说我给他下药了？”**陈雾**问。\n你把记录还给她。她没有追问，拉开抽屉，里面躺着一本卷边的旧护理册。\n“江临也来翻过这个。”她手指停在封皮上，“查的是2008年那场事故。你要是带着他的稿子，就拿来给我看看。”",
       "sha256": "8e0d6fb1a32100623088e8df8fccc3a38ec562ad395fd1c55efeb637cc693110"
     },
     {
@@ -3245,7 +4046,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "**陈雾**读完稿纸照片，把护理册打开到2008年9月21日。她当年随老师在岛上实习，字还写得很挤。第一条记录是22:10：“**赵世衡**，男，意识清醒，自报姓名。低温，右肩擦伤。”\n你问能否误认。她摇头，但没有说绝不可能：“老师问了两遍名字，他都回答了。何船长也认得他。”第二条是22:35，被一名港务人员带走。没有死亡记录，没有再次落水记录。\n“后来正式名单写海上失联。我说过这页不同，老师让我留好原册。”陈雾的声音很低，“老师已经去世。我能证明的，是当时记录了什么。”\n你只复制对应页，遮住其他病人的姓名。这个名字从海里回到岸上，再从官方材料里消失了。现在可以拿护理页去与旅馆名单、**何泊**的救援记忆互证；今晚是否有人失踪，与旧案是否有人被掩盖，必须分别回答。",
+      "summary": "**陈雾**读完稿纸照片，翻开护理册。2008年9月21日那页，字写得密密麻麻，签名在页脚。\n“那时我跟着老师实习。这页是他签的。”\n22:10：**赵世衡**，男，意识清醒，自报姓名。低温，右肩擦伤。\n22:35：由港务人员带离。\n“名字会不会记错？”\n“老师问了两遍。他都答了。何船长就在旁边，也认得他。”她往后翻了一页，又翻回来，“后来名单说他在海上失联。我拿给老师看，他让我把原册留好。”\n她用白纸盖住旁边几位病人的名字，让你拍下这两行。纸移开时，页脚的签名已经褪成浅褐色。",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -3253,7 +4054,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-chen.png",
       "audience": "public",
-      "summary": "你播放**江临**录音中的“告别电话”。**陈雾**没有因此放松，反而拿出手写值班记：“我怕以后说不清，所以记了时间。”23:15，江临说走后山，到了避风站会再联系。\n她没有接到第二通电话。手机信号随后断了，无法知道是他失约，还是电话没能打通。“你别把这个空白写成死亡。”她说，“也别把他早有计划写成此刻绝对安全。”\n护理室墙上仍挂着一部有线电话，通向旧船屋和山上的避风站。旅馆客房的交换机停电了，这条应急线是独立的。\n你记下线路位置，准备请**何泊**核对端口。你能做的不是凭一句话给江临宣布安全，而是尝试真正接通他，并得到他对材料公开范围的明确意见。",
+      "summary": "听到录音中的“告别电话”，**陈雾**从口袋里拿出值班记事本。\n23:15那行写着：**江临**，走后山，到避风站后再联系。\n“第二通没打来。”她说，“后来手机也没信号了。”\n你问有没有别的办法。她指向墙上的有线电话：“这条线接船屋和山上的避风站，单独供电。客房电话断了，它还能用。何船长知道怎么接。”\n她把记事本合上，又问了一遍：“找到了，给我回个话。”",
       "sha256": "6a2dfd5ed924dbbcded84ac6e630a2a5645dd3a11e41e13d0b2178a72fd02c00"
     },
     {
@@ -3261,7 +4062,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-zhao.png",
       "audience": "public",
-      "summary": "**赵朔**把手机放在关闭的供电柜上。23:12，**林素**发来短信：“机房进水，帮我看看。”他23:18到这里，电早已断了。你问，他看见谁离开吗？“没有。我只看到门没关严。”\n他指着控制线，声音突然提高：“这不是水泡坏的。”你没有急着认同他的全部判断，请他先解释剪口与正常故障的区别。他拿来一段废线作比较，平整断面与烧熔断面确实不同。\n说到父亲，他把手电握得很紧。“他们说他在海上失联。我每年拿同一张名单去问，得到的都是同一句话。”你告诉他，目前还没有核对旧记录，不会把他的愤怒当作犯罪证据，也不会把他的愿望当作事实。\n他退开一步，让出控制柜。报修短信给今晚多了一个时间锚点；林素关于机房的说法，需要在取得电表记录后重新询问。",
+      "summary": "**赵朔**擦掉手机屏上的水，把短信递过来。\n23:12，**林素**：“机房进水，帮我看看。”\n“我十八分到的。那时已经没电了，门也没关严。”\n他用手电照着断线：“水能泡出这种口子？”从工具箱里抽出一段烧坏的废线，放在旁边。一个断口平整，一个焦黑卷曲。\n你问起**赵世衡**，他握紧了手电。\n“我爸。他们说人没回来。”他将短信划走，屏幕上是一张旧名单的照片，“每年问，每年就让我看这个。”\n赵朔让开柜门：“你先看。林素说她没下过机房，我可没说过。”",
       "sha256": "ddebd48bc1786e6c2e3966f900ce0196b73c0c85365e598d8cdcbe613aae72ca"
     },
     {
@@ -3269,7 +4070,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "供电柜已经隔离，你只查看断线与外部记录，不接触带电部分。陶瓷保险丝完整，主开关没有过载痕迹。控制线的剪口高度在门口就能够到，不需要熟悉柜内线路的人钻进去。\n机械记录卡显示22:55断电。**赵朔**的短信是23:12，晚十七分钟。摆钟却更早停在21:17。三个时间不能混成一个“停电时所有事情同时发生”的瞬间。\n赵朔承认，岛上不少人都有能剪线的钳子，他自己的工具也没有唯一性。“我可以说不是自然故障，但不能说是谁。”你把这句话完整录下。\n要读取交换机上最后一条维修日志，可以尝试恢复隔离后的控制电源。也可以放弃修复，拆下封存的纸质计时卡。后者更费力，但不会因为一次运气不好就让证据永远消失。",
+      "summary": "**赵朔**确认控制柜已经隔离，才让你靠近。保险丝完好，开关没有烧痕，断线的剪口在门口伸手就能够到。\n柜外机械记录卡停在22:55。你拿它与23:12的短信对照，中间隔了十七分钟。餐厅的钟则早在21:17就停了。\n“有钳子就能剪，我那把也行。”赵朔说，“你问谁干的，我没看见。”\n最后一条维修日志存在控制设备里。赵朔翻开手册，指给你看：可以尝试恢复隔离后的控制电源，也可以拆封旁边的纸质计时卡。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -3277,7 +4078,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "你选择不再碰供电。**赵朔**拿出维护手册，按编号找到纸质计时卡的封口。封口上有上月港务巡检的骑缝章，打开前你先拍照，把拆封经过录下来。\n卡上22:55的记录与柜外一致。附页注明，客房交换机依赖旅馆供电，应急站有线电话独立供电。因此，停电可以让客房电话失效，却不能解释避风站电话是否接通。\n这条路线比直接修复多花了一些时间，但同样得到完整信息。你没有理由因为骰子不站在自己这边，就放弃一个能通过公开操作取得的事实。\n赵朔把计时卡重新装入透明袋。他问，你会回来告诉他旧案的结果吗？你答应把已经核实的部分当面说明，也会明确标出仍需调查的部分。",
+      "summary": "你请**赵朔**取出纸质计时卡。他按维护手册找到封口，上面还盖着上个月的巡检骑缝章。你拍下封口，他才下刀划开。\n卡上同样记着22:55断电。附页画着两条线路：客房交换机接旅馆供电，避风站应急电话单独供电。\n赵朔将卡装进透明袋，递到你手里。\n“旧案那边查出什么，能不能告诉我？”\n你答应了。他低头收拾螺钉，一颗一颗放回工具盒。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -3285,7 +4086,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-zhao.png",
       "audience": "public",
-      "summary": "你先说“这是一份当年的护理记录”，没有先说“你父亲一定被杀了”。**赵朔**逐字读到“意识清醒，自报姓名”时，坐在工具箱上，很久没有开口。\n“那他们这些年让我找的，不是同一件事。”他终于说。你解释，事故与上岸后的带离应分别调查，护理页说明他活着回来，不说明后来全部经过。\n赵朔想立即冲去问**林素**。你请他等原始救援页与名单互证，再一起谈。他问，等待是不是又一种拖延。你告诉他区别：这一次原件位置有人记录，副本有人保存，问题也不会被换成一句模糊的“风浪太大”。\n他没有原谅任何人，只答应暂时留下。你知道，给予一个人可靠的事实，比给他一个痛快但未经核实的凶手名字更难，也更必要。",
+      "summary": "**赵朔**接过护理页的照片，看到“意识清醒，自报姓名”，在工具箱上坐了下来。\n“他回来了？”\n你指给他看22:10那一行。他把照片放大，又缩回去。\n“我这些年，一直在问船沉在哪儿。”\n读到22:35，他忽然站起来：“谁带走的？”\n这页只写了港务人员，没有姓名。你告诉他，阁楼还有名单和救援记录。\n他朝门外走了两步，停住：“行，先找。找齐了我跟你一起去问她。”照片仍亮在他手里，他没有把屏幕关掉。",
       "sha256": "ddebd48bc1786e6c2e3966f900ce0196b73c0c85365e598d8cdcbe613aae72ca"
     },
     {
@@ -3293,7 +4094,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "阁楼外侧的客簿不用密码就能翻阅。2008年的原册上，**赵世衡**后面有“救回岸上”四个字，墨色与当页相近。送交港务的复写副本却写“海上失联”，两者不是同一措辞。\n你把页码、日期和装订线都拍下。修改发生在副本上，不能仅凭这一点认定原册全部真实；但它足以让“从未回岸”的官方叙述受到质疑。\n铁柜便条写“封存日，按月日”。原册封存日期为9月21日，机械锁需要四位数字。你把0921记在调查页边，准备输入。若锁因错误尝试卡住，可依据已经找到的维护说明拆开锁舌；不会让整桩旧案依赖猜谜。\n柜里可能有发出命令的人留下的原始页。护理记录证明被救回的状态，客簿证明两套名单的差别，最后还要核对带离与暂停救援发生在哪个环节。",
+      "summary": "铁柜外摞着旧客簿。2008年的原册里，**赵世衡**名字后写着“救回岸上”；夹在里面的港务复写副本，同一个位置却是“海上失联”。\n你将两页并排拍下，连页码和装订线一起收进画面。\n柜门贴着便条：“封存日，按月日。”原册封存日期是9月21日。你看向四位机械锁，记下0921。\n客簿后面还夹着一张维护页，画了锁舌和侧面的检修孔。即使锁转不动，也能从那里拆开。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3301,7 +4102,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "你不再猜密码，按客簿夹着的维护页找到铁柜侧面的检修孔。这里只需要拆下两颗生锈螺钉，取出锁舌，并不会破坏文件本身。你记录拆锁经过，把零件放在同一只托盘里。\n**林素**没有阻止，她在楼下说过可以查看旧材料。这不是悄悄撬走一个人的私人财物；你仍然需要清楚记录取得资料的方式，让后来的人能够检查。\n柜门开了，里面没有传说中的遗骨，也没有一封替所有人定罪的绝笔。只有纸页、印章、被折过许多次的命令单。\n真正改变调查的通常不是打开柜门的动作，而是柜门后面的内容能否与已有事实相互印证。你已经得到继续查证的机会。",
+      "summary": "维护页标出的检修孔藏在柜侧。你卸下两颗生锈的螺钉，把锁舌慢慢抽出来，零件放进旁边的托盘。\n柜门往外一沉，开了。纸张受潮的气味扑出来，最上面是一叠调度单，红印章已经透到背页。\n你拍下拆开的锁和文件原来的排列，再把手伸向第一张命令单。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3309,7 +4110,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "第一张是调度原始页，22:10救回，22:35由港务人员带离，23:05暂停搜寻。签发人是丁远。附注里写“船屋后间上锁，待问话”，不是正常救援记录会出现的措辞。\n你把这页与护理记录并排。**陈雾**记录的是当事人身体状态，调度页记录的是带离与命令；不同来源在22:10与22:35两个节点对上了。客簿副本却把这一段全部抹掉。\n最后一行墨水晕开，关于天亮后进入后间的记录只剩半句。你不替它补出自己最想看到的结论。能明确说的，是救回的人在之后被扣留，救援被人为暂停，失联叙述掩盖了这些过程。\n这需要正式调查保存原件、查清死亡原因与责任，不能让一段广播代替裁决。但它已经足够要求所有相关者停止把名字推回风浪里。",
+      "summary": "调度原始页写着三条记录：22:10救回，22:35由港务人员带离，23:05暂停搜寻。最后一条的签发人是丁远。\n旁边另有小字：“船屋后间上锁，待问话。”\n22:10和22:35，与护理页记下的时间相同。你将两份照片放在一起，客簿副本里的“海上失联”就在旁边。\n纸页末尾被水洇过。关于天亮后进入后间的记录，只剩半句，后面辨不出字。你换了几个角度拍照，仍没能读出余下的内容。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3317,7 +4118,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-letter.png",
       "audience": "public",
-      "summary": "信没有收件地址，开头写“如果有一天孩子们还要问”。**林素**写自己把“救回岸上”改成“海上失联”，因为丁远说**赵世衡**要揭发他挪用救援款，他们的旅馆也会保不住。\n她写过一句“我以为只是一晚”，又把“一晚”划掉，改成“等风停”。没有任何一行能够替死者解释后来的空白，也没有一行把全部责任交给天气。\n信的末尾提到**江临**来问同样的问题，她担心**赵朔**见到原件，会知道她早就知道。纸上没有今晚杀人的承认。你必须把掩盖旧案与今晚失踪分开，否则最容易传播的故事会再次覆盖真正发生的事。\n你把信放回信封，记录封存位置。回接待厅时，拿护理页、名单和信一起询问，比单独举着一封情绪强烈的信指控，更能让对方无法继续用模糊回答躲开。",
+      "summary": "信封上没有地址，信的开头是：“如果有一天孩子们还要问……”\n**林素**写，丁远告诉她，**赵世衡**要揭发他挪用救援款。事情闹开，旅馆也保不住。她于是将副本上的“救回岸上”改成了“海上失联”。\n“我以为只是一晚。”这句里的“一晚”被划掉，改作“等风停”。\n末尾提到**江临**。他又来问同样的事，她怕**赵朔**看到原件。\n你读到最后，信没有署日期，也没有寄出。护理页、两份名单和这封信，如今都能摆到林素面前了。",
       "sha256": "4902db4f60587ad4bc560e9ac2c84e48cabfb373839f6c3d4b2194636abe5983"
     },
     {
@@ -3325,7 +4126,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "你按时间顺序拍下==护理页、客簿原件与救援命令==，把页码与封存位置说进录音笔。磁带不做剪辑，另存完整副本。这样，任何一句被引用的话都能回到原始上下文。\n你在副本首页写上两个限制：病历中的无关姓名遮蔽；纸页真实性与具体责任应由正式调查复核。你不会因为想给**赵朔**一个交代，就略去这两条。\n**江临**提醒的“三份互证”现在完整了。即使某一份原件之后发生损坏，护理状态、名单变化与救援命令之间的关系仍有记录可查。\n你把副本放进防水袋。窗外雨势正在减弱，但调查还没有结束：江临是否安全，需要真正确认；**林素**是否愿意当面说明，需要给她一个不靠误指控也无法逃避事实的问题。",
+      "summary": "你把护理页、客簿原件和救援命令按时间摆好，逐页拍摄，将页码和原件的位置念进录音笔。磁带也另存了一份完整副本。\n病历旁边无关的姓名用纸遮住，洇坏的字保留原样。目录上，22:35之后仍有一段空白。\n副本装进防水袋，袋口扣紧。窗外雨小了些。还要回接待厅问**林素**，也得设法联系上**江临**。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3333,7 +4134,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "“大船走不了。”**何泊**把拐杖伸向石阶，指出刚退去的潮线。“不过上山可以。后墙有小门，绕过旧水井，能到避风站。”你问**江临**是否知道这条路，他把目光移到门边的挂钩。\n挂钩上少了一件防水外套。何泊说，只要有人留下希望公开行踪的说明，他愿意讲自己见到的部分。他不想让一个离开的人，因为被说成“逃跑”就失去继续讲事实的机会。\n你注意到绞盘边的绳索断面很新。何泊让你看另一头，仍卡在轮齿里。他说今晚拖小艇离开淤沙时切掉了损坏的一段，绳索没有绑过人。\n你可以核对切绳痕迹，也可以在拿到江临录音后再问他的离开时间。一个证人拒绝立刻满足你的猜测，不等于他没有愿意配合的边界。",
+      "summary": "“渡船出不了港。”**何泊**拿拐杖点了点石阶上的潮线，“上山倒能走。后门出去，绕旧水井，到避风站。”\n“**江临**知道这条路吗？”\n他望向门边空着的衣钩，没有回答。\n“他托我办过事。你要有他留下的话，拿来，我再跟你讲。”\n绞盘边搭着一根新断的绳子。见你看它，何泊将另一头从轮齿里拽出来。\n“拖小艇时坏的，割掉了。你自己看看，另一头还在这儿。”",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -3341,7 +4142,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-rope.png",
       "audience": "public",
-      "summary": "绳索的另一端还嵌在绞盘齿里，轮轴周围有新刮出的木屑。断口没有反复摩擦留下的毛边，损坏段被整齐切掉。小艇船底的淤泥，与石阶下面的滩泥一致。\n**何泊**指向后墙的小门。门闩从内侧抬起，外面的脚步一直延伸到上山路口。你只能看见这一段，不能透过雾看见一个人最后是否安全抵达。\n你把地图上后山避风站的位置记下来。那里有独立应急电话，与护理室相连；不需要客房交换机恢复，也不需要等渡船重新出航。\n绳索原本看上去像一个容易引人联想的证物，检查后它却指向正常的救援准备。你删除笔记里的“绑缚？”两字，换成“切断用途已与绞盘痕迹相符”。承认一条怀疑被证据排除，也是一种进展。",
+      "summary": "断绳的一端仍卡在绞盘里。轮轴旁散着新木屑，小艇船底糊着与石阶下一样的滩泥。被切掉的损坏段扔在墙边，长度刚好对得上。\n**何泊**抬起后墙小门的门闩。外面有脚印，沿着泥路走到上山路口，往后就看不清了。\n他指着雾里：“避风站在上面。有线电话能通，船屋这部就能打。跟护理室接的是同一条应急线。”",
       "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
     },
     {
@@ -3349,7 +4150,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "**江临**录音里的声音响起，**何泊**闭上眼听完，没有要求删去哪一段。他说，自己23:25取了防水外套给江临，对方从后门走向山路，左腿跛，但没有人扶或押着他。\n“我亲眼看见他到旧水井。再往上，雾挡住了。”何泊把这两句分开，说得很清楚。你感谢他没有把“见到出发”说成“保证安全”。\n你问是谁建议录九声钟。何泊说，江临自己决定的，希望你即使见不到他，也会留下查资料。他只帮忙拿外套，没有操作录音设备。\n今晚的顺序开始连起来：房间里有离开准备，录音里有安排，证人看见自愿走向后山。但最后一环仍缺失。船屋墙上的应急电话能直接呼叫避风站，你可以现在尝试接通，不用把所有希望放到明早的船上。",
+      "summary": "**何泊**听完**江临**的录音，伸手关小了音量。\n“十一点二十五。我把外套拿给他，他从这里出去。”他指向后门，“左腿不太好，走得慢，没让人扶。”\n“你看见他走到哪儿？”\n“旧水井。再往上都是雾。”\n他把空衣钩拨正：“钟是他自己的主意。怕你们来了找不着人，就掉头回去。我只管给他拿衣服，那机器我不会弄。”\n墙上的电话蒙着一层灰。何泊拿袖子擦了擦听筒：“要问到没到，打上去吧。”",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -3357,7 +4158,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-he.png",
       "audience": "public",
-      "summary": "**何泊**盯着“22:10”很久，然后用拐杖尖在地上划了一条线。“这里是岸。人已经回来，就不该再被写成还在海上。”他说自己把**赵世衡**送到护理床时，确实听见他报了名字。\n22:35，一个穿港务外套的人带赵世衡去后间。何泊当时准备第二趟搜救，23:05收到丁远暂停命令。他知道后间上了锁，却选择先服从命令。后来他每次讲事故，都只讲风浪，省去了这段。\n“我能说命令是谁发的，也能说我没有去开那扇门。”他看着你，“别替我写成尽力救了所有人。”你没有安慰他，说出愧疚不等于责任已经结束。\n护理页与调度页得到第三个来源的支持。何泊愿意在副本上注明哪些是亲见、哪些是后来听说。他不能给你完整的死因，却可以让之后的调查从一条不被天气掩盖的时间线开始。",
+      "summary": "**何泊**将护理页拿到灯下，手指停在22:10。\n“是我送回来的。他冷得牙齿打架，问名字还能答。”\n22:35，穿港务外套的人把**赵世衡**带去了后间。何泊忙着准备第二趟搜救，直到23:05，丁远下令停船。\n“后间锁了。我知道。”他把纸放低，“我想着先把船上的事做完。后来……我没去开门。”\n绞盘发出一声轻响，他伸手按住。\n“这些年别人问，我都说那晚风大。”\n他请你把副本留下，答应逐条写清当晚看见和听见的事。",
       "sha256": "205922734eade41363db7fae02c7572af6fe40b3e972698bfde770078746421e"
     },
     {
@@ -3365,7 +4166,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-dawn.png",
       "audience": "public",
-      "summary": "电话有短暂的杂音，随后一个男人问：“潮退了吗？”你没有仅凭声音认人，按约定问**江临**邀请信背面的采访口令。对方答出“把名字留在岸上”，又准确说出你们上一封信讨论过的章节。\n江临在护林员处。今晚与**林素**争执后，他担心材料被夺走，按计划经后山离开。他明确说，没有人把他从窗户带走，也没有人给他镇静药。那第九声钟，是他提前设置的提醒。\n“不是为了给谁设罪。”他说，“是怕我暂时说不了话，你们就只剩一个方便的解释。”他同意提交完整录音与资料副本，不同意公开无关病历。\n你请护林员接电话确认站点和通话登记，对方给出应急记录编号。现在可以把“计划离开”推进到“已与本人及站点核对安全”。江临会在天亮后配合调查；旧案不会因为今晚没有发生谋杀，就自动变成无事发生。",
+      "summary": "听筒里响了一阵杂音，有人问：“潮退了吗？”\n你照着邀请信背面问出口令。那人答：“把名字留在岸上。”随后说起上一封信里讨论过的章节。是**江临**。\n“我在护林员这儿。跟**林素**吵完，怕她拿走材料，就先走了。腿没事，路上慢了点。”\n你问起九声钟。他沉默片刻：“我设的。想让你们多留一会儿。抱歉，让你们这么找。”\n他答应天亮后带着录音和稿纸回来，也同意交出副本：“**陈雾**那本病历，只用相关的那页。”\n护林员接过电话，报了站点和通话登记编号。你记下号码，再把江临平安的消息告诉**何泊**。他松开握着拐杖的手，靠回椅背。",
       "sha256": "b30903c5f8d948f7e4694af773d0f88ceb23f1693edafa43aa57e82ffcf6790b"
     },
     {
@@ -3373,7 +4174,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/npc-lin.png",
       "audience": "public",
-      "summary": "你把护理页、两份名单与未寄信按顺序摆在台上。没有先问“是不是你杀的”，而是问：“你何时知道**赵世衡**活着上了岸？副本为什么变了？”**林素**第一次没有替问题换一个说法。\n她承认，2008年亲手改了副本，以保护丁远和旅馆。她不知道自己这样做能让多少后续问题再也没有人问。今晚22:55，她去机房剪控制线，想让**江临**停止播放旧采访录音；后来又发短信叫**赵朔**来修，假装只是水浸。\n你指出两件事可以同时成立：她参与掩盖与人为断电；江临随后自愿离开，钟声来自预录。不能用旧案的责任直接替代对今晚的查证。\n林素拿出另一只文件袋，愿意交出材料。她问赵朔会不会原谅她。你说那不是你能替别人做的决定。你能要求的，是她完整说明自己的行为，不再把名字、时点或问题改写成更好听的故事。",
+      "summary": "你把护理页、两份名单和未寄信摆上接待台。\n“**赵世衡**回来过。你什么时候知道的？”\n**林素**没有拿起纸。她看了一会儿，点头：“当晚就知道。副本是我改的，丁远让我改。我也怕旅馆保不住。”\n你再问断电。她说，今晚22:55去了机房，剪断控制线，想让**江临**放不了旧录音。后来发短信叫**赵朔**来修，谎称机房进水。\n“江临呢？”她问。\n这张台面上能说明的事，你逐一问完。林素从柜台下取出另一只文件袋，推过来。\n“剩下的在这里。”她没松手，“赵朔会看见吗？”\n你将袋子接过来。她低下头，手停在半空，慢慢收了回去。",
       "sha256": "e255177b4af143beba5b4841c43f41b14bf1e96c27dab9ec7834dbf84348178f"
     },
     {
@@ -3381,7 +4182,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "你把今夜与2008年分成两列。21:17只是机械钟停住；22:55人为断电；23:12报修；23:25**江临**走向后山；23:40==预录钟声==播放。不存在一声钟同时证明所有人的到场和离场。\n另一列是**赵世衡**：22:10活着上岸，22:35被带离，23:05救援暂停，名单随后被修改。护理页、旅馆原册与港务原始命令在不同环节互相支持。\n四个人围着桌子。**陈雾**坚持保留记录原貌，**赵朔**要让父亲的名字重新进入调查，**何泊**愿意说明服从命令的部分，**林素**必须说明掩盖与剪电。谁都没有得到一句足以替自己结束责任的简单评价。\n江临已安全确认，证据副本已保存。你现在可以作最后选择：把完整材料交给正式调查并播出不涉及隐私的核实报道，先做有时限的封存交接，或者仍追求一个更容易传播的“今夜谋杀”故事。最后一种选择会违背你手中的事实。",
+      "summary": "餐桌擦干了，今夜的记录放在左边，2008年的放在右边。\n今夜：21:17停钟；22:55断电；23:12报修；23:25**江临**走后山；23:40音箱播放钟声。避风站的电话已经接通，江临还活着。\n十五年前：22:10**赵世衡**被救回岸上；22:35被带离；23:05丁远命令暂停搜寻。副本后来改成了“海上失联”。再往后的那段，几份材料都没能补全。\n**陈雾**用笔圈出护理页的签名。**赵朔**把父亲的名字写在目录上，**何泊**坐着等你问话。**林素**将文件袋放在桌边。\n录音和副本已收好。是现在交出材料、公开报道，还是先封存，留七天继续核实？赵朔看着你，等你开口。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3389,7 +4190,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "你逐项列出已经核实与仍待查清的事实，请四名证人分别确认自己的记录。完整材料进入正式调查，播出的版本遮蔽无关病历。你没有承诺一个裁决，只承诺不会再把岸上的名字写回海里。",
+      "summary": "你请四位当事人逐页确认记录，将原件装入交接袋。用于报道的副本另放一边，无关病人的姓名遮住，读不出的半句仍留在原处。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3397,7 +4198,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "你决定先完成证据封存与证人交接，七日内公开已经核实的进度。**赵朔**不同意无限期等待，你把期限与联系人写进交接单。暂缓播出不是撤回调查，也不能成为新的沉默。",
+      "summary": "你拿出封存袋，写好交接目录。**赵朔**问要等多久，你在交接单上写下七天后的日期，将联系人和电话一并交给他。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3405,7 +4206,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "你把旧案的掩盖与今晚的失踪合成了一条痛快的指控。**陈雾**把应急通话登记放到你面前，**江临**的声音仍在电话另一头。这个结论比事实更响，却与已经查证的安全确认直接矛盾。",
+      "summary": "你在稿件里写下“**林素**杀害**江临**”。**陈雾**看见那一行，将应急通话登记推到你面前：“刚才电话里那个人，你也听见了。”你没有改掉那句话，按下发送。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3413,7 +4214,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/lobby-v2.png",
       "audience": "public",
-      "summary": "你告诉**林素**自己决定停止调查。她没有阻止，把渡船恢复通知压在登记台上。你仍保留已经取得的笔记，但没有完成最后的互证与交接。\n这不是一个被强迫的选择。你也可以暂时合上录音笔、继续回看线索，再作决定；但一旦确认离岛，这个夜晚会在还没有问完的问题中结束。那些材料不会自动因为你离开而变成答案。\n远处又有金属轻响，这次只是风吹动门口的铃。你知道至少有一件事是真的：声音本身，不会替任何一个人把经过讲清楚。",
+      "summary": "你把笔记收进包里，告诉**林素**，天亮就走。\n她拿出渡船恢复通航的通知，放在接待台上，没有问原因。\n录音笔还剩一点电。你关掉它，雨声一下显得很近。已经拿到的材料都在包里，没问完的话也留在纸上。\n门口的铃被风碰了一下。你站了一会儿，才转身上楼。",
       "sha256": "21a55f8cb401378569ba0096c0284b791241424b3676efe630ae422f6b9ced46"
     },
     {
@@ -3421,7 +4222,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-dawn.png",
       "audience": "public",
-      "summary": "名字留在岸上\n\n天亮后，**江临**从避风站下来，亲自确认录音与稿纸。**赵朔**把父亲的名字写在证据目录第一行；**陈雾**留下限定范围的证词；**何泊**与**林素**分别说明自己做过与没做过的事。\n你提交原始材料，报道只使用已经交叉核实的部分。它没有标题党式的“雨夜凶手”，也没有替正式调查宣布死因。它指出，一个活着上岸的人被带离、救援暂停，随后记录被改写；这些事实需要回应。\n潮汐旅馆暂时关闭。赵朔没有说原谅，林素也不能把一句道歉当作结案。你们约定继续追踪调查，保存原件，让每一个空白仍以空白的形式留在记录里。\n九声钟没有找到一个今晚的杀人者，却让一个旧案重新有了不能被轻易改写的起点。你的录音最后是海浪，以及渡船靠岸时真实的一声钟。",
+      "summary": "名字留在岸上\n\n天亮后，**江临**从山上下来，外套下摆全是泥。他坐到餐桌前，听完磁带，逐页认了稿纸。\n**赵朔**将父亲的名字写在证据目录第一行。**陈雾**留下护理页的副本，**何泊**写下当晚的经过。**林素**签名时，笔尖在纸上停了很久。\n材料交出去了。报道写到22:35被带离，写到暂停搜救和修改名单；后间那段残缺的记录，仍等着有人查清。\n旅馆暂时关门。赵朔收好交接单，没有和林素道别。\n渡船靠岸时响了一声铃。你按下录音键，江临站在旁边，终于没有再让任何声音替自己传话。",
       "sha256": "b30903c5f8d948f7e4694af773d0f88ceb23f1693edafa43aa57e82ffcf6790b"
     },
     {
@@ -3429,7 +4230,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-dawn.png",
       "audience": "public",
-      "summary": "七日之约\n\n材料装进封存袋，原件目录和副本交接分别由证人签字。你暂不播出未经复核的责任判断，但公开说明调查已启动，并约定七日内跟进。\n**江临**同意等待核实，**赵朔**坚持每一页都要有去向。你把联系方式与期限交给他，也留下完整录音。没有人被要求先原谅，才有资格要求答案。\n这是一个谨慎的结局，也是一项尚未结束的承诺。只要进度有记录、期限有人检查，暂缓并不等于遗忘；若你不再回来，这个选择就会变成又一次沉默。",
+      "summary": "七日之约\n\n原件装进封存袋，目录逐页签过，副本分别留下。交接单最后一栏写着跟进日期：七天以后。\n“七天。”**赵朔**读了一遍，“到时候我找谁？”\n你把联系人和电话写给他，也留下一份完整录音。**江临**说会一起跟进，**陈雾**将护理册锁回抽屉。\n**何泊**在门外等船。**林素**把餐桌上的纸屑收进掌心，没有来送。\n你将七天后的日期记进本子。那一页还空着。",
       "sha256": "b30903c5f8d948f7e4694af773d0f88ceb23f1693edafa43aa57e82ffcf6790b"
     },
     {
@@ -3437,7 +4238,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "最响的错误\n\n**江临**安全抵达的记录推翻了你的今夜谋杀指控。旧案材料仍然重要，却因为一条未经区分的报道承受了本可避免的质疑。\n**赵朔**问，你明明拿到了护理页、报修日志与通话登记，为什么还要选择一个已经被证据排除的解释。你无法用“想尽快给交代”回答这件事。\n录音里第九声钟的尾音一遍遍重放。你终于意识到，重复得最响的部分，并不因此更真实。你必须更正报道，保存原件，重新取得证人的信任。",
+      "summary": "最响的错误\n\n报道发出后，**江临**打来电话。\n“你说她今晚杀了我？”\n你面前还摊着避风站的通话登记。报修短信、护理页和那盘磁带，都被你用来拼成了另一个故事。\n**赵朔**把报道链接发来，只问了一句：“那我爸的事，现在还有谁肯信？”\n你撤下报道，写更正，逐个联系交过材料的人。有的电话接通了，有的响到最后也没人接。\n磁带仍留在桌上。第九声钟，和第八声一模一样。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3445,7 +4246,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-confrontation.png",
       "audience": "public",
-      "summary": "尚未问完的雨夜\n\n渡船恢复了，旅馆重新把钥匙挂上板。你带走未完成的笔记，未能把今晚的行踪与十五年前的记录完整拼合。\n没有新的证据证明那些最初的怀疑。你可以回看已经获得的内容，也可以重新开始这段故事，选择留下多问一个能够被复核的问题。\n海上的雾渐渐散去。有些人离开不是消失，有些人被写成失联，却曾真实站回岸上。这个夜晚，还欠他们一个完整的记录。",
+      "summary": "尚未问完的雨夜\n\n天亮后，**林素**把钥匙重新挂上板。你背着包穿过接待厅，渡船在码头等着。\n笔记里记了几个人名、几个时间，还有没来得及问的问题。纸夹在包里，被潮气浸得发软。\n船离岸时，你回头看。旧船屋的门开着，**何泊**站在石阶上。再远一些，旅馆二楼的窗户反着光，看不见里面。\n手机恢复了信号。你翻开行前笔记，重新读了一遍。",
       "sha256": "ff5b13769f93fac996ffe59d425e217464fecf6f8714e7cefbb22f9a4783fefd"
     },
     {
@@ -3453,7 +4254,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-dawn.png",
       "audience": "public",
-      "summary": "调查暂时中止\n\n天亮的渡船已抵达。你用完了这个夜晚的调查轮次。已经取得的记录仍保存在手记中，但未完成的核对不能自动填成结论。你可以重新开始，先询问**林素**、查停钟、听**江临**的录音，再让旧案的三个来源互相印证。",
+      "summary": "调查暂时中止\n\n天已经亮了，码头传来渡船的汽笛。你将散在桌上的纸页收好，有几处时间还没对上，也有几句话来不及再问。已取得的记录留在手记里，这次调查到这里暂告一段落。",
       "sha256": "b30903c5f8d948f7e4694af773d0f88ceb23f1693edafa43aa57e82ffcf6790b"
     },
     {
@@ -3461,7 +4262,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cg-blackout.png",
       "audience": "public",
-      "summary": "楼下灯灭了一瞬，应急红灯随即亮起。有人在接待台说“又来了”，却没有解释“又”指的是哪一次。\n这次变化没有摧毁证据，也没有让任何NPC凭空消失。已知的机房与应急电话仍可调查。你记下眼前的停电现象，不把它自动倒推为过去所有灯灭的原因。",
+      "summary": "楼下灯灭了一瞬，应急红灯随即亮起。有人在接待台说“又来了”，却没有解释“又”指的是哪一次。\n**林素**摸到台边的手电，光柱扫过楼梯，又移向机房入口。餐厅、走廊和船屋仍有人回应。应急灯下，摊开的纸页泛着红光。",
       "sha256": "546c992fa88d21935d3c8a4e3b04a6707166d771b77ca0a66d380018ce0c5949"
     },
     {
@@ -3469,7 +4270,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "机械锁舌退回，柜门缓缓打开。密码只是取得资料的方式；真正需要核对的内容，还在柜里。你可以读取原始救援命令与未寄出的信。",
+      "summary": "机械锁舌退回，柜门缓缓打开。最上面压着救援命令，下面露出一只没有写地址的信封。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3477,7 +4278,7 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-fuse.png",
       "audience": "public",
-      "summary": "隔离后的控制电源恢复，维修时间表再次可读。记录与纸质计时卡一致：22:55断电，23:12报修。故障修复提供核对便利，不改变已有事实。",
+      "summary": "隔离后的控制电源恢复，维修时间表再次可读。记录与纸质计时卡一致：22:55断电，23:12报修。**赵朔**将这两项抄到纸上，递给你。",
       "sha256": "2b1ebdd1e6c9ca2253ab8008897d353ab6aaeadeb14634444b2edc63e54a94aa"
     },
     {
@@ -3485,7 +4286,161 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-tape.png",
       "audience": "public",
-      "summary": "你带来**江临**的采访邀请。你的录音笔收下了九声钟响；声音相似不等于时间相同。",
+      "summary": "你叫徐闻，在一家地方电台做声音报道。**江临**找上你，是因为你去年播过一段海难家属的采访。\n那段录音原本有十一分钟。节目最后只用了四十秒：一个年轻男人说，他父亲没能从海上回来。后面那句“可我总觉得名单有问题”，你剪掉了。没有材料能接上它，编辑也催着交片。\n江临听过完整版。他没有责怪你，只寄来一张旧名单，圈出**赵世衡**的名字。你这才知道，录音里的年轻人叫**赵朔**，失踪的是他父亲。\n来岛前，江临与你通了最后一次电话。他让你带足电池，说从进门起就开着录音。你问今晚要采访谁，他说：“先听，别急着替他们收尾。”\n你们还约了一个采访口令：“把名字留在岸上。”邀请信背面记着这句话。\n渡船上，你又听了一遍去年的原始录音。赵朔问名单的那句话还在。你没有告诉江临，当初删掉它的人就是你。\n现在，旅馆的门就在面前。你按下录音键。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "role_opening_reporter",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "你叫徐闻，在一家地方电台做声音报道。**江临**找上你，是因为你去年播过一段海难家属的采访。\n那段录音原本有十一分钟。节目最后只用了四十秒：一个年轻男人说，他父亲没能从海上回来。后面那句“可我总觉得名单有问题”，你剪掉了。没有材料能接上它，编辑也催着交片。\n江临听过完整版。他没有责怪你，只寄来一张旧名单，圈出**赵世衡**的名字。你这才知道，录音里的年轻人叫**赵朔**，失踪的是他父亲。\n来岛前，江临与你通了最后一次电话。他让你带足电池，说从进门起就开着录音。你问今晚要采访谁，他说：“先听，别急着替他们收尾。”\n你们还约了一个采访口令：“把名字留在岸上。”邀请信背面记着这句话。\n渡船上，你又听了一遍去年的原始录音。赵朔问名单的那句话还在。你没有告诉江临，当初删掉它的人就是你。\n现在，旅馆的门就在面前。你按下录音键。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_shore_names",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "回程时，你给编辑发去原始材料目录。这次稿件里有一段空白，你标明“仍待查清”，没有找一句话填进去。\n\n去年的完整采访仍在你的设备里。这次交接中，你还没有另存原文件并补上删节说明。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_shore_names_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "回程时，你给编辑发去原始材料目录。这次稿件里有一段空白，你标明“仍待查清”，没有找一句话填进去。\n\n你给旧采访补上了一份删节说明，原始文件也另存了一份。**赵朔**是否愿意再接受采访，要等他自己回答。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_seven_days",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "你在七天后的日历上留了一小时，标题只写“回访**赵朔**”。录音笔放在桌边，电池还没有取出。\n\n去年的完整采访仍在你的设备里。这次交接中，你还没有另存原文件并补上删节说明。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_seven_days_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "你在七天后的日历上留了一小时，标题只写“回访**赵朔**”。录音笔放在桌边，电池还没有取出。\n\n你给旧采访补上了一份删节说明，原始文件也另存了一份。赵朔是否愿意再接受采访，要等他自己回答。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_loud_error",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "更正稿写到第三遍，编辑问你为什么忽略那通电话。你点开自己的录音，从**江临**报出口令的地方重新听起。\n\n去年的完整采访仍在你的设备里。这次交接中，你还没有另存原文件并补上删节说明。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_loud_error_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "更正稿写到第三遍，编辑问你为什么忽略那通电话。你点开自己的录音，从**江临**报出口令的地方重新听起。\n\n你给旧采访补上了一份删节说明，原始文件也另存了一份。**赵朔**是否愿意再接受采访，要等他自己回答。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_unanswered",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "船上有人问岛里出了什么事。你摸着包里的录音笔，说还没有问完。\n\n去年的完整采访仍在你的设备里。这次交接中，你还没有另存原文件并补上删节说明。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_unanswered_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "船上有人问岛里出了什么事。你摸着包里的录音笔，说还没有问完。\n\n你给旧采访补上了一份删节说明，原始文件也另存了一份。**赵朔**是否愿意再接受采访，要等他自己回答。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_storm_passed",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "夜里的录音很长。你将尚未核对的片段逐段标好，耳机里传来接待台收杯子的声音。\n\n去年的完整采访仍在你的设备里。这次交接中，你还没有另存原文件并补上删节说明。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "epilogue_reporter_storm_passed_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "夜里的录音很长。你将尚未核对的片段逐段标好，耳机里传来接待台收杯子的声音。\n\n你给旧采访补上了一份删节说明，原始文件也另存了一份。**赵朔**是否愿意再接受采访，要等他自己回答。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "clue_memory_reporter_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": "public",
+      "summary": "**江临**查的果然是**赵世衡**。你翻出那段旧采访，在耳机里听到**赵朔**说：“我问过是不是有人把名字记错了，他们叫我别再来。”\n去年这句话也没播。你当时记得的是交片时间，已经不记得他停顿了多久。\n你可以拿出完整录音，也可以继续只谈今晚。要说明旧报道为什么缺了一截，得由你自己开口。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "memory_reporter_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "第2幕 · 徐闻的回忆（仅自己可见）\n\n**江临**查的果然是**赵世衡**。你翻出那段旧采访，在耳机里听到**赵朔**说：“我问过是不是有人把名字记错了，他们叫我别再来。”\n去年这句话也没播。你当时记得的是交片时间，已经不记得他停顿了多久。\n你可以拿出完整录音，也可以继续只谈今晚。要说明旧报道为什么缺了一截，得由你自己开口。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "clue_memory_reporter_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": "public",
+      "summary": "副本已经保存，你在文件目录里看见自己给旧采访起的名字：“海难家属补录”。\n这段录音不会补齐十五年前的经过，却能说明**赵朔**早就提出过异议。你一直留着它，只是从未将它交出去。\n如果要说清这件事，可以回餐厅录下说明，把旧采访的来历和删节一起留下。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "memory_reporter_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": [
+        "reporter"
+      ],
+      "summary": "第3幕 · 徐闻的回忆（仅自己可见）\n\n副本已经保存，你在文件目录里看见自己给旧采访起的名字：“海难家属补录”。\n这段录音不会补齐十五年前的经过，却能说明**赵朔**早就提出过异议。你一直留着它，只是从未将它交出去。\n如果要说清这件事，可以回餐厅录下说明，把旧采访的来历和删节一起留下。",
+      "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
+    },
+    {
+      "id": "echo_disclose_reporter",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-tape.png",
+      "audience": "public",
+      "summary": "你在餐桌上打开原始录音，让那段没有播出的问话放完。\n“去年是我剪的。”你说，“播出的版本没留下他对名单的怀疑。原文件一直在我这里。”\n你将日期、文件名和删节位置录进说明，另存一份完整录音。话说完以后，你没有关掉机器，留下一段等人回应的空白。",
       "sha256": "06a9528b24458623f0c3f84a9108d6ba4b601d751dfcc3d391f5423e896d27d0"
     },
     {
@@ -3493,7 +4448,161 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-registry.png",
       "audience": "public",
-      "summary": "你正整理2008年的海难目录，发现港务副本没有注明原始记录的保存地点。先寻找原件，再比较副本。",
+      "summary": "你叫沈砚，正在整理地方海难档案。去年出版的名录里，2008年9月21日那一页由你校录，**赵世衡**被列作“海上失联”。\n当时能找到的只有港务副本。页边有人用很浅的字写“原册另存”，你看不清保存地点，便在整理说明中统一标注了资料来源。那行小字没有单独保留下来。\n**江临**半个月前寄来一张客簿照片。同一个名字后面，写的是“救回岸上”。照片没有拍全页码，你回信问他原件在哪儿。他只说：“来旅馆看，别再隔着复印件争。”\n你带了两份材料：自己整理的名录，以及江临寄来的照片。还带着一页尚未提交的勘误稿。稿上第一句“经查原始记录”被你划掉了，因为你其实还没见过原册。\n你与江临约在今晚核对材料。你们不算熟，他却知道你那本名录的每一条注释。\n有人若问你来做什么，你可以说来查档。至于名单经过你的手之后，又被多少人当成了最后的答案，你还不想在第一次见面时谈。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "role_opening_archivist",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "你叫沈砚，正在整理地方海难档案。去年出版的名录里，2008年9月21日那一页由你校录，**赵世衡**被列作“海上失联”。\n当时能找到的只有港务副本。页边有人用很浅的字写“原册另存”，你看不清保存地点，便在整理说明中统一标注了资料来源。那行小字没有单独保留下来。\n**江临**半个月前寄来一张客簿照片。同一个名字后面，写的是“救回岸上”。照片没有拍全页码，你回信问他原件在哪儿。他只说：“来旅馆看，别再隔着复印件争。”\n你带了两份材料：自己整理的名录，以及江临寄来的照片。还带着一页尚未提交的勘误稿。稿上第一句“经查原始记录”被你划掉了，因为你其实还没见过原册。\n你与江临约在今晚核对材料。你们不算熟，他却知道你那本名录的每一条注释。\n有人若问你来做什么，你可以说来查档。至于名单经过你的手之后，又被多少人当成了最后的答案，你还不想在第一次见面时谈。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_shore_names",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "你回去后先联系了名录的出版方。对方问改哪几个字，你将整页来源说明发了过去。\n\n那页尚未提交的勘误稿仍夹在你自己的名录里。旧名单的来源缺口还没有正式写进这次交接记录。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_shore_names_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "你回去后先联系了名录的出版方。对方问改哪几个字，你将整页来源说明发了过去。\n\n勘误稿上留下了你的署名，也留下了当初漏掉的注记。旧名录与新材料一起存档，下一位查阅者能看见它们之间的差别。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_seven_days",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "七天的期限写在桌历上。你将原册核对、版本比对和联系出版方分成三行，第一行旁边留着空格。\n\n那页尚未提交的勘误稿仍夹在你自己的名录里。旧名单的来源缺口还没有正式写进这次交接记录。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_seven_days_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "七天的期限写在桌历上。你将原册核对、版本比对和联系出版方分成三行，第一行旁边留着空格。\n\n勘误稿上留下了你的署名，也留下了当初漏掉的注记。旧名录与新材料一起存档，下一位查阅者能看见它们之间的差别。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_loud_error",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "一条错误报道传开后，名录的勘误也被人当成争执的一部分。你只能将每份材料的来历重新列出，逐个回答。\n\n那页尚未提交的勘误稿仍夹在你自己的名录里。旧名单的来源缺口还没有正式写进这次交接记录。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_loud_error_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "一条错误报道传开后，名录的勘误也被人当成争执的一部分。你只能将每份材料的来历重新列出，逐个回答。\n\n勘误稿上留下了你的署名，也留下了当初漏掉的注记。旧名录与新材料一起存档，下一位查阅者能看见它们之间的差别。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_unanswered",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "渡船颠簸时，名录从包里滑出来。你扶住书页，**赵世衡**名字后的四个字还是原来的样子。\n\n那页尚未提交的勘误稿仍夹在你自己的名录里。旧名单的来源缺口还没有正式写进这次交接记录。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_unanswered_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "渡船颠簸时，名录从包里滑出来。你扶住书页，**赵世衡**名字后的四个字还是原来的样子。\n\n勘误稿上留下了你的署名，也留下了当初漏掉的注记。旧名录与新材料一起存档，下一位查阅者能看见它们之间的差别。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_storm_passed",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "天亮时，你的对照表还缺几栏。你没有将空格删去，把未核对的页码单独抄在下一页。\n\n那页尚未提交的勘误稿仍夹在你自己的名录里。旧名单的来源缺口还没有正式写进这次交接记录。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "epilogue_archivist_storm_passed_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "天亮时，你的对照表还缺几栏。你没有将空格删去，把未核对的页码单独抄在下一页。\n\n勘误稿上留下了你的署名，也留下了当初漏掉的注记。旧名录与新材料一起存档，下一位查阅者能看见它们之间的差别。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "clue_memory_archivist_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": "public",
+      "summary": "你又看了一遍自己的名录。纸面整洁，**赵世衡**的名字后只有四个字，没有任何存疑标记。\n当初那句“原册另存”并非毫无用处，只是你选择先把名录做完。眼下有人找到了当年的护理记录，原件之间终于有了核对的可能。\n你在勘误稿上添了一栏：原始材料所在位置。自己的旧整理说明，也该放进这次对照里。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "memory_archivist_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "第2幕 · 沈砚的回忆（仅自己可见）\n\n你又看了一遍自己的名录。纸面整洁，**赵世衡**的名字后只有四个字，没有任何存疑标记。\n当初那句“原册另存”并非毫无用处，只是你选择先把名录做完。眼下有人找到了当年的护理记录，原件之间终于有了核对的可能。\n你在勘误稿上添了一栏：原始材料所在位置。自己的旧整理说明，也该放进这次对照里。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "clue_memory_archivist_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": "public",
+      "summary": "材料副本已保存。你把旧名录与新的目录并排，发现自己的书页最好读，也最容易被人直接引用。\n要让后来的读者知道问题出在哪里，不能只留下一份新名单。你可以在餐厅说明旧名录的来源，以及当时省略的存疑注记。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "memory_archivist_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": [
+        "archivist"
+      ],
+      "summary": "第3幕 · 沈砚的回忆（仅自己可见）\n\n材料副本已保存。你把旧名录与新的目录并排，发现自己的书页最好读，也最容易被人直接引用。\n要让后来的读者知道问题出在哪里，不能只留下一份新名单。你可以在餐厅说明旧名录的来源，以及当时省略的存疑注记。",
+      "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
+    },
+    {
+      "id": "echo_disclose_archivist",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-registry.png",
+      "audience": "public",
+      "summary": "你将自己校录的名录摊在餐桌上，指向署名。\n“这页是我整理的。当时只有副本，页边还写着‘原册另存’。我没把这条存疑注记留下。”\n你把**江临**寄来的照片放在旁边，在勘误稿里逐项写明材料来源、原册位置与两份名单的差异。旧版本没有被抽走，一同留在目录里。",
       "sha256": "7354895eabedf9bf770fe51a8a1071a0c9870e788fdbd5bff652a09e91416e13"
     },
     {
@@ -3501,7 +4610,161 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-rope.png",
       "audience": "public",
-      "summary": "你在避风站协助值守，知道后山仍有一条通往避风站的步行小径。交通中断不代表所有离岛方式都消失。",
+      "summary": "你叫许澄，做救援志愿服务三年。平时到岛上，你住避风站，帮着检查应急电话和雨具。\n**何泊**教过你系缆、看潮。他讲2008年那场风暴，总会说到第二趟船没能出去。你以前以为船被风浪困住，从没追问过是谁决定停船。\n上个月清点旧物，你在一只雨靴里找到一枚钥匙，铜牌刻着“船屋后间”。何泊看见后，把它收进抽屉，说那间屋子早就不用了。你没有再问。\n**江临**听说这件事，请你今晚来旅馆。他想知道后间的位置，也想请你确认后山的路还能不能走。你下午检查过：绕旧水井上山可到避风站，雨大时得沿内侧走。船屋、护理室和避风站的应急电话独立供电。\n你将路线图留给江临，也提醒过他山路不好走。你不知道他会不会用这条路。\n何泊曾把你从一次翻艇里拉回来。你愿意相信他，却开始在意他讲旧事时，每次都略过的那段停顿。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "role_opening_volunteer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你叫许澄，做救援志愿服务三年。平时到岛上，你住避风站，帮着检查应急电话和雨具。\n**何泊**教过你系缆、看潮。他讲2008年那场风暴，总会说到第二趟船没能出去。你以前以为船被风浪困住，从没追问过是谁决定停船。\n上个月清点旧物，你在一只雨靴里找到一枚钥匙，铜牌刻着“船屋后间”。何泊看见后，把它收进抽屉，说那间屋子早就不用了。你没有再问。\n**江临**听说这件事，请你今晚来旅馆。他想知道后间的位置，也想请你确认后山的路还能不能走。你下午检查过：绕旧水井上山可到避风站，雨大时得沿内侧走。船屋、护理室和避风站的应急电话独立供电。\n你将路线图留给江临，也提醒过他山路不好走。你不知道他会不会用这条路。\n何泊曾把你从一次翻艇里拉回来。你愿意相信他，却开始在意他讲旧事时，每次都略过的那段停顿。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_shore_names",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你回避风站检查电话。测试接通以后，听筒里有人问要不要记录，你说要，日期和姓名都记。\n\n路线图上的后间仍没有名称。钥匙的见闻还没写进这次整理的材料目录。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_shore_names_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你回避风站检查电话。测试接通以后，听筒里有人问要不要记录，你说要，日期和姓名都记。\n\n路线图上补上了后间和钥匙的记录。**何泊**曾救过你的命，这件事仍是真的；你也将自己见过的另一件事留下了。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_seven_days",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你给值守表多添了一次回岛安排，正好是七天以后。**何泊**的号码还存在手机里。\n\n路线图上的后间仍没有名称。钥匙的见闻还没写进这次整理的材料目录。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_seven_days_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你给值守表多添了一次回岛安排，正好是七天以后。**何泊**的号码还存在手机里。\n\n路线图上补上了后间和钥匙的记录。何泊曾救过你的命，这件事仍是真的；你也将自己见过的另一件事留下了。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_loud_error",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "看到“今夜谋杀”的说法，你想起刚接通过的应急电话。山路是通的，**江临**答过话，这些你都知道。\n\n路线图上的后间仍没有名称。钥匙的见闻还没写进这次整理的材料目录。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_loud_error_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "看到“今夜谋杀”的说法，你想起刚接通过的应急电话。山路是通的，**江临**答过话，这些你都知道。\n\n路线图上补上了后间和钥匙的记录。**何泊**曾救过你的命，这件事仍是真的；你也将自己见过的另一件事留下了。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_unanswered",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你在码头向**何泊**挥手。他抬了抬拐杖，船很快转过防波堤，旧船屋不见了。\n\n路线图上的后间仍没有名称。钥匙的见闻还没写进这次整理的材料目录。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_unanswered_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你在码头向**何泊**挥手。他抬了抬拐杖，船很快转过防波堤，旧船屋不见了。\n\n路线图上补上了后间和钥匙的记录。何泊曾救过你的命，这件事仍是真的；你也将自己见过的另一件事留下了。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_storm_passed",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你将路线图折好。后山的路已经走过许多次，旧船屋里的那段经过，仍有没问清的地方。\n\n路线图上的后间仍没有名称。钥匙的见闻还没写进这次整理的材料目录。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "epilogue_volunteer_storm_passed_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "你将路线图折好。后山的路已经走过许多次，旧船屋里的那段经过，仍有没问清的地方。\n\n路线图上补上了后间和钥匙的记录。**何泊**曾救过你的命，这件事仍是真的；你也将自己见过的另一件事留下了。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "clue_memory_volunteer_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": "public",
+      "summary": "旧案的记录被找出来，你想起那枚刻着“船屋后间”的钥匙。\n**何泊**收钥匙时并不意外。他知道是哪间屋，也知道钥匙为什么还在。你已经听过太多次第二趟船没能出去，却从没问那扇门当时关着什么。\n这件事你可以讲给同伴，也可以亲自去问他。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "memory_volunteer_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "第2幕 · 许澄的回忆（仅自己可见）\n\n旧案的记录被找出来，你想起那枚刻着“船屋后间”的钥匙。\n**何泊**收钥匙时并不意外。他知道是哪间屋，也知道钥匙为什么还在。你已经听过太多次第二趟船没能出去，却从没问那扇门当时关着什么。\n这件事你可以讲给同伴，也可以亲自去问他。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "clue_memory_volunteer_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": "public",
+      "summary": "你在路线图上找到旧船屋的位置。**何泊**教你画这张图时，连哪块石阶涨潮会滑都说了，后间却只画成一块没有名称的方格。\n副本已保存。回到餐厅，你可以把钥匙的事录下来，也可以继续让那个方格空着。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "memory_volunteer_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": [
+        "volunteer"
+      ],
+      "summary": "第3幕 · 许澄的回忆（仅自己可见）\n\n你在路线图上找到旧船屋的位置。**何泊**教你画这张图时，连哪块石阶涨潮会滑都说了，后间却只画成一块没有名称的方格。\n副本已保存。回到餐厅，你可以把钥匙的事录下来，也可以继续让那个方格空着。",
+      "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
+    },
+    {
+      "id": "echo_disclose_volunteer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-rope.png",
+      "audience": "public",
+      "summary": "你将路线图铺在餐桌上，在船屋后面补画一扇门。\n“上个月我找到过这间屋的钥匙，铜牌刻着‘船屋后间’。**何泊**收走了。我当时没问。”\n你写下清点日期和钥匙原来的位置。画到门闩时，笔停了片刻，最后还是将何泊的名字写在旁边。",
       "sha256": "7246ad20628a87898fe34f1cc1c5701c6e66f24ee1dff24efd5da50bde3c3e53"
     },
     {
@@ -3509,15 +4772,185 @@
       "kind": "image",
       "uri": "assets/stories/tide_hotel/evidence-photo.png",
       "audience": "public",
-      "summary": "你为**江临**的采访拍摄现场。照片应保留位置、拍摄时刻与原始文件；不凭一张破损照片推定毁证。",
+      "summary": "你叫陆遥，做纪实摄影。**江临**这次请你来，是想补拍一组旧船屋和旅馆的照片。\n你不是第一次上岛。学生时那次驻岛拍摄，住宿和来往船票都是丁远替你安排的。他笑着说年轻人来拍海岛不容易，让你以后寄一本画册给旅馆。\n那本画册后来寄到了。你选的是风景，船屋门口几个人争执的照片没有用。画面歪了，雨点糊在镜头上，丁远的脸也没拍清。你当时觉得没有留下的必要，却一直没删原片。\n江临看见你早年的作品，问有没有没发表的照片。你说回去找找，没有立刻把那张给他。直到出发前，你才将原文件复制进存储卡。\n你不知道争执与十五年前的事故有没有关系。照片只记住了一个瞬间，里面的人后来去了哪里，你没有跟拍。\n旅馆的灯从雨里亮起来。你摸了摸存储卡盒，想起丁远让你寄画册时站的位置。那面墙上的旧合照，江临也请你拍下来。",
       "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "role_opening_photographer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "你叫陆遥，做纪实摄影。**江临**这次请你来，是想补拍一组旧船屋和旅馆的照片。\n你不是第一次上岛。学生时那次驻岛拍摄，住宿和来往船票都是丁远替你安排的。他笑着说年轻人来拍海岛不容易，让你以后寄一本画册给旅馆。\n那本画册后来寄到了。你选的是风景，船屋门口几个人争执的照片没有用。画面歪了，雨点糊在镜头上，丁远的脸也没拍清。你当时觉得没有留下的必要，却一直没删原片。\n江临看见你早年的作品，问有没有没发表的照片。你说回去找找，没有立刻把那张给他。直到出发前，你才将原文件复制进存储卡。\n你不知道争执与十五年前的事故有没有关系。照片只记住了一个瞬间，里面的人后来去了哪里，你没有跟拍。\n旅馆的灯从雨里亮起来。你摸了摸存储卡盒，想起丁远让你寄画册时站的位置。那面墙上的旧合照，江临也请你拍下来。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_shore_names",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "离岛前，你拍了关闭的旅馆。取景框里没有人，你仍在图注里写下时间和位置。\n\n你还没有给那张原片另存副本，并将拍摄来历与自己同丁远的旧交一起写入交接说明。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_shore_names_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "离岛前，你拍了关闭的旅馆。取景框里没有人，你仍在图注里写下时间和位置。\n\n原片和图注都有了副本，你与丁远的旧交也被记下。画面里的雨点仍遮着那张脸，没有人替它填上姓名。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_seven_days",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "你将原文件另存到一张卡里，在卡盒上贴好交接日期。七天以后，还要带着它回来。\n\n你还没有给那张原片另存副本，并将拍摄来历与自己同丁远的旧交一起写入交接说明。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_seven_days_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "你将原文件另存到一张卡里，在卡盒上贴好交接日期。七天以后，还要带着它回来。\n\n原片和图注都有了副本，你与丁远的旧交也被记下。画面里的雨点仍遮着那张脸，没有人替它填上姓名。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_loud_error",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "错误报道配着雨夜照片被转发。你认得那个画面，却找不到哪一处能证明标题写的事情。\n\n你还没有给那张原片另存副本，并将拍摄来历与自己同丁远的旧交一起写入交接说明。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_loud_error_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "错误报道配着雨夜照片被转发。你认得那个画面，却找不到哪一处能证明标题写的事情。\n\n原片和图注都有了副本，你与丁远的旧交也被记下。画面里的雨点仍遮着那张脸，没有人替它填上姓名。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_unanswered",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "船开后，你翻看今晚拍下的照片。接待台、钟面、空走廊，几张图之间还缺着经过。\n\n你还没有给那张原片另存副本，并将拍摄来历与自己同丁远的旧交一起写入交接说明。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_unanswered_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "船开后，你翻看今晚拍下的照片。接待台、钟面、空走廊，几张图之间还缺着经过。\n\n原片和图注都有了副本，你与丁远的旧交也被记下。画面里的雨点仍遮着那张脸，没有人替它填上姓名。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_storm_passed",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "晨光落在相机屏上，照片很难看清。你关掉预览，把尚未确认的图注单独存成一个文件。\n\n你还没有给那张原片另存副本，并将拍摄来历与自己同丁远的旧交一起写入交接说明。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "epilogue_photographer_storm_passed_shared",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "晨光落在相机屏上，照片很难看清。你关掉预览，把尚未确认的图注单独存成一个文件。\n\n原片和图注都有了副本，你与丁远的旧交也被记下。画面里的雨点仍遮着那张脸，没有人替它填上姓名。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "clue_memory_photographer_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": "public",
+      "summary": "你将存储卡里的原片打开。画面里丁远背对镜头，**何泊**站在船屋门边；另一人的脸被雨点挡住，不能认清。\n原片日期是你学生时代那次驻岛拍摄，并非2008年事故当晚。它只能帮助核对后来的人物关系，不能补出当年的经过。\n你迟迟没给**江临**这张照片，是因为画面不清，也因为丁远曾帮过你。后一个理由，你没有说过。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "memory_photographer_2",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "第2幕 · 陆遥的回忆（仅自己可见）\n\n你将存储卡里的原片打开。画面里丁远背对镜头，**何泊**站在船屋门边；另一人的脸被雨点挡住，不能认清。\n原片日期是你学生时代那次驻岛拍摄，并非2008年事故当晚。它只能帮助核对后来的人物关系，不能补出当年的经过。\n你迟迟没给**江临**这张照片，是因为画面不清，也因为丁远曾帮过你。后一个理由，你没有说过。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "clue_memory_photographer_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": "public",
+      "summary": "材料目录已经整理好，旧照片仍在你的存储卡里。\n你重新写了图注：拍摄日期、地点、可辨认的人物。写到“丁远”时，你想起那本只收风景的画册。\n你可以在餐厅说明照片为什么没交出去。图像里看不清的部分，依然留着。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "memory_photographer_3",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": [
+        "photographer"
+      ],
+      "summary": "第3幕 · 陆遥的回忆（仅自己可见）\n\n材料目录已经整理好，旧照片仍在你的存储卡里。\n你重新写了图注：拍摄日期、地点、可辨认的人物。写到“丁远”时，你想起那本只收风景的画册。\n你可以在餐厅说明照片为什么没交出去。图像里看不清的部分，依然留着。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "echo_disclose_photographer",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-photo.png",
+      "audience": "public",
+      "summary": "你把原片调出来，给餐桌上的人看。雨点糊住了一张脸，丁远背对镜头，**何泊**站在门边。\n“这是后来拍的，不是事故当晚。”你说出日期，“丁远当年帮过我。我没把这张交给**江临**，也有这个原因。”\n你保存原文件，写下拍摄地点和能认清的人名。无法辨认的那张脸没有补上名字。",
+      "sha256": "546cee4b84ac70d1a1a9bdbc41c5d079ebabec1cfb7f98101c582d0483fc61e7"
+    },
+    {
+      "id": "chapter_oldcase",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/evidence-medical.png",
+      "audience": "public",
+      "summary": "第二幕 · 岸上的名字\n\n护理室找到了十五年前的记录。**江临**追查的旧事有了实物，参与调查的人可以交换各自发现，再去问当年的在场者。",
+      "sha256": "8e0d6fb1a32100623088e8df8fccc3a38ec562ad395fd1c55efeb637cc693110"
+    },
+    {
+      "id": "chapter_handover",
+      "kind": "image",
+      "uri": "assets/stories/tide_hotel/lounge-v2.png",
+      "audience": "public",
+      "summary": "第三幕 · 留下什么\n\n旧案材料已有副本。雨渐渐小了，海景餐厅的桌子已经腾空。带着找到的东西回来，有些话还要当面讲。",
+      "sha256": "14b99274bc17da36a3aea26b80cdffa4cbf923207837a33745288a5316299127"
     },
     {
       "id": "cover",
       "kind": "image",
       "uri": "assets/stories/tide_hotel/cover.png",
       "audience": "public",
-      "summary": "1～4人悬疑 · 预计30–60分钟 · 四名NPC · 八个场景 · 五个结局",
+      "summary": "1～4人悬疑 · 预计30–60分钟 · 四位当事人 · 八个场景 · 五个结局",
       "sha256": "9c11450d2ebbca1a9689e97bf2c3d2a058ac9a50025d7a69fa846f2cb1be901d"
     }
   ],
@@ -3679,8 +5112,9 @@
             "op": "always"
           },
           "enter_if": {
-            "op": "known",
-            "ref": "key"
+            "op": "eq",
+            "ref": "world.guest_room_access",
+            "value": true
           },
           "arrival_events": []
         },
@@ -3794,7 +5228,7 @@
     "interaction_labels": {
       "cabinet_password": {
         "label": "输入铁柜密码",
-        "risk_text": "按封存日的月日输入四位数字。错误扣1余力；六次后仍可按维护页拆锁，不会堵住主线。"
+        "risk_text": "按封存日的月日输入四位数字。每次错误消耗1点余力，最多尝试六次。也可按维护页拆锁。"
       },
       "repair_switchboard": {
         "label": "尝试修复隔离后的控制电源",
@@ -3806,14 +5240,14 @@
         "id": "lin",
         "label": "林素",
         "location": "lobby",
-        "description": "48岁，旅馆经营者。克制、礼貌，习惯替别人把话说完。你可以询问她的证词，也可以在掌握新证据后回访。",
+        "description": "48岁，旅馆经营者。客人还没开口，她往往就已递来热水。今晚水壶烧开了几次，她一杯也没喝。",
         "schedule": []
       },
       {
         "id": "chen",
         "label": "陈雾",
         "location": "infirmary",
-        "description": "34岁，护士。先问你的名字，再问你有没有得到当事人的同意。她愿意谈医学事实，对别的事很谨慎。",
+        "description": "34岁，护士。袖口挽得齐整，药柜钥匙一直放在衣袋里。提起**江临**，她先看了一眼你手里的录音笔。",
         "schedule": []
       },
       {
@@ -3827,7 +5261,7 @@
         "id": "he",
         "label": "何泊",
         "location": "boathouse",
-        "description": "67岁，退休渡船船长。说话很慢，对潮位和绳结比对人名更熟悉。他会明确告诉你哪些是亲眼看见，哪些只是猜测。",
+        "description": "67岁，退休渡船船长。拐杖柄磨出了深色的光。说话慢，提到旧船和潮水时，偶尔会抬手比画。",
         "schedule": []
       }
     ],
@@ -3857,8 +5291,82 @@
         },
         "latch": true,
         "membership_policy": "follow_current"
+      },
+      {
+        "id": "personal_reporter",
+        "label": "记录旧采访的删节，留下完整录音的来历。",
+        "layer": "personal",
+        "role_ids": [
+          "reporter"
+        ],
+        "condition": {
+          "op": "eq",
+          "ref": "world.done_disclose_reporter",
+          "value": true
+        },
+        "latch": true,
+        "membership_policy": "follow_current"
+      },
+      {
+        "id": "personal_archivist",
+        "label": "说明旧名录的来源缺口，将原册线索写入勘误记录。",
+        "layer": "personal",
+        "role_ids": [
+          "archivist"
+        ],
+        "condition": {
+          "op": "eq",
+          "ref": "world.done_disclose_archivist",
+          "value": true
+        },
+        "latch": true,
+        "membership_policy": "follow_current"
+      },
+      {
+        "id": "personal_volunteer",
+        "label": "留下船屋后间钥匙的见闻，不再省去与何泊有关的部分。",
+        "layer": "personal",
+        "role_ids": [
+          "volunteer"
+        ],
+        "condition": {
+          "op": "eq",
+          "ref": "world.done_disclose_volunteer",
+          "value": true
+        },
+        "latch": true,
+        "membership_policy": "follow_current"
+      },
+      {
+        "id": "personal_photographer",
+        "label": "交代未发表原片的来历，以及自己与丁远的旧交。",
+        "layer": "personal",
+        "role_ids": [
+          "photographer"
+        ],
+        "condition": {
+          "op": "eq",
+          "ref": "world.done_disclose_photographer",
+          "value": true
+        },
+        "latch": true,
+        "membership_policy": "follow_current"
       }
     ],
+    "action_roles": {
+      "disclose_reporter": [
+        "reporter"
+      ],
+      "disclose_archivist": [
+        "archivist"
+      ],
+      "disclose_volunteer": [
+        "volunteer"
+      ],
+      "disclose_photographer": [
+        "photographer"
+      ]
+    },
     "min_players": 1,
     "coalesce_actions": true,
     "team_decisions": [
@@ -3867,11 +5375,5 @@
       "accuse_murder",
       "leave_early"
     ]
-  },
-  "communication": {
-    "voice": {
-      "enabled": true,
-      "scope": "scene"
-    }
   }
 }

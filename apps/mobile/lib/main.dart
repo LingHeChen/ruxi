@@ -15,11 +15,61 @@ ThemeData playerTheme() => ThemeData(
   useMaterial3: true,
   brightness: Brightness.dark,
   scaffoldBackgroundColor: const Color(0xff111918),
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: amber,
-    brightness: Brightness.dark,
-    surface: const Color(0xff1a2522),
-    primary: amber,
+  colorScheme:
+      ColorScheme.fromSeed(
+        seedColor: amber,
+        brightness: Brightness.dark,
+        surface: const Color(0xff1a2522),
+        primary: amber,
+      ).copyWith(
+        surfaceContainerLowest: const Color(0xff0e181f),
+        surfaceContainerLow: const Color(0xff15232c),
+        surfaceContainer: const Color(0xff1b2b34),
+        surfaceContainerHigh: const Color(0xff243640),
+        surfaceContainerHighest: const Color(0xff30444e),
+      ),
+  dialogTheme: DialogThemeData(
+    backgroundColor: const Color(0xff15232c),
+    surfaceTintColor: Colors.transparent,
+    elevation: 16,
+    barrierColor: const Color(0xb3071018),
+    insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: const BorderSide(color: Color(0xff4a5b63)),
+    ),
+    titleTextStyle: const TextStyle(
+      fontFamily: 'Songti SC',
+      fontSize: 24,
+      color: Color(0xffdcc18d),
+    ),
+    contentTextStyle: const TextStyle(
+      fontSize: 14,
+      height: 1.7,
+      color: Color(0xffd4dddd),
+    ),
+    actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+  ),
+  checkboxTheme: CheckboxThemeData(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    side: const BorderSide(color: Color(0xff879b9f), width: 1.5),
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xff101d25),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xff455760)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xff455760)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xffdcc18d)),
+    ),
   ),
   fontFamily: 'PingFang SC',
   cardTheme: CardThemeData(

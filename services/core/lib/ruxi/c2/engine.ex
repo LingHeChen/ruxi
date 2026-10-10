@@ -80,6 +80,23 @@ defmodule Ruxi.C2.Engine do
 
     s = s |> Ruxi.C3.Interactions.init() |> Ruxi.C3.World.init(now) |> Ruxi.C3.Domain.init()
     s = events(s, "room_start", nil, now)
+
+    s =
+      Enum.reduce(story["roles"], s, fn role, acc ->
+        if role["opening_media"] do
+          cue(
+            acc,
+            Content.index(story, "media")[role["opening_media"]],
+            [role["id"]],
+            nil,
+            true,
+            now
+          )
+        else
+          acc
+        end
+      end)
+
     m = Enum.find(story["media"], &(&1["id"] == "opening" and &1["audience"] == "public"))
     if m, do: cue(s, m, "all", nil, true, now), else: s
   end
@@ -204,21 +221,26 @@ defmodule Ruxi.C2.Engine do
     ensure(valid?(s, role, a, now), "CONDITION_CHANGED")
     ensure(a["cost"] <= actor(s, role)["ap_remaining"], "AP_INSUFFICIENT")
     ensure(is_nil(body["target_id"]) or body["target_id"] == a["target"], "CONDITION_CHANGED")
-    id = U.id()
-    i = %{"id" => id, "action" => a, "proposal_id" => body["proposal_id"]}
-    s = invalidate_proposal(s, s["intents"][role], "cancelled")
 
-    s =
-      s
-      |> put_in(["intents", role], i)
-      |> update_actor(role, &Map.put(&1, "ap_reserved", a["cost"]))
+    if immediate_npc?(s, a) do
+      execute_npc(s, role, a, now)
+    else
+      id = U.id()
+      i = %{"id" => id, "action" => a, "proposal_id" => body["proposal_id"]}
+      s = invalidate_proposal(s, s["intents"][role], "cancelled")
 
-    s =
-      if body["proposal_id"],
-        do: put_in(s, ["proposals", body["proposal_id"], "status"], "confirmed"),
-        else: s
+      s =
+        s
+        |> put_in(["intents", role], i)
+        |> update_actor(role, &Map.put(&1, "ap_reserved", a["cost"]))
 
-    {maybe_resolve(s, now), %{"status" => "queued", "intent_id" => id}}
+      s =
+        if body["proposal_id"],
+          do: put_in(s, ["proposals", body["proposal_id"], "status"], "confirmed"),
+          else: s
+
+      {maybe_resolve(s, now), %{"status" => "queued", "intent_id" => id}}
+    end
   end
 
   defp dispatch(s, role, "action.cancel", body, now) do
@@ -358,7 +380,8 @@ defmodule Ruxi.C2.Engine do
     s =
       if s["barrier"] &&
            Enum.all?(s["barrier"]["cue_ids"], fn id ->
-             Enum.all?(Map.keys(s["actors"]), &acknowledged?(s, &1, id))
+             cue = Enum.find(s["cues"], &(&1["id"] == id))
+             Enum.all?(cue["audience"], &acknowledged?(s, &1, id))
            end),
          do:
            Map.merge(s, %{
@@ -490,6 +513,86 @@ defmodule Ruxi.C2.Engine do
     a
   end
 
+  # NPC conversations are local actions: they do not settle other players' intents
+  # or advance the simulation clock. Visibility is authored, never inferred from prose.
+  defp immediate_npc?(s, a) do
+    (a["required_participants"] || 1) == 1 and
+      Enum.any?(get_in(s, ["content", "c3_settings", "npcs"]) || [], &(&1["id"] == a["target"])) and
+      get_in(s, ["content", "c3_settings", "npc_interactions", a["id"], "execution"]) != "round"
+  end
+
+  defp execute_npc(s, role, a, now) do
+    ensure(
+      a["cost"] <= actor(s, role)["ap_remaining"] - actor(s, role)["ap_reserved"],
+      "AP_INSUFFICIENT"
+    )
+
+    id = U.id()
+    roll = if a["threshold"], do: roll(s, id), else: nil
+    success = is_nil(roll) or roll <= a["threshold"]
+
+    private =
+      get_in(s, ["content", "c3_settings", "npc_interactions", a["id"], "visibility"]) ==
+        "private" or
+        not is_nil(get_in(s, ["content", "c3_settings", "action_roles", a["id"]]))
+
+    es = if success, do: a["effects"], else: a["failure"]
+
+    es =
+      es
+      |> Enum.reject(&(&1["op"] == "grant" and not is_nil(s["ownership"][&1["ref"]])))
+      |> Enum.map(fn e ->
+        if e["op"] == "cue" or (private and e["op"] in ~w(reveal hide)),
+          do: e |> Map.put("audience", "self") |> Map.put("blocking", false),
+          else: e
+      end)
+
+    location = actor(s, role)["location"]
+    audience = for {r, m} <- s["actors"], r != role and m["location"] == location, do: r
+    npc = Enum.find(get_in(s, ["content", "c3_settings", "npcs"]), &(&1["id"] == a["target"]))
+
+    notice = %{"id" => id, "actor" => role, "npc" => npc["label"], "audience" => audience}
+
+    record = %{
+      "step_id" => s["step_id"],
+      "round" => s["round"],
+      "step" => s["step"],
+      "immediate" => true,
+      "intents" => %{role => %{"id" => id, "action" => a}},
+      "results" => [
+        %{
+          "actor" => role,
+          "action_id" => a["id"],
+          "intent_id" => id,
+          "status" => "resolved",
+          "cost" => a["cost"],
+          "success" => success,
+          "roll" => roll
+        }
+      ]
+    }
+
+    next =
+      s
+      |> update_actor(role, fn m ->
+        m
+        |> Map.update!("ap_remaining", &(&1 - a["cost"]))
+        |> Map.update!("used", &Map.update(&1, a["id"], 1, fn n -> n + 1 end))
+      end)
+      |> effects(es, role, now)
+      |> events("action_end", role, now)
+      |> Ruxi.C3.World.observe(now)
+      |> Map.update!("settlements", &(&1 ++ [record]))
+
+    next =
+      if private,
+        do: next,
+        else: Map.update(next, "scene_activity", [notice], &Enum.take(&1 ++ [notice], -80))
+
+    {maybe_resolve(next, now),
+     %{"status" => "committed", "execution" => "immediate", "intent_id" => id}}
+  end
+
   defp valid?(s, r, a, now) do
     member = actor(s, r)
     target = Content.index(s["content"], "objects")[a["target"]]
@@ -512,7 +615,10 @@ defmodule Ruxi.C2.Engine do
       is_nil(npc) or get_in(s, ["npc_states", npc["id"], "location"]) == member["location"]
 
     uses = is_nil(a["max_uses"]) or Map.get(member["used"], a["id"], 0) < a["max_uses"]
-    grants = Enum.all?(a["effects"], &(&1["op"] != "grant" or is_nil(s["ownership"][&1["ref"]])))
+
+    grants =
+      immediate_npc?(s, a) or
+        Enum.all?(a["effects"], &(&1["op"] != "grant" or is_nil(s["ownership"][&1["ref"]])))
 
     (is_nil(get_in(a, ["link", "direction"])) or Ruxi.C3.World.traversable?(s, a["link"], r, now)) and
       Ruxi.C3.Interactions.valid_action?(s, r, a, now) and located and known_target and tag and
@@ -600,7 +706,14 @@ defmodule Ruxi.C2.Engine do
   end
 
   defp do_settle(s, now) do
-    ensure(not Enum.any?(s["settlements"], &(&1["step_id"] == s["step_id"])), "STEP_CLOSED")
+    ensure(
+      not Enum.any?(
+        s["settlements"],
+        &(&1["step_id"] == s["step_id"] and &1["immediate"] != true)
+      ),
+      "STEP_CLOSED"
+    )
+
     before = s
     order = order(s)
 
@@ -832,12 +945,7 @@ defmodule Ruxi.C2.Engine do
        when op in ~w(reveal discover) do
     field = if op == "reveal", do: "knowledge", else: "known_locations"
 
-    roles =
-      cond do
-        audience == "all" -> Map.keys(s["actors"])
-        audience == "participants" -> s["last_arrival"]["moved_roles"]
-        true -> [r]
-      end
+    roles = audience_roles(s, audience, r)
 
     s =
       Enum.reduce(
@@ -876,8 +984,13 @@ defmodule Ruxi.C2.Engine do
           })
       )
 
-  defp effect(s, %{"op" => "cue", "ref" => id} = e, r, now),
-    do: cue(s, Content.index(s["content"], "media")[id], e["audience"], r, e["blocking"], now)
+  defp effect(s, %{"op" => "cue", "ref" => id} = e, r, now) do
+    # Scene witnesses receive knowledge in their notebook, never the initiator's modal.
+    passive_scene_echo = e["audience"] == "scene" and String.starts_with?(id, "echo_")
+    audience = if passive_scene_echo, do: "self", else: e["audience"]
+    blocking = if passive_scene_echo, do: false, else: e["blocking"]
+    cue(s, Content.index(s["content"], "media")[id], audience, r, blocking, now)
+  end
 
   defp effect(s, %{"op" => "start_vote", "ref" => id}, _, now) do
     ensure(is_nil(s["vote"]), "RULE_LOOP")
@@ -923,14 +1036,33 @@ defmodule Ruxi.C2.Engine do
     if count == 0 or next["ending"], do: next, else: events(next, trigger, r, now, n + 1)
   end
 
-  defp cue(s, m, audience, r, blocking, now) do
-    roles =
-      cond do
-        audience == "all" -> Map.keys(s["actors"])
-        audience == "participants" -> s["last_arrival"]["moved_roles"]
-        true -> [r]
-      end
+  defp audience_roles(s, audience, r) do
+    cond do
+      is_list(audience) ->
+        Enum.filter(Enum.uniq(audience), &Map.has_key?(s["actors"], &1))
 
+      audience == "all" ->
+        Map.keys(s["actors"])
+
+      audience == "participants" ->
+        s["last_arrival"]["moved_roles"]
+
+      audience == "scene" ->
+        location = actor(s, r)["location"]
+        for {role, a} <- s["actors"], a["location"] == location, do: role
+
+      true ->
+        [r]
+    end
+  end
+
+  defp cue(s, m, audience, r, blocking, now) do
+    roles = audience_roles(s, audience, r)
+
+    if roles == [], do: s, else: enqueue_cue(s, m, roles, blocking, now)
+  end
+
+  defp enqueue_cue(s, m, roles, blocking, now) do
     ensure(
       m["audience"] == "public" or Enum.all?(roles, &(&1 in m["audience"])),
       "UNSAFE_AUDIENCE"
@@ -948,7 +1080,7 @@ defmodule Ruxi.C2.Engine do
 
     s = Map.update!(s, "cues", &(&1 ++ [c]))
 
-    if blocking and audience == "all" do
+    if blocking do
       ids = if s["barrier"], do: s["barrier"]["cue_ids"], else: []
 
       Map.merge(s, %{
@@ -1152,6 +1284,20 @@ defmodule Ruxi.C2.Engine do
         do: Content.index(story, "media")[s["ending"]] |> Map.take(~w(id summary kind uri)),
         else: nil
 
+    override = get_in(own, ["epilogue_overrides", s["ending"]])
+
+    epilogue_ref =
+      if override && condition(s, override["condition"], r, now),
+        do: override["media"],
+        else: get_in(own, ["epilogues", s["ending"]])
+
+    epilogue = Content.index(story, "media")[epilogue_ref]
+
+    ending =
+      if ending && epilogue && (epilogue["audience"] == "public" or r in epilogue["audience"]),
+        do: Map.put(ending, "epilogue", epilogue["summary"]),
+        else: ending
+
     action_history =
       s["settlements"]
       |> Enum.take(-80)
@@ -1193,6 +1339,9 @@ defmodule Ruxi.C2.Engine do
       "npcs" => Ruxi.C3.Domain.project_npcs(s, r),
       "own_results" => Enum.take(action_history, -8),
       "action_history" => action_history,
+      "scene_activity" =>
+        Enum.filter(s["scene_activity"] || [], &(r in &1["audience"]))
+        |> Enum.map(&Map.drop(&1, ["audience"])),
       "own_intent" => if(s["intents"][r], do: Map.take(s["intents"][r], ~w(id)), else: nil),
       "inventory" => inventory,
       "offers" => s["offers"] |> Map.values() |> Enum.filter(&(r in [&1["from"], &1["to"]])),

@@ -56,6 +56,16 @@ defmodule RuxiWeb.C2RoomChannel do
     end
   end
 
+  def handle_out("communication.changed", %{kind: :chat}, socket) do
+    try do
+      Store.socket_valid!(socket.assigns.ctx)
+      push(socket, "chat.changed", %{})
+      {:noreply, socket}
+    catch
+      {:error, _} -> {:stop, :normal, socket}
+    end
+  end
+
   def handle_out("communication.changed", _, socket) do
     try do
       Store.socket_valid!(socket.assigns.ctx)
@@ -68,15 +78,44 @@ defmodule RuxiWeb.C2RoomChannel do
         "state" => state
       })
 
-      push(socket, "chat.changed", %{})
       {:noreply, socket}
     catch
       {:error, _} -> {:stop, :normal, socket}
     end
   end
 
-  def handle_in("room.command", p, socket),
-    do: respond(Store.command(socket.assigns.ctx, socket.assigns.ctx.room, p), socket)
+  def handle_in(event, p, socket)
+      when event in ["room.command", "interaction.quote"] and is_map(p) do
+    Ruxi.CloudSQL.reset_metrics()
+    started = System.monotonic_time(:microsecond)
+
+    try do
+      result =
+        if event == "room.command",
+          do: Store.command(socket.assigns.ctx, socket.assigns.ctx.room, p),
+          else: Store.interaction_quote(socket.assigns.ctx, socket.assigns.ctx.room, p)
+
+      metrics = Ruxi.CloudSQL.metrics()
+
+      result =
+        case result do
+          {:ok, value} ->
+            {:ok,
+             Map.put(value, "server_timing", %{
+               "app_ms" => (System.monotonic_time(:microsecond) - started) / 1000,
+               "db_ms" => metrics.microseconds / 1000,
+               "db_calls" => metrics.calls
+             })}
+
+          error ->
+            error
+        end
+
+      respond(result, socket)
+    rescue
+      _ in Ruxi.CloudSQL.Error -> respond({:error, "SERVICE_UNAVAILABLE"}, socket)
+    end
+  end
 
   def handle_in("view.ack", p, socket) when is_map(p),
     do: respond(Store.ack(socket.assigns.ctx, p), socket)

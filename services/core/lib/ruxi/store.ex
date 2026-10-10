@@ -135,7 +135,7 @@ defmodule Ruxi.Store do
 
       DB.query(
         "INSERT INTO vote_rounds(room_id,id,options_json,display_options_json,status) VALUES($1,$2,$3,$4,$5) ON CONFLICT(room_id,id) DO UPDATE SET status=$5",
-        [rid, round, r["options"], r["display_options"], r["status"]]
+        [rid, round, DB.json(r["options"]), DB.json(r["display_options"]), r["status"]]
       )
 
       frozen =
@@ -656,7 +656,7 @@ defmodule Ruxi.Dispatcher do
 
         for row <- batch do
           topic = "player_room:#{DB.str(row["room_id"])}:#{DB.str(row["member_id"])}"
-          RuxiWeb.Endpoint.broadcast(topic, "view_event", row["event_json"])
+          Ruxi.DB.broadcast(topic, "view_event", row["event_json"])
         end
 
         if batch != [] do

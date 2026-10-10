@@ -40,13 +40,23 @@ defmodule Ruxi.Privacy do
 
     if match?({:ok, _}, result) do
       for row <- DB.rows("SELECT id FROM sessions WHERE user_id=$1", [DB.uuid(ctx.user)]),
-          do: RuxiWeb.Endpoint.broadcast("session:#{DB.str(row["id"])}", "disconnect", %{})
+          do: Ruxi.DB.broadcast("session:#{DB.str(row["id"])}", "disconnect", %{})
     end
 
     result
   end
 
   def append(record) do
+    if Ruxi.CloudStorage.enabled?() do
+      Util.require!(Ruxi.Contract.uuid?(record["request_id"]), "INVALID_ARGUMENT")
+      key = "ruxi/erasure-ledger/" <> record["request_id"] <> "-" <> Util.hash(record) <> ".json"
+      Ruxi.CloudStorage.put!(key, Jason.encode!(record))
+    else
+      append_local(record)
+    end
+  end
+
+  defp append_local(record) do
     :global.trans({__MODULE__, self()}, fn ->
       path = ledger_path()
       File.mkdir_p!(Path.dirname(path))
@@ -63,6 +73,36 @@ defmodule Ruxi.Privacy do
   end
 
   def replay do
+    if Ruxi.CloudStorage.enabled?() do
+      users =
+        Ruxi.CloudStorage.list!("ruxi/erasure-ledger/")
+        |> Enum.map(fn key ->
+          case Ruxi.CloudStorage.get(key) do
+            {200, bytes} when byte_size(bytes) <= 65_536 ->
+              record = Jason.decode!(bytes)
+
+              Util.require!(
+                record["schema"] == 1 and Ruxi.Contract.uuid?(record["user_id"]) and
+                  is_integer(record["erased_at"]),
+                "INVALID_ARGUMENT"
+              )
+
+              record["user_id"]
+
+            _ ->
+              raise "erasure ledger unavailable"
+          end
+        end)
+        |> Enum.uniq()
+
+      for user <- users, do: DB.transaction(fn -> apply!(user) end) |> replay_result!()
+      %{"replayed" => length(users)}
+    else
+      replay_local()
+    end
+  end
+
+  defp replay_local do
     case File.stat(ledger_path()) do
       {:error, :enoent} ->
         %{"replayed" => 0}

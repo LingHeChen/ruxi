@@ -90,84 +90,84 @@ def endpoint(path,method,props=None,security=True,summary='',code='200',required
     if '/rooms/{room_id}/' in path and method=='get':parameters += [{'name':'X-Device-ID','in':'header','required':True,'schema':UUID},{'name':'X-Control-Generation','in':'header','required':True,'schema':INT}]
     if parameters:spec['parameters']=parameters
     paths.setdefault(path,{})[method]=spec
-endpoint('/health','get',security=False)
-endpoint('/v1/auth/guest','post',{'device_id':UUID,'command_id':UUID},False)
+endpoint('/api/health','get',security=False)
+endpoint('/api/v1/auth/guest','post',{'device_id':UUID,'command_id':UUID},False)
 ACCOUNT={'type':'string','minLength':3,'maxLength':64,'pattern':'^[a-zA-Z0-9][a-zA-Z0-9_.@-]{2,63}$'}
 PASSWORD={'type':'string','minLength':1,'maxLength':128,'description':'10–128 UTF-8 bytes; never returned or logged'}
-endpoint('/v1/auth/register','post',{'username':ACCOUNT,'password':PASSWORD,'display_name':{'type':'string','minLength':1,'maxLength':24},'device_id':UUID,'command_id':UUID},False)
-for prefix in ['/v1/auth','/v1/admin/auth']:
+endpoint('/api/v1/auth/register','post',{'username':ACCOUNT,'password':PASSWORD,'display_name':{'type':'string','minLength':1,'maxLength':24},'device_id':UUID,'command_id':UUID},False)
+for prefix in ['/api/v1/auth','/api/v1/admin/auth']:
  endpoint(prefix+'/login','post',{'username':ACCOUNT,'password':PASSWORD,'device_id':UUID,'login_request_id':UUID},False)
-endpoint('/v1/auth/password-reset','post',{'recovery_code':{'type':'string','minLength':20,'maxLength':128},'new_password':PASSWORD,'device_id':UUID,'recovery_request_id':UUID},False)
-endpoint('/v1/me','put',{'display_name':{'type':'string','minLength':1,'maxLength':24},'bio':{'type':'string','maxLength':160},'command_id':UUID})
-endpoint('/v1/me/password','post',{'current_password':PASSWORD,'new_password':PASSWORD,'command_id':UUID})
-endpoint('/v1/me/favorites','get')
-endpoint('/v1/stories/{story_id}/favorite','post',{'saved':BOOL,'command_id':UUID})
-endpoint('/v1/admin/me','get')
-endpoint('/v1/admin/users','get')
-endpoint('/v1/admin/users/{user_id}/roles','post',{'roles':{'type':'array','maxItems':3,'uniqueItems':True,'items':{'enum':['editor','reviewer','publisher']}},'command_id':UUID})
-endpoint('/v1/admin/stories/{story_id}/metadata','put',{'category':{'enum':['mystery','emotion','scifi','adventure']},'difficulty':{'enum':['beginner','intermediate','advanced']},'summary':{'type':'string','maxLength':1000},'command_id':UUID})
-endpoint('/v1/auth/recover','post',{'recovery_code':{'type':'string'},'device_id':UUID,'recovery_request_id':UUID},False)
-for prefix in ['/v1/auth','/v1/admin/auth']:
+endpoint('/api/v1/auth/password-reset','post',{'recovery_code':{'type':'string','minLength':20,'maxLength':128},'new_password':PASSWORD,'device_id':UUID,'recovery_request_id':UUID},False)
+endpoint('/api/v1/me','put',{'display_name':{'type':'string','minLength':1,'maxLength':24},'bio':{'type':'string','maxLength':160},'command_id':UUID})
+endpoint('/api/v1/me/password','post',{'current_password':PASSWORD,'new_password':PASSWORD,'command_id':UUID})
+endpoint('/api/v1/me/favorites','get')
+endpoint('/api/v1/stories/{story_id}/favorite','post',{'saved':BOOL,'command_id':UUID})
+endpoint('/api/v1/admin/me','get')
+endpoint('/api/v1/admin/users','get')
+endpoint('/api/v1/admin/users/{user_id}/roles','post',{'roles':{'type':'array','maxItems':3,'uniqueItems':True,'items':{'enum':['editor','reviewer','publisher']}},'command_id':UUID})
+endpoint('/api/v1/admin/stories/{story_id}/metadata','put',{'category':{'enum':['mystery','emotion','scifi','adventure']},'difficulty':{'enum':['beginner','intermediate','advanced']},'summary':{'type':'string','maxLength':1000},'command_id':UUID})
+endpoint('/api/v1/auth/recover','post',{'recovery_code':{'type':'string'},'device_id':UUID,'recovery_request_id':UUID},False)
+for prefix in ['/api/v1/auth','/api/v1/admin/auth']:
  endpoint(prefix+'/refresh','post',{'refresh_token':{'type':'string'},'device_id':UUID,'refresh_request_id':UUID},False)
  endpoint(prefix+'/logout','post',{})
-endpoint('/v1/admin/auth/exchange','post',{'login_code':{'type':'string'},'device_id':UUID,'login_request_id':UUID},False)
-for p in ['/v1/me','/v1/stories','/v1/stories/{story_id}','/v1/rooms']:endpoint(p,'get',security=p not in ['/v1/stories','/v1/stories/{story_id}'])
-endpoint('/v1/me/erase','post',{'command_id':UUID,'confirmation':{'const':'ERASE_ACCOUNT'}},summary='Irreversible authenticated erasure; revokes identity, preserves deidentified joint results and records an independent restore ledger')
+endpoint('/api/v1/admin/auth/exchange','post',{'login_code':{'type':'string'},'device_id':UUID,'login_request_id':UUID},False)
+for p in ['/api/v1/me','/api/v1/stories','/api/v1/stories/{story_id}','/api/v1/rooms']:endpoint(p,'get',security=p not in ['/api/v1/stories','/api/v1/stories/{story_id}'])
+endpoint('/api/v1/me/erase','post',{'command_id':UUID,'confirmation':{'const':'ERASE_ACCOUNT'}},summary='Irreversible authenticated erasure; revokes identity, preserves deidentified joint results and records an independent restore ledger')
 diagnostic_variants=[]
 for name, field, values in [('screen_view','screen',['entry','discover','lobby','play','ending','account']),('connection_state','state',['online','offline','reconnecting']),('media_summary','reason',['timeout','buffering','user']),('command_attempt','kind',['select_role','ready','start','media_complete','investigate','share_clue','offer_item','accept_offer','reject_offer','cancel_offer','vote','request_hint','chat_send','request_pause','confirm_pause','cancel_pause','resume','leave_room'])]:
  diagnostic_variants.append(obj({'event_id':UUID,'event_name':{'const':name},'schema_version':{'const':1},'occurred_at':{'type':'string','format':'date-time'},'app_version':{'type':'string','pattern':'^[0-9][A-Za-z0-9.+-]{0,31}$'},'session_id':UUID,'properties':obj({field:{'enum':values}})}))
-endpoint('/v1/analytics/batches','post',{'batch_id':UUID,'events':{'type':'array','minItems':1,'maxItems':50,'items':{'oneOf':diagnostic_variants}}},summary='Optional bounded diagnostics; at most 64 KiB; accepted_ids and rejected event IDs; not business success metrics')
-paths['/v1/stories']['get']['parameters']=[{'name':key,'in':'query','required':False,'schema':schema} for key,schema in {'q':{'type':'string','maxLength':80},'category':{'enum':['mystery','emotion','scifi','adventure']},'seats':{'enum':['2','3','4']},'sort':{'enum':['latest','title']},'offset':{'type':'string','pattern':'^[0-9]{1,5}$'}}.items()]
-endpoint('/v1/rooms','post',{'story_id':UUID,'command_id':UUID},code='201')
-endpoint('/v1/rooms/join','post',{'invite_code':{'type':'string','pattern':'^[2-9A-HJ-NP-Z]{8}$'},'command_id':UUID})
-endpoint('/v1/rooms/{room_id}/chat/reports','post',{'command_id':UUID,'message_id':UUID,'reason':{'enum':['harassment','privacy','spam','other']}},summary='Reports only an authorized retained public message; server retrieves its text')
-paths['/v1/rooms/{room_id}/chat/reports']['post']['parameters'] += [{'name':'X-Device-ID','in':'header','required':True,'schema':UUID},{'name':'X-Control-Generation','in':'header','required':True,'schema':INT}]
-endpoint('/v1/admin/chat/reports','get',summary='Reviewer-only queue of explicitly reported public messages')
-endpoint('/v1/admin/chat/reports/{report_id}','post',{'command_id':UUID,'status':{'enum':['resolved','dismissed']},'remove_message':BOOL},required=['command_id','status'],summary='Reviewer-only auditable disposition; optional removal forces clean snapshots and invalidates historical chat projections')
-endpoint('/v1/rooms/{room_id}/socket-ticket','post',{'device_id':UUID,'takeover':BOOL,'command_id':UUID},required=['device_id','takeover'])
-endpoint('/v1/rooms/{room_id}/invites','post',{'command_id':UUID})
-for suffix in ['snapshot','events','commands/{command_id}','watermark']:endpoint('/v1/rooms/{room_id}/'+suffix,'get')
+endpoint('/api/v1/analytics/batches','post',{'batch_id':UUID,'events':{'type':'array','minItems':1,'maxItems':50,'items':{'oneOf':diagnostic_variants}}},summary='Optional bounded diagnostics; at most 64 KiB; accepted_ids and rejected event IDs; not business success metrics')
+paths['/api/v1/stories']['get']['parameters']=[{'name':key,'in':'query','required':False,'schema':schema} for key,schema in {'q':{'type':'string','maxLength':80},'category':{'enum':['mystery','emotion','scifi','adventure']},'seats':{'enum':['2','3','4']},'sort':{'enum':['latest','title']},'offset':{'type':'string','pattern':'^[0-9]{1,5}$'}}.items()]
+endpoint('/api/v1/rooms','post',{'story_id':UUID,'command_id':UUID},code='201')
+endpoint('/api/v1/rooms/join','post',{'invite_code':{'type':'string','pattern':'^[2-9A-HJ-NP-Z]{8}$'},'command_id':UUID})
+endpoint('/api/v1/rooms/{room_id}/chat/reports','post',{'command_id':UUID,'message_id':UUID,'reason':{'enum':['harassment','privacy','spam','other']}},summary='Reports only an authorized retained public message; server retrieves its text')
+paths['/api/v1/rooms/{room_id}/chat/reports']['post']['parameters'] += [{'name':'X-Device-ID','in':'header','required':True,'schema':UUID},{'name':'X-Control-Generation','in':'header','required':True,'schema':INT}]
+endpoint('/api/v1/admin/chat/reports','get',summary='Reviewer-only queue of explicitly reported public messages')
+endpoint('/api/v1/admin/chat/reports/{report_id}','post',{'command_id':UUID,'status':{'enum':['resolved','dismissed']},'remove_message':BOOL},required=['command_id','status'],summary='Reviewer-only auditable disposition; optional removal forces clean snapshots and invalidates historical chat projections')
+endpoint('/api/v1/rooms/{room_id}/socket-ticket','post',{'device_id':UUID,'takeover':BOOL,'command_id':UUID},required=['device_id','takeover'])
+endpoint('/api/v1/rooms/{room_id}/invites','post',{'command_id':UUID})
+for suffix in ['snapshot','events','commands/{command_id}','watermark']:endpoint('/api/v1/rooms/{room_id}/'+suffix,'get')
 for suffix in ['events','watermark']:
- spec=paths['/v1/rooms/{room_id}/'+suffix]['get'];spec['parameters'].append({'name':'recovery_epoch','in':'query','required':True,'schema':{'type':'string'}})
+ spec=paths['/api/v1/rooms/{room_id}/'+suffix]['get'];spec['parameters'].append({'name':'recovery_epoch','in':'query','required':True,'schema':{'type':'string'}})
  if suffix=='events':
   for name in ['after_seq','through_seq','limit']:spec['parameters'].append({'name':name,'in':'query','required':name=='after_seq','schema':INT})
-endpoint('/v1/media/access','post',{'room_id':UUID,'asset_id':UUID,'device_id':UUID,'control_generation':INT},summary='Authorized 120-second signed video/subtitle URLs and same-view summary; development uses original procedural sample clips')
-endpoint('/v1/admin/stories','post',{'title':TEXT,'summary':TEXT,'seat_count':{'type':'integer','minimum':2,'maximum':4},'command_id':UUID})
-endpoint('/v1/admin/stories/{story_id}/versions','post',{'base_version_id':UUID,'command_id':UUID},required=['command_id'])
-endpoint('/v1/admin/versions/{version_id}','get')
-endpoint('/v1/admin/versions/{version_id}','put',{'revision':INT,'graph':{'type':'object'}})
+endpoint('/api/v1/media/access','post',{'room_id':UUID,'asset_id':UUID,'device_id':UUID,'control_generation':INT},summary='Authorized 120-second signed video/subtitle URLs and same-view summary; development uses original procedural sample clips')
+endpoint('/api/v1/admin/stories','post',{'title':TEXT,'summary':TEXT,'seat_count':{'type':'integer','minimum':2,'maximum':4},'command_id':UUID})
+endpoint('/api/v1/admin/stories/{story_id}/versions','post',{'base_version_id':UUID,'command_id':UUID},required=['command_id'])
+endpoint('/api/v1/admin/versions/{version_id}','get')
+endpoint('/api/v1/admin/versions/{version_id}','put',{'revision':INT,'graph':{'type':'object'}})
 for op in ['validate','approve','publish','availability']:
  props={'command_id':UUID}
  if op=='availability':props.update({'availability':{'enum':['available','unlisted','blocked']},'reason':TEXT})
  else:props['revision']=INT
  if op=='approve':props['content_hash']={'type':'string'}
  if op=='publish':props['approved_hash']={'type':'string'}
- endpoint('/v1/admin/versions/{version_id}/'+op,'post',props)
-endpoint('/v1/admin/stories','get')
-endpoint('/v1/admin/stories/{story_id}/versions','get')
-endpoint('/v1/admin/versions/{version_id}/preview','post',{'revision':INT,'command_id':UUID})
-endpoint('/v1/admin/previews/step','post',{'preview_token':{'type':'string','maxLength':65536},'actor_role':CODE,'type':CODE,'payload':{'type':'object'},'command_id':UUID,'target_version':INT},required=['preview_token','actor_role','type','payload','command_id'])
-endpoint('/v1/admin/jobs/{job_id}','get')
-endpoint('/internal/work/claim','post',{'worker_id':TEXT,'supported_kinds':{'type':'array','minItems':1,'maxItems':3,'uniqueItems':True,'items':{'enum':['player_hint','media_transcode','editor_ai']}},'claim_id':UUID})
+ endpoint('/api/v1/admin/versions/{version_id}/'+op,'post',props)
+endpoint('/api/v1/admin/stories','get')
+endpoint('/api/v1/admin/stories/{story_id}/versions','get')
+endpoint('/api/v1/admin/versions/{version_id}/preview','post',{'revision':INT,'command_id':UUID})
+endpoint('/api/v1/admin/previews/step','post',{'preview_token':{'type':'string','maxLength':65536},'actor_role':CODE,'type':CODE,'payload':{'type':'object'},'command_id':UUID,'target_version':INT},required=['preview_token','actor_role','type','payload','command_id'])
+endpoint('/api/v1/admin/jobs/{job_id}','get')
+endpoint('/api/internal/work/claim','post',{'worker_id':TEXT,'supported_kinds':{'type':'array','minItems':1,'maxItems':3,'uniqueItems':True,'items':{'enum':['player_hint','media_transcode','editor_ai']}},'claim_id':UUID})
 for op in ['heartbeat','complete','fail']:
  props={'attempt':INT,'lease_token':TEXT}
  if op=='complete':props.update({'result_hash':TEXT,'result':{'oneOf':[result,obj({'outputs':arr(obj({'asset_id':UUID,'object_key':TEXT,'sha256':TEXT,'mime_type':TEXT,'size_bytes':INT}),3)}),obj({'proposal_ref':TEXT,'sha256':TEXT})]}})
  if op=='fail':props.update({'code':CODE,'retryable':BOOL})
- endpoint('/internal/work/{job_id}/'+op,'post',props)
+ endpoint('/api/internal/work/{job_id}/'+op,'post',props)
 SHA={'type':'string','pattern':'^[0-9a-f]{64}$'}
-endpoint('/v1/admin/operations','get',summary='Reviewer-only deidentified committed room outcomes and operational gauges')
-endpoint('/v1/admin/assets/{asset_id}/captions','post',{'command_id':UUID,'vtt':{'type':'string','maxLength':60000}},summary='Validate plain timed VTT and create a new immutable asset; published subtitle bytes remain frozen')
-endpoint('/v1/admin/assets/{asset_id}/preview','get',summary='Editor-owned 60-second first-frame preview, revoked with the session')
-endpoint('/v1/admin/assets','get',summary='Editor-owned production assets and transcode state')
-endpoint('/v1/admin/assets/upload-intents','post',{'command_id':UUID,'filename':{'type':'string','minLength':1,'maxLength':180},'mime_type':{'enum':['video/mp4','video/webm','video/quicktime']},'size_bytes':{'type':'integer','minimum':1,'maximum':524288000},'sha256':SHA})
-endpoint('/v1/admin/assets/{asset_id}/complete','post',{'command_id':UUID,'sha256':SHA,'size_bytes':INT,'rights_source':{'type':'string','minLength':1,'maxLength':2000}})
-endpoint('/v1/admin/versions/{version_id}/ai','post',{'command_id':UUID,'revision':INT,'target':{'enum':['title','description','asset_summary']},'instruction':TEXT,'media_id':CODE},required=['command_id','revision','target','instruction'])
-endpoint('/v1/admin/ai/jobs/{job_id}','get')
-endpoint('/v1/admin/ai/jobs/{job_id}/apply','post',{'command_id':UUID,'revision':INT},summary='Explicit human acceptance bound to the frozen proposal revision and hash')
-endpoint('/internal/work/{job_id}/output-intents','post',{'attempt':INT,'lease_token':TEXT,'outputs':arr(obj({'kind':{'enum':['video','poster','subtitle','proposal']},'size_bytes':INT,'sha256':SHA}),3)})
-endpoint('/internal/work/{job_id}/source','get',summary='Worker-only source stream; X-Work-Attempt and X-Lease-Token required')
-paths['/internal/work/{job_id}/source']['get']['parameters'] += [{'name':'X-Work-Attempt','in':'header','required':True,'schema':INT},{'name':'X-Lease-Token','in':'header','required':True,'schema':TEXT}]
-paths['/internal/work/claim']['post']['responses']['204']={'description':'No available work'}
+endpoint('/api/v1/admin/operations','get',summary='Reviewer-only deidentified committed room outcomes and operational gauges')
+endpoint('/api/v1/admin/assets/{asset_id}/captions','post',{'command_id':UUID,'vtt':{'type':'string','maxLength':60000}},summary='Validate plain timed VTT and create a new immutable asset; published subtitle bytes remain frozen')
+endpoint('/api/v1/admin/assets/{asset_id}/preview','get',summary='Editor-owned 60-second first-frame preview, revoked with the session')
+endpoint('/api/v1/admin/assets','get',summary='Editor-owned production assets and transcode state')
+endpoint('/api/v1/admin/assets/upload-intents','post',{'command_id':UUID,'filename':{'type':'string','minLength':1,'maxLength':180},'mime_type':{'enum':['video/mp4','video/webm','video/quicktime']},'size_bytes':{'type':'integer','minimum':1,'maximum':524288000},'sha256':SHA})
+endpoint('/api/v1/admin/assets/{asset_id}/complete','post',{'command_id':UUID,'sha256':SHA,'size_bytes':INT,'rights_source':{'type':'string','minLength':1,'maxLength':2000}})
+endpoint('/api/v1/admin/versions/{version_id}/ai','post',{'command_id':UUID,'revision':INT,'target':{'enum':['title','description','asset_summary']},'instruction':TEXT,'media_id':CODE},required=['command_id','revision','target','instruction'])
+endpoint('/api/v1/admin/ai/jobs/{job_id}','get')
+endpoint('/api/v1/admin/ai/jobs/{job_id}/apply','post',{'command_id':UUID,'revision':INT},summary='Explicit human acceptance bound to the frozen proposal revision and hash')
+endpoint('/api/internal/work/{job_id}/output-intents','post',{'attempt':INT,'lease_token':TEXT,'outputs':arr(obj({'kind':{'enum':['video','poster','subtitle','proposal']},'size_bytes':INT,'sha256':SHA}),3)})
+endpoint('/api/internal/work/{job_id}/source','get',summary='Worker-only source stream; X-Work-Attempt and X-Lease-Token required')
+paths['/api/internal/work/{job_id}/source']['get']['parameters'] += [{'name':'X-Work-Attempt','in':'header','required':True,'schema':INT},{'name':'X-Lease-Token','in':'header','required':True,'schema':TEXT}]
+paths['/api/internal/work/claim']['post']['responses']['204']={'description':'No available work'}
 write('contracts/http/openapi.json',{'openapi':'3.1.0','info':{'title':'入戏 C1 development API','version':'0.1.0','description':'Authoritative multiplayer game, creator content pipeline, bounded AI and media processing. Operational validation is tracked in docs/IMPLEMENTATION_STATUS.md.'},'servers':[{'url':'http://localhost:4000'}],'paths':paths,'components':{'securitySchemes':{'bearer':{'type':'http','scheme':'bearer'}}}})
 proposal=obj({'schema_version':{'const':1},'target':{'oneOf':[{'const':['title']},{'const':['description']}, {'type':'array','prefixItems':[{'const':'assets'},INT,{'const':'summary'}],'minItems':3,'maxItems':3}]},'original':{'type':'string','maxLength':2000},'suggested':{'type':'string','minLength':1,'maxLength':2000},'notes':arr({'type':'string','maxLength':200},5),'source':{'enum':['ai','template']}})
 write('contracts/work/editor_proposal.schema.json',{'$schema':'https://json-schema.org/draft/2020-12/schema',**proposal})

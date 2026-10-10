@@ -1,6 +1,6 @@
 defmodule Ruxi.Objects do
-  @moduledoc "Immutable local object adapter. Production requires a durable mounted root."
-  alias Ruxi.Util
+  @moduledoc "Immutable objects with a local adapter or CloudBase-backed local cache."
+  alias Ruxi.{Util, CloudStorage}
   def root, do: System.get_env("OBJECT_ROOT", Path.expand("../../.local/objects", File.cwd!()))
 
   def path(key) do
@@ -10,7 +10,26 @@ defmodule Ruxi.Objects do
       "INVALID_ARGUMENT"
     )
 
-    Path.join(root(), key)
+    target = Path.join(root(), key)
+
+    if CloudStorage.enabled?() and not File.regular?(target) do
+      case CloudStorage.get(key) do
+        {200, bytes} ->
+          File.mkdir_p!(Path.dirname(target))
+          temp = target <> "." <> Util.id()
+          File.write!(temp, bytes, [:binary, :exclusive])
+          File.chmod!(temp, 0o600)
+          commit_cache!(temp, target, byte_size(bytes), Util.hash(bytes))
+
+        {404, _} ->
+          :ok
+
+        _ ->
+          Util.fail("SERVICE_UNAVAILABLE")
+      end
+    end
+
+    target
   end
 
   def hash(path),
@@ -38,11 +57,45 @@ defmodule Ruxi.Objects do
     temp = target <> "." <> Util.id()
     File.write!(temp, bytes, [:binary, :exclusive])
     File.chmod!(temp, 0o600)
-    commit!(temp, target, byte_size(bytes), sha)
+
+    try do
+      commit!(temp, target, byte_size(bytes), sha)
+    after
+      File.rm(temp)
+    end
+
     target
   end
 
   def commit!(temp, target, size, sha) do
+    Util.require!(File.stat!(temp).size == size and hash(temp) == sha, "ASSET_MISMATCH")
+
+    if CloudStorage.enabled?() do
+      key = Path.relative_to(target, root())
+
+      Util.require!(
+        String.starts_with?(key, "ruxi/") and not String.contains?(key, ".."),
+        "INVALID_ARGUMENT"
+      )
+
+      CloudStorage.put!(key, File.read!(temp))
+    end
+
+    commit_cache!(temp, target, size, sha)
+  end
+
+  def copy!(source, target) do
+    bytes = File.read!(path(source))
+    put!(target, bytes, Util.hash(bytes))
+  end
+
+  def delete!(key) do
+    if CloudStorage.enabled?(), do: CloudStorage.delete!(key)
+    File.rm(Path.join(root(), key))
+    :ok
+  end
+
+  defp commit_cache!(temp, target, size, sha) do
     try do
       Util.require!(File.stat!(temp).size == size and hash(temp) == sha, "ASSET_MISMATCH")
 

@@ -36,6 +36,9 @@ class _C2StageState extends State<C2Stage> {
   int? _round;
   final _results = <String>{}, _cues = <String>{}, _knowledge = <String>{};
   final _messages = <NovelMessage>[];
+  final _activities = <String>{};
+  Timer? _activityTimer;
+  String? _activityNotice;
   List<dynamic> items(String key) => client.view?[key] as List? ?? [];
   @override
   void initState() {
@@ -142,6 +145,22 @@ class _C2StageState extends State<C2Stage> {
   }
 
   void observe(Json v) {
+    final activity = items('scene_activity');
+    if (!_seeded) _activities.addAll(activity.map((a) => '${a['id']}'));
+    final freshActivity = activity
+        .where((a) => _activities.add('${a['id']}'))
+        .toList();
+    if (freshActivity.isNotEmpty) {
+      final a = freshActivity.last;
+      final member = items('team')
+          .where((m) => m['role_id'] == a['actor'])
+          .firstOrNull;
+      _activityNotice = '${member?['label'] ?? '同伴'}与${a['npc']}进行了交谈';
+      _activityTimer?.cancel();
+      _activityTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) setState(() => _activityNotice = null);
+      });
+    }
     final room = v['room'];
     final round = room['round'] as int?;
     final results = items('own_results');
@@ -168,6 +187,9 @@ class _C2StageState extends State<C2Stage> {
     final freshKnowledge = knowledge
         .where((k) => !_knowledge.contains('${k['id']}'))
         .toList();
+    final narrativeKnowledge = freshKnowledge
+        .where((k) => !freshCues.any((c) => c['media_id'] == k['id']))
+        .toList();
     _knowledge.addAll(knowledge.map((k) => '${k['id']}'));
     _cues.addAll(freshCues.map((c) => '${c['id']}'));
     for (final outcome in items('interaction_results')) {
@@ -183,7 +205,7 @@ class _C2StageState extends State<C2Stage> {
             text: [
               '${check ? "点数 ${outcome["roll"]} / 目标 ${outcome["target"]}\n\n" : ""}本次尝试已结算，消耗 ${outcome["cost"]} 余力。剩余 ${outcome["attempts_remaining"]} 次尝试。',
               ...freshCues.map((c) => '${c['summary'] ?? c['text'] ?? ''}'),
-              ...freshKnowledge.map((k) => '${k['text']}'),
+              ...narrativeKnowledge.map((k) => '${k['text']}'),
             ].join('\n\n'),
             illustration:
                 freshCues
@@ -216,10 +238,13 @@ class _C2StageState extends State<C2Stage> {
           '你的行动已经完成。环顾四周，看看接下来还能做些什么。',
         if (success)
           ...freshCues.map((c) => '${c['summary'] ?? c['text'] ?? ''}'),
-        if (success) ...freshKnowledge.map((k) => '${k['text']}'),
+        if (success) ...narrativeKnowledge.map((k) => '${k['text']}'),
       ].join('\n\n');
       enqueue(
         NovelMessage(
+          character:
+              !moved &&
+              items('npcs').any((npc) => npc['id'] == result['target']),
           title: moved
               ? '场景抵达'
               : success
@@ -237,19 +262,16 @@ class _C2StageState extends State<C2Stage> {
       );
     }
     if (freshResults.isEmpty) {
-      if (freshKnowledge.isNotEmpty) {
-        enqueue(
-          NovelMessage(
-            title: '一条新的线索',
-            text: freshKnowledge.map((k) => '${k['text']}').join('\n\n'),
-            clue: true,
-          ),
-        );
-      }
+      // Passive discoveries and teammate shares update the notebook badge only.
+      // Actions initiated by this player already have their own result above.
       for (final cue in freshCues) {
         enqueue(
           NovelMessage(
-            title: '故事 · 旁白',
+            title: '${cue['media_id']}'.startsWith('role_opening_')
+                ? '你的角色 · 私人经历'
+                : '${cue['media_id']}'.startsWith('memory_')
+                ? '你的回忆 · 仅自己可见'
+                : '故事 · 旁白',
             text: '${cue['summary'] ?? cue['text'] ?? ''}',
             illustration: illustrationFor(v, cue['media_id']),
             choices: cue['media_id'] == 'echo_inspect_damage'
@@ -287,7 +309,10 @@ class _C2StageState extends State<C2Stage> {
       enqueue(
         NovelMessage(
           title: '故事的最后一页',
-          text: '${ending['summary']}',
+          text: [
+            '${ending['summary']}',
+            if (ending['epilogue'] != null) '你的尾声\n\n${ending['epilogue']}',
+          ].join('\n\n'),
           subtitle: '你的选择，写下了这个结局。',
           ending: true,
           illustration: ending['kind'] == 'image' ? ending['uri'] : null,
@@ -383,14 +408,10 @@ class _C2StageState extends State<C2Stage> {
         context,
         interaction,
         () async => Map<String, dynamic>.from(
-          await client.request(
-            'POST',
-            '/rooms/${client.roomId}/interaction-quotes',
-            {
-              'interaction_id': interaction['id'],
-              'step_id': client.view?['room']['step_id'],
-            },
-          ),
+          await client.interactionQuote({
+            'interaction_id': interaction['id'],
+            'step_id': client.view?['room']['step_id'],
+          }),
         ),
         (q, answer) async {
           await client.command('interaction.submit', {
@@ -539,15 +560,57 @@ class _C2StageState extends State<C2Stage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, set) => AlertDialog(
-          title: const Text('分享这条线索'),
+          icon: const Align(
+            alignment: Alignment.centerLeft,
+            child: Icon(Icons.ios_share, color: novelGold),
+          ),
+          title: const Text('分享线索'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('选中的同伴会永久获得这条线索。'),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    clue['label'] ?? '调查线索',
+                    style: const TextStyle(color: novelGold, fontSize: 16),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text('选择接收的同伴。线索将加入对方的线索册，不打断对方游玩。'),
+                const SizedBox(height: 20),
+                if (members.isEmpty) const Text('暂时没有可分享的同伴。'),
                 for (final m in members)
                   CheckboxListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: selected.contains(m['member_id'])
+                            ? novelGold
+                            : const Color(0xff35454e),
+                      ),
+                    ),
+                    selected: selected.contains(m['member_id']),
+                    selectedTileColor: const Color(0xff293b43),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    secondary: const Icon(
+                      Icons.person_outline,
+                      color: novelGold,
+                    ),
                     title: Text(m['display_name']),
+                    subtitle: Text(
+                      items('team')
+                              .where((r) => r['role_id'] == m['role_id'])
+                              .firstOrNull?['label'] ??
+                          '同伴',
+                      style: const TextStyle(
+                        color: Color(0xff9bafb5),
+                        fontSize: 12,
+                      ),
+                    ),
                     value: selected.contains(m['member_id']),
                     onChanged: (v) => set(
                       () => v == true
@@ -608,12 +671,59 @@ class _C2StageState extends State<C2Stage> {
 
   @override
   void dispose() {
+    _activityTimer?.cancel();
     client.removeListener(changed);
     communication.removeListener(communicationChanged);
     communication.dispose();
     client.dispose();
     if (widget.identity == null) identity.dispose();
     super.dispose();
+  }
+
+  Widget roleChoice(dynamic role, dynamic member) {
+    final occupant = items('members')
+        .where(
+          (m) =>
+              m['role_id'] == role['id'] &&
+              m['member_id'] != client.view?['own_member_id'],
+        )
+        .firstOrNull;
+    final selected = member?['role_id'] == role['id'];
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ChoiceChip(
+            label: Text(
+              occupant == null
+                  ? '${role['label']}'
+                  : '${role['label']} · ${occupant['display_name']}已选',
+            ),
+            selected: selected,
+            onSelected: client.busy || occupant != null
+                ? null
+                : (_) => unawaited(
+                    send('role.select', {
+                      'role_id': role['id'],
+                    }, '你将以${role['label']}的身份进入故事。'),
+                  ),
+          ),
+          if (role['description'] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 8),
+              child: Text(
+                '${role['description']}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.6,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -649,7 +759,18 @@ class _C2StageState extends State<C2Stage> {
     final solo = items('roles').length == 1;
     final cinematic = solo && v['story_title'] == '雨夜最后一封信';
     final clues = items('knowledge').map((k) => k['id']).toSet();
-    final chapter = clues.contains('truth')
+    final tide = v['story_title'] == '潮汐旅馆：第九声钟响';
+    final chapter = tide
+        ? (clues.any(
+                (id) => '$id'.startsWith('memory_') && '$id'.endsWith('_3'),
+              )
+              ? '第三幕 · 留下什么'
+              : clues.any(
+                  (id) => '$id'.startsWith('memory_') && '$id'.endsWith('_2'),
+                )
+              ? '第二幕 · 岸上的名字'
+              : '第一幕 · 第九声钟响')
+        : clues.contains('truth')
         ? '第三幕 · 迟到的告别'
         : self?['location'] == 'archive' || clues.contains('damage')
         ? '第二幕 · 雨水中的选择'
@@ -674,6 +795,10 @@ class _C2StageState extends State<C2Stage> {
     }
     final visibleActions = items('actions')
         .where((a) => (a['remaining_uses'] ?? 1) > 0)
+        .toList();
+    final npcIds = items('npcs').map((n) => n['id']).toSet();
+    final sceneActions = visibleActions
+        .where((a) => !npcIds.contains(a['target']))
         .toList();
     final lobby = room['status'] == 'lobby';
     final active = room['status'] == 'active';
@@ -851,7 +976,7 @@ class _C2StageState extends State<C2Stage> {
                                 Text(
                                   lobby
                                       ? '故事即将开始'
-                                      : cinematic
+                                      : (cinematic || tide)
                                       ? chapter
                                       : '第 ${room['round'] ?? 1} 回合',
                                   style: const TextStyle(
@@ -929,6 +1054,46 @@ class _C2StageState extends State<C2Stage> {
                             ),
                         ],
                       ),
+                    ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _activityNotice == null
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              key: ValueKey(_activityNotice),
+                              padding: EdgeInsets.fromLTRB(
+                                narrow ? 12 : 48,
+                                0,
+                                narrow ? 12 : 48,
+                                10,
+                              ),
+                              child: Semantics(
+                                liveRegion: true,
+                                child: NovelPanel(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.forum_outlined,
+                                          size: 18,
+                                          color: novelGold,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            _activityNotice!,
+                                            style: const TextStyle(
+                                              color: novelGold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                     Padding(
                       padding: EdgeInsets.fromLTRB(
@@ -1020,6 +1185,7 @@ class _C2StageState extends State<C2Stage> {
                                             label: Text('与${npc['label']}交谈'),
                                             onPressed: () => enqueue(
                                               NovelMessage(
+                                                character: true,
                                                 title: npc['label'],
                                                 text: npc['description'] ?? '',
                                                 illustration: npc['image_uri'],
@@ -1082,20 +1248,7 @@ class _C2StageState extends State<C2Stage> {
                                       runSpacing: 12,
                                       children: [
                                         for (final r in items('roles'))
-                                          ChoiceChip(
-                                            label: Text(r['label']),
-                                            selected:
-                                                member?['role_id'] == r['id'],
-                                            onSelected: client.busy
-                                                ? null
-                                                : (_) => unawaited(
-                                                    send(
-                                                      'role.select',
-                                                      {'role_id': r['id']},
-                                                      '你将以${r['label']}的身份进入故事。',
-                                                    ),
-                                                  ),
-                                          ),
+                                          roleChoice(r, member),
                                       ],
                                     ),
                                     const SizedBox(height: 16),
@@ -1173,8 +1326,8 @@ class _C2StageState extends State<C2Stage> {
                                           ),
                                         for (final a
                                             in (_showAllActions
-                                                ? visibleActions
-                                                : visibleActions.take(
+                                                ? sceneActions
+                                                : sceneActions.take(
                                                     (3 -
                                                             items(
                                                               'interactions',
@@ -1195,7 +1348,7 @@ class _C2StageState extends State<C2Stage> {
                                           ),
                                       ],
                                     ),
-                                    if (visibleActions.length +
+                                    if (sceneActions.length +
                                             items('interactions').length >
                                         3)
                                       TextButton(
@@ -1325,7 +1478,11 @@ class _C2StageState extends State<C2Stage> {
                                           : () => unawaited(
                                               client.recoverCommand(),
                                             ),
-                                      child: const Text('查询未确认的操作'),
+                                      child: Text(
+                                        client.busy
+                                            ? '正在恢复操作…'
+                                            : '恢复上次操作 · 安全重试',
+                                      ),
                                     ),
                                   if (client.error != null)
                                     Text(

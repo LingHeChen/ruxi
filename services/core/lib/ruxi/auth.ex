@@ -33,7 +33,7 @@ defmodule Ruxi.Auth do
 
         DB.query(
           "INSERT INTO auth_retry_cache(scope,key_hash,request_hash,response_ciphertext,expires_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(scope,key_hash) DO UPDATE SET request_hash=$3,response_ciphertext=$4,expires_at=$5",
-          [scope, h, Util.hash(p), seal(reply), now + 60_000]
+          [scope, h, Util.hash(p), DB.bytes(seal(reply)), now + 60_000]
         )
 
         reply
@@ -137,7 +137,7 @@ defmodule Ruxi.Auth do
           "SELECT s.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND NOT s.revoked AND s.expires_at>$2 AND u.status='active'",
           [
             DB.uuid(ctx.session),
-            Util.now()
+            if(DB.cloud?(), do: DB.time(), else: Util.now())
           ]
         ) != nil,
         "AUTH_EXPIRED"
@@ -206,7 +206,7 @@ defmodule Ruxi.Auth do
   def logout(ctx) do
     DB.query("UPDATE sessions SET revoked=true WHERE id=$1", [DB.uuid(ctx.session)])
     Ruxi.SceneVoice.Coordinator.revoke_identity(ctx.user, ctx.device)
-    RuxiWeb.Endpoint.broadcast("session:#{ctx.session}", "disconnect", %{})
+    Ruxi.DB.broadcast("session:#{ctx.session}", "disconnect", %{})
     %{"revoked" => true}
   end
 
@@ -215,7 +215,7 @@ defmodule Ruxi.Auth do
           DB.rows("UPDATE sessions SET revoked=true WHERE user_id=$1 RETURNING id", [
             DB.uuid(user)
           ]),
-        do: RuxiWeb.Endpoint.broadcast("session:#{DB.str(row["id"])}", "disconnect", %{})
+        do: Ruxi.DB.broadcast("session:#{DB.str(row["id"])}", "disconnect", %{})
 
     Ruxi.SceneVoice.Coordinator.revoke_identity(user)
   end

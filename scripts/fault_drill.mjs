@@ -9,14 +9,14 @@ mkdirSync(new URL('../.local/',import.meta.url),{recursive:true});
 const log=openSync(new URL('../.local/fault-core.log',import.meta.url),'a',0o600);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let processCore;const players=[];
-async function start(){processCore=spawn('mix',['run','--no-halt'],{cwd:core,env:{...env,PHX_SERVER:'true'},stdio:['ignore',log,log]});for(let i=0;i<100;i++){try{if((await fetch('http://localhost:4003/health')).ok)return;}catch{}await sleep(100);}throw Error('isolated Core did not start');}
+async function start(){processCore=spawn('mix',['run','--no-halt'],{cwd:core,env:{...env,PHX_SERVER:'true'},stdio:['ignore',log,log]});for(let i=0;i<100;i++){try{if((await fetch('http://localhost:4003/api/health')).ok)return;}catch{}await sleep(100);}throw Error('isolated Core did not start');}
 try {
  execFileSync(pg+'createdb',['-h','localhost','-p','55432',db]);
  for(const args of [['run','--no-start','priv/repo/init_schema.exs'],['ecto.migrate'],['run','priv/repo/seeds.exs']])execFileSync('mix',args,{cwd:core,env,stdio:['ignore','ignore','inherit']});
  await start();process.env.API_BASE='http://localhost:4003';const{Player}=await import('./protocol_client.mjs');
  for(let i=0;i<3;i++){const p=new Player();await p.guest();players.push(p);}
- const[a,b,c]=players;const made=await a.http('POST','/v1/rooms',{story_id:'11111111-1111-4111-8111-111111111111',command_id:randomUUID()});
- for(const p of [b,c])await p.http('POST','/v1/rooms/join',{invite_code:made.invite_code,command_id:randomUUID()});
+ const[a,b,c]=players;const made=await a.http('POST','/api/v1/rooms',{story_id:'11111111-1111-4111-8111-111111111111',command_id:randomUUID()});
+ for(const p of [b,c])await p.http('POST','/api/v1/rooms/join',{invite_code:made.invite_code,command_id:randomUUID()});
  for(const[i,p]of players.entries()){await p.connect(made.room_id);await p.command('select_role',{role_code:['investigator','passenger','conductor'][i]});await p.command('ready',{ready:true});}
  await a.command('start');
  for(const p of players)await p.command('media_complete',{media_id:'opening',media_epoch:1,mode:'summary'});

@@ -1,23 +1,33 @@
 {
   "envId": "tnt-like-d2gmmbwti62706aae",
   "region": "ap-shanghai",
+  "storage": {
+    "provider": "cloudbase-pgstore",
+    "bucket": "ruxi-private",
+    "public": false,
+    "fileSizeLimitBytes": 268435456,
+    "adapterStatus": "implemented-and-storage-api-verified",
+    "note": "Use CloudBase storage API; not a mounted POSIX filesystem."
+  },
   "database": {
     "engine": "postgresql",
     "schema": "ruxi",
-    "migration": "20261008120500_ruxi_initial",
-    "localMigrationHead": "20261008001300"
+    "migration": "20261010150000_ruxi_http_transactions",
+    "localMigrationHead": "20261010002200",
+    "businessMigrationHead": "20261010002200",
+    "transport": "cloudbase-http-sql"
   },
   "core": {
     "serverName": "ruxi-core",
     "serverType": "container",
-    "dockerfile": "infra/core.production.Dockerfile",
+    "dockerfile": "infra/core.cloudbase.Dockerfile",
     "port": 4000,
     "minInstances": 1,
     "maxInstances": 1,
-    "requiredPersistentPaths": [
-      "/persistent/erasure-ledger.jsonl",
-      "/persistent/objects"
-    ]
+    "objectBackend": "cloudbase",
+    "objectCacheRoot": "/tmp/ruxi-objects",
+    "requiredPersistentPaths": [],
+    "erasureLedger": "ruxi-private/ruxi/erasure-ledger/*.json"
   },
   "worker": {
     "serverName": "ruxi-ai-worker",
@@ -28,7 +38,8 @@
       "player_hint",
       "editor_ai"
     ],
-    "maxInstances": 2
+    "maxInstances": 1,
+    "coreUrl": "https://ruxi.fuyaten.online"
   },
   "mediaWorker": {
     "serverName": "ruxi-media-worker",
@@ -41,11 +52,21 @@
     "minInstances": 1,
     "maxInstances": 1,
     "requiredMemoryMiB": 2048,
-    "requiredCPU": 2,
-    "vendorSecrets": false
+    "requiredCPU": 1,
+    "vendorSecrets": false,
+    "coreUrl": "https://ruxi.fuyaten.online"
   },
   "notes": [
-    "Planning manifest; not a CloudBase deployment result.",
+    "Deployment configuration; current release status is recorded in docs/CLOUDBASE.md.",
+    "API gateway must preserve the /api prefix, including WebSocket upgrades.",
     "Media Worker receives no vendor key; credentials restricted to its supported kinds."
-  ]
+  ],
+  "apiOrigin": "https://ruxi.fuyaten.online",
+  "apiPrefix": "/api",
+  "gateway": {
+    "domain": "ruxi.fuyaten.online",
+    "path": "/api",
+    "upstream": "ruxi-core",
+    "enablePathTransmission": true
+  }
 }

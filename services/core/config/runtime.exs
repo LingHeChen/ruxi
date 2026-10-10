@@ -10,15 +10,34 @@ if config_env() == :prod do
 
   secret = required.("SECRET_KEY_BASE")
   if byte_size(secret) < 64, do: raise("SECRET_KEY_BASE must contain at least 64 bytes")
-  database = required.("DATABASE_URL")
+  database_backend = System.get_env("DB_BACKEND", "native")
+  unless database_backend in ["native", "cloudbase"], do: raise("invalid DB_BACKEND")
+
+  if database_backend == "cloudbase" do
+    required.("CLOUDBASE_ENV_ID")
+    required.("CLOUDBASE_API_KEY")
+  end
+
+  database = if database_backend == "native", do: required.("DATABASE_URL")
+  config :ruxi, database_backend: database_backend
   epoch = required.("RECOVERY_EPOCH")
   instance = required.("CORE_INSTANCE")
-  ledger = required.("ERASURE_LEDGER_PATH")
-  if Path.type(ledger) != :absolute, do: raise("ERASURE_LEDGER_PATH must be absolute")
+  backend = System.get_env("OBJECT_BACKEND", "local")
+  unless backend in ["local", "cloudbase"], do: raise("invalid OBJECT_BACKEND")
+
+  if backend == "cloudbase" do
+    required.("CLOUDBASE_ENV_ID")
+    required.("CLOUDBASE_STORAGE_BUCKET")
+    required.("CLOUDBASE_API_KEY")
+  else
+    ledger = required.("ERASURE_LEDGER_PATH")
+    if Path.type(ledger) != :absolute, do: raise("ERASURE_LEDGER_PATH must be absolute")
+  end
+
   objects = required.("OBJECT_ROOT")
 
   if Path.type(objects) != :absolute,
-    do: raise("OBJECT_ROOT must be an absolute durable mount path")
+    do: raise("OBJECT_ROOT must be an absolute path (durable mount for local backend)")
 
   credentials = required.("WORKER_CREDENTIALS_JSON") |> Jason.decode!()
 
@@ -52,9 +71,11 @@ if config_env() == :prod do
 
   config :ruxi, recovery_epoch: epoch, core_instance: instance, allowed_origins: origins
 
-  config :ruxi, Ruxi.Repo,
-    url: database,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+  if database_backend == "native" do
+    config :ruxi, Ruxi.Repo,
+      url: database,
+      pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+  end
 
   config :ruxi, RuxiWeb.Endpoint,
     server: System.get_env("PHX_SERVER", "true") == "true",

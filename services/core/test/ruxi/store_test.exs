@@ -298,8 +298,8 @@ defmodule Ruxi.StoreTest do
       )
 
     assert a["duration_ms"] == 50_000
-    cap = a["url"] |> String.split("/media/") |> List.last()
-    conn = Plug.Test.conn(:get, "/media/x") |> Plug.Conn.put_req_header("range", "bytes=0-1023")
+    cap = a["url"] |> String.split("/api/media/") |> List.last()
+    conn = Plug.Test.conn(:get, "/api/media/x") |> Plug.Conn.put_req_header("range", "bytes=0-1023")
     assert Ruxi.Media.stream(conn, cap).status == 206
 
     assert Ruxi.Media.access(
@@ -332,26 +332,32 @@ defmodule Ruxi.StoreTest do
 
   test "cross-room item owner is rejected by PostgreSQL", %{ctx: ctx} do
     error =
-      assert_raise Postgrex.Error, fn ->
+      assert_raise if(DB.cloud?(), do: Ruxi.CloudSQL.Error, else: Postgrex.Error), fn ->
         DB.query(
           "INSERT INTO room_items(room_id,item_id,owner_member_id,version) VALUES($1,'C2',$2,1)",
           [DB.uuid(ctx.room), DB.uuid(Util.id())]
         )
       end
 
-    assert error.postgres.code == :foreign_key_violation
+    assert if(DB.cloud?(),
+             do: error.code == "DATABASE_23503",
+             else: error.postgres.code == :foreign_key_violation
+           )
   end
 
   test "published graph is immutable at the database layer" do
     error =
-      assert_raise Postgrex.Error, fn ->
+      assert_raise if(DB.cloud?(), do: Ruxi.CloudSQL.Error, else: Postgrex.Error), fn ->
         DB.query(
           "UPDATE content_versions SET graph=jsonb_set(graph,'{title}','\"changed\"') WHERE id=$1",
           [DB.uuid(Ruxi.Content.version_id())]
         )
       end
 
-    assert error.postgres.code == :raise_exception
+    assert if(DB.cloud?(),
+             do: error.code == "DATABASE_P0001",
+             else: error.postgres.code == :raise_exception
+           )
   end
 
   test "admin version flow freezes a new version without changing an existing room", %{

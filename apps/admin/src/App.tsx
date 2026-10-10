@@ -234,7 +234,7 @@ function Shell() {
         theme="dark"
         mode="inline"
         selectedKeys={[selected]}
-        items={sections.filter((s) => allowed(s.role, profile!.roles))}
+        items={sections.filter((s) => allowed(s.role, profile!.roles)).map(({ role: _role, ...item }) => item)}
         onClick={(e) => {
           navigate(e.key);
           setMobile(false);

@@ -68,6 +68,20 @@ defmodule Ruxi.C2.StoreTest do
       "body" => body
     }
 
+  test "a selected role belongs to one member and changing role releases the old seat", s do
+    [first, second | _] = s.people
+    id = s.room["room_id"]
+    assert {:ok, _} = Store.command(first, id, cmd("role.select", %{"role_id" => "guest"}))
+
+    assert {:error, "ROLE_TAKEN"} =
+             Store.command(second, id, cmd("role.select", %{"role_id" => "guest"}))
+
+    assert {:ok, _} = Store.command(first, id, cmd("role.select", %{"role_id" => "doctor"}))
+    assert {:ok, _} = Store.command(second, id, cmd("role.select", %{"role_id" => "guest"}))
+    assert {:ok, v} = Store.snapshot(first, id)
+    assert Enum.count(v["blocks"]["members"], &(&1["role_id"] == "guest")) == 1
+  end
+
   test "published content is frozen and drafts use optimistic revisions", s do
     assert {:error, "REVISION_CONFLICT"} =
              DB.transaction(fn -> Studio.save(hd(s.people), s.project, %{}, 1) end)

@@ -8,7 +8,7 @@ async function api(method,path,body={},token='',headers={}) {
  const value=await r.json();assert(r.ok,`${path}: ${value.error?.code ?? r.status}`);return value.data;
 }
 const credential=JSON.parse(await readFile(new URL('../.local/admin-review.json',import.meta.url),'utf8'));
-const admin=await api('POST','/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
+const admin=await api('POST','/api/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
 const studio=(method,path,body={},rev)=>api(method,'/api/v2'+path,body,admin.access_token,{'Idempotency-Key':uuid(),...(rev?{'If-Match':String(rev)}:{})});
 
 const story=JSON.parse(await readFile(new URL('../content/c2/last_letter.json',import.meta.url),'utf8'));
@@ -26,7 +26,7 @@ const catalog=await api('GET','/api/v2/stories?seats=1');
 assert(catalog.items.some(p=>p.story_id===project.id),'Single-player catalog filter');
 const endings=new Set();
 for(const saved of ['ledger','tape']) for(const memory of [false,true]) for(const choice of ['deliver','keep']) {
- const player=await api('POST','/v1/auth/guest',{device_id:uuid(),command_id:uuid()});
+ const player=await api('POST','/api/v1/auth/guest',{device_id:uuid(),command_id:uuid()});
  const room=await api('POST','/api/v2/rooms',{release_id:project.current_release_id},player.access_token,{'Idempotency-Key':uuid()});
  const snap=()=>api('GET',`/api/v2/rooms/${room.room_id}/snapshot`,{},player.access_token);
  async function command(type,body={}) {

@@ -4,11 +4,11 @@ defmodule RuxiWeb.Router do
   plug(:match)
   plug(:dispatch)
 
-  get "/health" do
+  get "/api/health" do
     send_json(conn, 200, %{"status" => "ok", "baseline" => "C1"})
   end
 
-  get "/asset-preview/:capability" do
+  get "/api/asset-preview/:capability" do
     try do
       Ruxi.Assets.poster(conn, capability)
     catch
@@ -16,7 +16,7 @@ defmodule RuxiWeb.Router do
     end
   end
 
-  get "/media/:capability" do
+  get "/api/media/:capability" do
     try do
       Ruxi.Media.stream(conn, capability)
     catch
@@ -25,7 +25,7 @@ defmodule RuxiWeb.Router do
     end
   end
 
-  get "/internal/work/:id/source" do
+  get "/api/internal/work/:id/source" do
     try do
       attempt = List.first(get_req_header(conn, "x-work-attempt")) || ""
 
@@ -125,10 +125,10 @@ defmodule RuxiWeb.Router do
     path = conn.path_info
 
     case {method, path} do
-      {"POST", ["v1", "auth", "guest"]} ->
+      {"POST", ["api", "v1", "auth", "guest"]} ->
         Auth.guest(json!(p, ~w(device_id command_id)))
 
-      {"POST", ["v1", "auth", "recover"]} ->
+      {"POST", ["api", "v1", "auth", "recover"]} ->
         Ruxi.AuthGuard.run(
           "recover",
           :inet.ntoa(conn.remote_ip) |> to_string(),
@@ -138,14 +138,14 @@ defmodule RuxiWeb.Router do
           end
         )
 
-      {"POST", ["v1", "auth", "refresh"]} ->
+      {"POST", ["api", "v1", "auth", "refresh"]} ->
         Auth.refresh(json!(p, ~w(refresh_token device_id refresh_request_id)), "player")
 
-      {"POST", ["v1", "auth", "logout"]} ->
+      {"POST", ["api", "v1", "auth", "logout"]} ->
         json!(p, [])
         Auth.logout(ctx(conn))
 
-      {"POST", ["v1", "auth", "register"]} ->
+      {"POST", ["api", "v1", "auth", "register"]} ->
         Ruxi.AuthGuard.run(
           "account.register",
           to_string(:inet.ntoa(conn.remote_ip)),
@@ -156,7 +156,7 @@ defmodule RuxiWeb.Router do
           end
         )
 
-      {"POST", ["v1", "auth", "password-reset"]} ->
+      {"POST", ["api", "v1", "auth", "password-reset"]} ->
         Ruxi.AuthGuard.run(
           "password.reset",
           to_string(:inet.ntoa(conn.remote_ip)),
@@ -164,7 +164,7 @@ defmodule RuxiWeb.Router do
           fn -> Ruxi.Accounts.reset_password(p) end
         )
 
-      {"POST", ["v1", "auth", "login"]} ->
+      {"POST", ["api", "v1", "auth", "login"]} ->
         Ruxi.AuthGuard.run(
           "account.login",
           to_string(:inet.ntoa(conn.remote_ip)),
@@ -172,7 +172,7 @@ defmodule RuxiWeb.Router do
           fn -> Ruxi.Accounts.login(p) end
         )
 
-      {"POST", ["v1", "admin", "auth", "login"]} ->
+      {"POST", ["api", "v1", "admin", "auth", "login"]} ->
         Ruxi.AuthGuard.run(
           "admin.login",
           to_string(:inet.ntoa(conn.remote_ip)),
@@ -180,64 +180,64 @@ defmodule RuxiWeb.Router do
           fn -> Ruxi.Accounts.login(p, "admin") end
         )
 
-      {"GET", ["v1", "me"]} ->
+      {"GET", ["api", "v1", "me"]} ->
         Ruxi.Accounts.profile(ctx(conn))
 
-      {"PUT", ["v1", "me"]} ->
+      {"PUT", ["api", "v1", "me"]} ->
         Ruxi.Accounts.update(ctx(conn), p)
 
-      {"POST", ["v1", "me", "password"]} ->
+      {"POST", ["api", "v1", "me", "password"]} ->
         Ruxi.AuthGuard.run("password.change", to_string(:inet.ntoa(conn.remote_ip)), nil, fn ->
           Ruxi.Accounts.change_password(ctx(conn), p)
         end)
 
-      {"GET", ["v1", "me", "favorites"]} ->
+      {"GET", ["api", "v1", "me", "favorites"]} ->
         Ruxi.Catalog.favorites(ctx(conn))
 
-      {"POST", ["v1", "stories", id, "favorite"]} ->
+      {"POST", ["api", "v1", "stories", id, "favorite"]} ->
         Ruxi.Catalog.favorite(ctx(conn), id, p)
 
-      {"PUT", ["v1", "admin", "stories", id, "metadata"]} ->
+      {"PUT", ["api", "v1", "admin", "stories", id, "metadata"]} ->
         Ruxi.Catalog.metadata(ctx(conn, "admin"), id, p)
 
-      {"POST", ["v1", "me", "erase"]} ->
+      {"POST", ["api", "v1", "me", "erase"]} ->
         Ruxi.Privacy.erase(ctx(conn), p)
 
-      {"POST", ["v1", "analytics", "batches"]} ->
+      {"POST", ["api", "v1", "analytics", "batches"]} ->
         Ruxi.Telemetry.receive_batch(ctx(conn), p)
 
-      {"POST", ["v1", "rooms", rid, "chat", "reports"]} ->
+      {"POST", ["api", "v1", "rooms", rid, "chat", "reports"]} ->
         Ruxi.Chat.report(private(conn, rid), p)
 
-      {"GET", ["v1", "admin", "chat", "reports"]} ->
+      {"GET", ["api", "v1", "admin", "chat", "reports"]} ->
         Ruxi.Chat.queue(ctx(conn, "admin"))
 
-      {"POST", ["v1", "admin", "chat", "reports", id]} ->
+      {"POST", ["api", "v1", "admin", "chat", "reports", id]} ->
         Ruxi.Chat.review(ctx(conn, "admin"), id, p)
 
-      {"GET", ["v1", "stories"]} ->
+      {"GET", ["api", "v1", "stories"]} ->
         Ruxi.Catalog.list(fetch_query_params(conn).query_params)
 
-      {"GET", ["v1", "stories", id]} ->
+      {"GET", ["api", "v1", "stories", id]} ->
         Ruxi.Catalog.detail(id)
 
-      {"POST", ["v1", "rooms"]} ->
+      {"POST", ["api", "v1", "rooms"]} ->
         Auth.create_room(ctx(conn), json!(p, ~w(story_id command_id))) |> created()
 
-      {"POST", ["v1", "rooms", "join"]} ->
+      {"POST", ["api", "v1", "rooms", "join"]} ->
         c = ctx(conn)
 
         Ruxi.AuthGuard.run("invite", :inet.ntoa(conn.remote_ip) |> to_string(), c.user, fn ->
           Auth.join_room(c, json!(p, ~w(invite_code command_id)))
         end)
 
-      {"GET", ["v1", "rooms"]} ->
+      {"GET", ["api", "v1", "rooms"]} ->
         Ruxi.Catalog.rooms(ctx(conn))
 
-      {"POST", ["v1", "rooms", rid, "socket-ticket"]} ->
+      {"POST", ["api", "v1", "rooms", rid, "socket-ticket"]} ->
         Auth.ticket(ctx(conn), rid, json!(p, ~w(device_id takeover), ~w(command_id)))
 
-      {"POST", ["v1", "rooms", rid, "invites"]} ->
+      {"POST", ["api", "v1", "rooms", rid, "invites"]} ->
         c = private(conn, rid)
         json!(p, ~w(command_id))
 
@@ -254,10 +254,10 @@ defmodule RuxiWeb.Router do
           %{"invite_code" => n["invite"], "invite_expires_at" => Util.iso(n["invite_expires"])}
         end)
 
-      {"GET", ["v1", "rooms", rid, "snapshot"]} ->
+      {"GET", ["api", "v1", "rooms", rid, "snapshot"]} ->
         Store.snapshot(private(conn, rid))
 
-      {"GET", ["v1", "rooms", rid, "events"]} ->
+      {"GET", ["api", "v1", "rooms", rid, "events"]} ->
         q = fetch_query_params(conn).query_params
 
         Store.events(
@@ -268,7 +268,7 @@ defmodule RuxiWeb.Router do
           String.to_integer(q["limit"] || "200")
         )
 
-      {"GET", ["v1", "rooms", rid, "watermark"]} ->
+      {"GET", ["api", "v1", "rooms", rid, "watermark"]} ->
         c = private(conn, rid)
         s = Store.load!(rid)["state_json"]
         Store.auth!(s, c)
@@ -281,15 +281,15 @@ defmodule RuxiWeb.Router do
         ])
         |> Map.put("recovery_epoch", Util.epoch())
 
-      {"GET", ["v1", "rooms", rid, "commands", cid]} ->
+      {"GET", ["api", "v1", "rooms", rid, "commands", cid]} ->
         Store.receipt(private(conn, rid), cid)
 
-      {"POST", ["v1", "media", "access"]} ->
+      {"POST", ["api", "v1", "media", "access"]} ->
         json!(p, ~w(room_id asset_id device_id control_generation))
         origin = System.get_env("PUBLIC_API_URL", "#{conn.scheme}://#{conn.host}:#{conn.port}")
         Ruxi.Media.access(ctx(conn), p, origin)
 
-      {"POST", ["v1", "admin", "auth", "exchange"]} ->
+      {"POST", ["api", "v1", "admin", "auth", "exchange"]} ->
         Ruxi.AuthGuard.run(
           "admin.exchange",
           :inet.ntoa(conn.remote_ip) |> to_string(),
@@ -299,56 +299,56 @@ defmodule RuxiWeb.Router do
           end
         )
 
-      {"POST", ["v1", "admin", "auth", "refresh"]} ->
+      {"POST", ["api", "v1", "admin", "auth", "refresh"]} ->
         Auth.refresh(json!(p, ~w(refresh_token device_id refresh_request_id)), "admin")
 
-      {"POST", ["v1", "admin", "auth", "logout"]} ->
+      {"POST", ["api", "v1", "admin", "auth", "logout"]} ->
         Auth.logout(ctx(conn, "admin"))
 
-      {"GET", ["v1", "admin", "me"]} ->
+      {"GET", ["api", "v1", "admin", "me"]} ->
         c = ctx(conn, "admin")
         Map.put(Ruxi.Accounts.profile(c), "roles", Auth.roles(c.user))
 
-      {"GET", ["v1", "admin", "users"]} ->
+      {"GET", ["api", "v1", "admin", "users"]} ->
         Ruxi.Accounts.directory(ctx(conn, "admin"))
 
-      {"POST", ["v1", "admin", "users", id, "roles"]} ->
+      {"POST", ["api", "v1", "admin", "users", id, "roles"]} ->
         Ruxi.Accounts.assign_roles(ctx(conn, "admin"), id, p)
 
-      {"GET", ["v1", "admin", "operations"]} ->
+      {"GET", ["api", "v1", "admin", "operations"]} ->
         Ruxi.Operations.report(ctx(conn, "admin"))
 
-      {"GET", ["v1", "admin", "assets"]} ->
+      {"GET", ["api", "v1", "admin", "assets"]} ->
         Ruxi.Assets.list(ctx(conn, "admin"))
 
-      {"POST", ["v1", "admin", "assets", "upload-intents"]} ->
+      {"POST", ["api", "v1", "admin", "assets", "upload-intents"]} ->
         Ruxi.Assets.intent(ctx(conn, "admin"), p, origin(conn))
 
-      {"POST", ["v1", "admin", "assets", id, "captions"]} ->
+      {"POST", ["api", "v1", "admin", "assets", id, "captions"]} ->
         Ruxi.Assets.captions(ctx(conn, "admin"), id, p)
 
-      {"GET", ["v1", "admin", "assets", id, "preview"]} ->
+      {"GET", ["api", "v1", "admin", "assets", id, "preview"]} ->
         Ruxi.Assets.preview(ctx(conn, "admin"), id, origin(conn))
 
-      {"POST", ["v1", "admin", "assets", id, "complete"]} ->
+      {"POST", ["api", "v1", "admin", "assets", id, "complete"]} ->
         Ruxi.Assets.complete(ctx(conn, "admin"), id, p)
 
-      {"POST", ["v1", "admin", "versions", id, "ai"]} ->
+      {"POST", ["api", "v1", "admin", "versions", id, "ai"]} ->
         Ruxi.EditorAI.create(ctx(conn, "admin"), id, p)
 
-      {"GET", ["v1", "admin", "ai", "jobs", id]} ->
+      {"GET", ["api", "v1", "admin", "ai", "jobs", id]} ->
         Ruxi.EditorAI.get(ctx(conn, "admin"), id)
 
-      {"POST", ["v1", "admin", "ai", "jobs", id, "apply"]} ->
+      {"POST", ["api", "v1", "admin", "ai", "jobs", id, "apply"]} ->
         Ruxi.EditorAI.apply(ctx(conn, "admin"), id, p)
 
-      {"POST", ["internal", "work", id, "output-intents"]} ->
+      {"POST", ["api", "internal", "work", id, "output-intents"]} ->
         Ruxi.ProductionJobs.output_intents(id, p, worker(conn), origin(conn))
 
-      {_, ["v1", "admin" | rest]} ->
+      {_, ["api", "v1", "admin" | rest]} ->
         Ruxi.Admin.dispatch(method, rest, p, ctx(conn, "admin"))
 
-      {"POST", ["internal", "work" | rest]} ->
+      {"POST", ["api", "internal", "work" | rest]} ->
         Util.require!(
           get_req_header(conn, "x-work-protocol") == ["1"],
           "UNAUTHORIZED"

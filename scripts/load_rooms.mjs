@@ -13,8 +13,8 @@ try {
  for(let room=0;room<roomCount;room++){
   const group=[];
   for(let i=0;i<3;i++){const p=new Player();await p.guest();group.push(p);players.push(p);}
-  const made=await group[0].http('POST','/v1/rooms',{story_id:'11111111-1111-4111-8111-111111111111',command_id:crypto.randomUUID()});
-  for(const p of group.slice(1))await p.http('POST','/v1/rooms/join',{invite_code:made.invite_code,command_id:crypto.randomUUID()});
+  const made=await group[0].http('POST','/api/v1/rooms',{story_id:'11111111-1111-4111-8111-111111111111',command_id:crypto.randomUUID()});
+  for(const p of group.slice(1))await p.http('POST','/api/v1/rooms/join',{invite_code:made.invite_code,command_id:crypto.randomUUID()});
   for(const [i,p] of group.entries()){await p.connect(made.room_id);await p.command('select_role',{role_code:['investigator','passenger','conductor'][i]});await p.command('ready',{ready:true});}
   await group[0].command('start');
   // Stay in briefing so a 25-minute load does not depend on gameplay deadlines.
@@ -40,7 +40,7 @@ try {
     const task=(async()=>{const p=target;
       const drainUntil=Date.now()+15000;
       while(p.loadInflight>0){if(Date.now()>drainUntil)throw Error('reconnect drain timed out');await sleep(50);}
-      if(Date.now()-p.authAt>600000){const auth=await p.http('POST','/v1/auth/refresh',{refresh_token:p.refreshToken,device_id:p.device,refresh_request_id:crypto.randomUUID()});p.token=auth.access_token;p.refreshToken=auth.refresh_token;p.authAt=Date.now();}
+      if(Date.now()-p.authAt>600000){const auth=await p.http('POST','/api/v1/auth/refresh',{refresh_token:p.refreshToken,device_id:p.device,refresh_request_id:crypto.randomUUID()});p.token=auth.access_token;p.refreshToken=auth.refresh_token;p.authAt=Date.now();}
       await p.close();await sleep(100);await p.connect(p.room,true);reconnects++;
     })().catch(e=>{errors++;const key=e.code??e.message;errorCodes[key]=(errorCodes[key]??0)+1;}).finally(()=>{target.paused=false;reconnectTasks.delete(task);});
     reconnectTasks.add(task);

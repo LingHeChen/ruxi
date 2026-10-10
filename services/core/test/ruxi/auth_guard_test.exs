@@ -57,7 +57,7 @@ defmodule Ruxi.AuthGuardTest do
     }
 
     call = fn ->
-      conn = Plug.Test.conn(:post, "/v1/auth/recover")
+      conn = Plug.Test.conn(:post, "/api/v1/auth/recover")
       conn = %{conn | body_params: body}
       RuxiWeb.Router.call(conn, RuxiWeb.Router.init([]))
     end

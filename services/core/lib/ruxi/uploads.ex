@@ -4,7 +4,7 @@ defmodule Ruxi.Uploads do
   alias Ruxi.{DB, Util, Objects}
   def init(options), do: options
 
-  def call(%Plug.Conn{method: "PUT", path_info: ["uploads", token]} = conn, _) do
+  def call(%Plug.Conn{method: "PUT", path_info: ["api", "uploads", token]} = conn, _) do
     try do
       cap =
         case Phoenix.Token.verify(RuxiWeb.Endpoint, "upload", token, max_age: 900) do

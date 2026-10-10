@@ -4,7 +4,9 @@ defmodule Ruxi.Limiter do
   def init(s), do: {:ok, s}
 
   def check!(key, rate, burst) do
-    Ruxi.Util.require!(GenServer.call(__MODULE__, {key, rate, burst}), "RATE_LIMITED")
+    Ruxi.CloudDB.once({:limiter, key, rate, burst}, fn ->
+      Ruxi.Util.require!(GenServer.call(__MODULE__, {key, rate, burst}), "RATE_LIMITED")
+    end)
   end
 
   def handle_call({key, rate, burst}, _, s) do

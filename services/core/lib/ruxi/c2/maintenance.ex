@@ -1,6 +1,6 @@
 defmodule Ruxi.C2.Maintenance do
   use GenServer
-  alias Ruxi.{DB, Repo}
+  alias Ruxi.DB
   alias Ruxi.C2.Store
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
@@ -13,7 +13,7 @@ defmodule Ruxi.C2.Maintenance do
 
   def handle_info(:tick, state) do
     try do
-      Repo.checkout(fn ->
+      DB.checkout(fn ->
         # Migrations may run after the release boots. Retry without blocking C1.
         if DB.one("SELECT to_regclass('ruxi.c2_rooms') IS NOT NULL AS ready")["ready"] do
           for r <-
@@ -29,7 +29,7 @@ defmodule Ruxi.C2.Maintenance do
         end
       end)
     rescue
-      _ in [Postgrex.Error, DBConnection.ConnectionError, DBConnection.OwnershipError] -> :ok
+      _ in [Postgrex.Error, DBConnection.ConnectionError, DBConnection.OwnershipError, Ruxi.CloudSQL.Error] -> :ok
     catch
       {:error, _} -> :ok
     end

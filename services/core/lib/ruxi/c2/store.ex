@@ -2,10 +2,11 @@ defmodule Ruxi.C2.Store do
   alias Ruxi.{DB, Auth, Util}
   alias Ruxi.C2.Engine
 
+  @room_sql "SELECT r.*,l.content AS release_content,l.status AS release_status FROM c2_rooms r JOIN c2_releases l ON l.id=r.release_id WHERE r.id=$1"
   defp room!(id, lock \\ false) do
     room =
       DB.one(
-        "SELECT r.*,l.content AS release_content,l.status AS release_status FROM c2_rooms r JOIN c2_releases l ON l.id=r.release_id WHERE r.id=$1" <>
+        @room_sql <>
           if(lock, do: " FOR UPDATE OF r", else: ""),
         [DB.uuid(id)]
       )
@@ -138,7 +139,7 @@ defmodule Ruxi.C2.Store do
         DB.uuid(ctx.user),
         state,
         Util.hash(invite),
-        Auth.seal(%{"code" => invite}),
+        DB.bytes(Auth.seal(%{"code" => invite})),
         now + 86_400_000,
         now
       ]
@@ -255,14 +256,14 @@ defmodule Ruxi.C2.Store do
         end,
       "own_member_id" => DB.str(m["id"]),
       "story_title" => state["content"]["title"],
-      "roles" => Enum.map(state["content"]["roles"], &Map.take(&1, ~w(id label)))
+      "roles" => Enum.map(state["content"]["roles"], &Map.take(&1, ~w(id label description)))
     }
 
     if state["status"] in ~w(lobby abandoned) and is_nil(state["actors"]) do
       common
       |> Map.merge(%{
         "room" => Map.take(state, ~w(status phase)),
-        "roles" => Enum.map(state["content"]["roles"], &Map.take(&1, ~w(id label))),
+        "roles" => Enum.map(state["content"]["roles"], &Map.take(&1, ~w(id label description))),
         "invite_code" =>
           if(m["user_id"] == room["host_user_id"] and room["invite_cipher"],
             do: Auth.unseal(room["invite_cipher"])["code"],
@@ -361,6 +362,20 @@ defmodule Ruxi.C2.Store do
 
   def command(ctx, id, c) do
     DB.transaction(fn ->
+      Util.require!(is_map(c) and Ruxi.Contract.uuid?(c["command_id"]), "INVALID_ARGUMENT")
+
+      DB.prefetch([
+        {@room_sql <> " FOR UPDATE OF r", [DB.uuid(id)]},
+        {"SELECT s.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND NOT s.revoked AND s.expires_at>$2 AND u.status='active'",
+         [DB.uuid(ctx.session), DB.time()]},
+        {"SELECT * FROM c2_room_members WHERE room_id=$1 AND user_id=$2 FOR UPDATE",
+         [DB.uuid(id), DB.uuid(ctx.user)]},
+        {"SELECT * FROM c2_commands WHERE room_id=$1 AND member_id=(SELECT id FROM c2_room_members WHERE room_id=$1 AND user_id=$2) AND command_id=$3",
+         [DB.uuid(id), DB.uuid(ctx.user), DB.uuid(c["command_id"])]},
+        {"SELECT * FROM c2_voice_transitions WHERE room_id=$1 AND phase IN ('retiring','blocked','fenced')",
+         [DB.uuid(id)]}
+      ])
+
       r = room!(id, true)
       m = member!(ctx, id, true)
       now = DB.time()
@@ -383,11 +398,14 @@ defmodule Ruxi.C2.Store do
       )
 
       old =
-        DB.one("SELECT * FROM c2_commands WHERE room_id=$1 AND member_id=$2 AND command_id=$3", [
-          r["id"],
-          m["id"],
-          DB.uuid(c["command_id"])
-        ])
+        DB.one(
+          "SELECT * FROM c2_commands WHERE room_id=$1 AND member_id=(SELECT id FROM c2_room_members WHERE room_id=$1 AND user_id=$2) AND command_id=$3",
+          [
+            r["id"],
+            DB.uuid(ctx.user),
+            DB.uuid(c["command_id"])
+          ]
+        )
 
       if old do
         Util.require!(old["payload_hash"] == command_hash(c), "IDEMPOTENCY_CONFLICT")
@@ -411,7 +429,12 @@ defmodule Ruxi.C2.Store do
         Util.require!(Ruxi.SceneVoice.Coordinator.pending(r) == nil, "VOICE_TRANSITION_PENDING")
         saved = save(r, next, owner, now)
         result = if saved == :deferred, do: Map.put(result, "status", "queued"), else: result
-        seq = DB.one("SELECT view_seq FROM c2_room_members WHERE id=$1", [m["id"]])["view_seq"]
+
+        seq =
+          if is_map(saved),
+            do: Map.get(saved, DB.str(m["id"]), m["view_seq"]),
+            else: m["view_seq"]
+
         result = Map.merge(result, %{"command_id" => c["command_id"], "receipt_seq" => seq})
 
         DB.query(
@@ -494,7 +517,7 @@ defmodule Ruxi.C2.Store do
 
         DB.query(
           "UPDATE c2_rooms SET invite_hash=$2,invite_cipher=$3,invite_expires_at=$4 WHERE id=$1",
-          [r["id"], Util.hash(code), Auth.seal(%{"code" => code}), now + 86_400_000]
+          [r["id"], Util.hash(code), DB.bytes(Auth.seal(%{"code" => code})), now + 86_400_000]
         )
 
         {s, Map.put(result, "invite_code", code)}
@@ -656,7 +679,7 @@ defmodule Ruxi.C2.Store do
 
   defp save_ready(r, s, epoch, now) do
     updated =
-      DB.query(
+      DB.checked_query(
         "UPDATE c2_rooms SET state=$2,status=$3,revision=revision+1,updated_at=$4 WHERE id=$1 AND owner_epoch=$5 AND lease_until>$4",
         [r["id"], s, s["status"], now, epoch]
       )
@@ -786,48 +809,75 @@ defmodule Ruxi.C2.Store do
           ])
     end
 
-    emit_all(rid, r["state"], s, now)
+    emit_all(rid, r["state"], s, now, r, rows)
   end
 
-  defp emit_all(id, old, new, now) do
-    r = room!(id)
-    rows = members(id)
+  defp emit_all(id, old, new, now, room \\ nil, current_members \\ nil) do
+    r = room || room!(id)
+    rows = current_members || members(id)
 
-    for m <- rows do
-      before = project(old, m, rows, r, now)
-      after_view = project(new, m, rows, r, now)
+    changed =
+      Enum.flat_map(rows, fn m ->
+        before = project(old, m, rows, r, now)
+        after_view = project(new, m, rows, r, now)
 
-      if before != after_view or m["view_seq"] == 0 or old["status"] == "lobby" do
-        seq =
-          DB.one(
-            "UPDATE c2_room_members SET view_seq=view_seq+1 WHERE id=$1 RETURNING view_seq",
-            [m["id"]]
-          )["view_seq"]
+        if before != after_view or m["view_seq"] == 0 or old["status"] == "lobby",
+          do: [{m, after_view}],
+          else: []
+      end)
 
-        e = %{
-          "stream_id" => DB.str(m["stream_id"]),
-          "view_seq" => seq,
-          "base_view_seq" => seq - 1,
-          "blocks" => after_view,
-          "narrative_cues" => after_view["narrative_cues"] || []
-        }
+    ids = Enum.map(changed, fn {m, _} -> m["id"] end)
 
-        DB.query("INSERT INTO c2_view_events VALUES($1,$2,$3,$4,$5,$6,$7)", [
-          r["id"],
-          m["id"],
-          m["stream_id"],
-          seq,
-          seq - 1,
-          e,
-          now
-        ])
+    sequences =
+      if changed == [] do
+        %{}
+      else
+        DB.query("UPDATE c2_room_members SET view_seq=view_seq+1 WHERE id=ANY($1::uuid[])", [ids])
 
-        DB.query(
-          "INSERT INTO c2_outbox(room_id,member_id,stream_id,view_seq,created_at) VALUES($1,$2,$3,$4,$5)",
-          [r["id"], m["id"], m["stream_id"], seq, now]
-        )
+        # Member rows were observed under the room lock. HTTP commit validates
+        # that observation before this deferred increment, so the next sequence
+        # is known without an extra gateway round trip.
+        Map.new(changed, fn {m, _} -> {DB.str(m["id"]), m["view_seq"] + 1} end)
+      end
+
+    for {m, after_view} <- changed do
+      seq = Map.fetch!(sequences, DB.str(m["id"]))
+
+      e = %{
+        "stream_id" => DB.str(m["stream_id"]),
+        "view_seq" => seq,
+        "base_view_seq" => seq - 1,
+        "blocks" => after_view,
+        "narrative_cues" => after_view["narrative_cues"] || []
+      }
+
+      DB.query("INSERT INTO c2_view_events VALUES($1,$2,$3,$4,$5,$6,$7)", [
+        r["id"],
+        m["id"],
+        m["stream_id"],
+        seq,
+        seq - 1,
+        e,
+        now
+      ])
+
+      DB.query(
+        "INSERT INTO c2_outbox(room_id,member_id,stream_id,view_seq,created_at) VALUES($1,$2,$3,$4,$5)",
+        [r["id"], m["id"], m["stream_id"], seq, now]
+      )
+
+      # Deliver immediately after commit. The durable outbox remains the retry
+      # path if the process exits between commit and broadcast; clients dedupe.
+      # Native mode currently drains the outbox after its transaction; its
+      # DB.after_commit helper does not defer callbacks, so never publish early.
+      if DB.cloud?() do
+        DB.after_commit(fn ->
+          DB.broadcast("room:#{DB.str(r["id"])}:member:#{DB.str(m["id"])}", "room.view", e)
+        end)
       end
     end
+
+    sequences
   end
 
   def command_result(ctx, id, command_id) do
@@ -877,7 +927,15 @@ defmodule Ruxi.C2.Store do
     DB.transaction(fn ->
       r = room!(id, true)
       now = DB.time()
-      epoch = fence!(r, now)
+      # A scan that changes no gameplay must not rewrite the room every second.
+      # HTTP transactions validate observed rows; needless lease writes would
+      # continuously conflict with a player's command.
+      epoch =
+        if r["owner_id"] == Application.get_env(:ruxi, :core_instance, "local-core") and
+             (r["lease_until"] || 0) > now + 10_000,
+           do: r["owner_epoch"],
+           else: fence!(r, now)
+
       s = r["state"]
 
       prepared = Ruxi.SceneVoice.Coordinator.prepared_next(r, epoch, now)
@@ -1036,20 +1094,24 @@ defmodule Ruxi.C2.Store do
   end
 
   def drain do
-    DB.transaction(fn ->
-      rows =
-        DB.rows(
-          "SELECT o.id,o.room_id,o.member_id,v.view FROM c2_outbox o JOIN c2_view_events v USING(room_id,member_id,stream_id,view_seq) WHERE o.delivered_at IS NULL ORDER BY o.id LIMIT 128 FOR UPDATE OF o SKIP LOCKED"
-        )
+    # Publish before acknowledging delivery. Concurrent drains may duplicate an
+    # event; a failed publish must leave it available for a later retry.
+    rows =
+      DB.rows(
+        "SELECT o.id,o.room_id,o.member_id,v.view FROM c2_outbox o JOIN c2_view_events v USING(room_id,member_id,stream_id,view_seq) WHERE o.delivered_at IS NULL ORDER BY o.id LIMIT 128"
+      )
 
-      for row <- rows do
-        topic = "room:#{DB.str(row["room_id"])}:member:#{DB.str(row["member_id"])}"
-        RuxiWeb.Endpoint.broadcast(topic, "room.view", row["view"])
-        DB.query("UPDATE c2_outbox SET delivered_at=$2 WHERE id=$1", [row["id"], DB.time()])
-      end
+    for row <- rows do
+      topic = "room:#{DB.str(row["room_id"])}:member:#{DB.str(row["member_id"])}"
+      :ok = Ruxi.DB.broadcast(topic, "room.view", row["view"])
 
-      length(rows)
-    end)
+      DB.query("UPDATE c2_outbox SET delivered_at=$2 WHERE id=$1 AND delivered_at IS NULL", [
+        row["id"],
+        DB.time()
+      ])
+    end
+
+    {:ok, length(rows)}
   end
 
   def favorites(ctx) do

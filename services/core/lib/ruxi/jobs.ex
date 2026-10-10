@@ -59,7 +59,7 @@ defmodule Ruxi.Jobs do
 
           DB.query(
             "INSERT INTO work_claims(worker_id,claim_id,reply_ciphertext,expires_at) VALUES($1,$2,$3,$4) ON CONFLICT(worker_id,claim_id) DO UPDATE SET reply_ciphertext=$3,expires_at=$4",
-            [p["worker_id"], DB.uuid(p["claim_id"]), Auth.seal(reply), now + 60_000]
+            [p["worker_id"], DB.uuid(p["claim_id"]), DB.bytes(Auth.seal(reply)), now + 60_000]
           )
 
           reply

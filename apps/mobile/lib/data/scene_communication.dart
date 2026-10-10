@@ -15,13 +15,16 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
     : rtc = rtc ?? createRtcClient() {
     WidgetsBinding.instance.addObserver(this);
     client.addListener(worldChanged);
-    subscription = client.communicationEvents.stream.listen(
-      (_) => unawaited(refresh()),
-    );
-    timer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => unawaited(refresh()),
-    );
+    subscription = client.communicationEvents.stream.listen((event) {
+      if (event['type'] == 'voice.state' && event['state'] is Map) {
+        unawaited(applyVoice(Map<String, dynamic>.from(event['state'])));
+      } else {
+        unawaited(refresh(chat: true, voiceState: false));
+      }
+    });
+    timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (foreground && !_refreshing) unawaited(refresh());
+    });
     unawaited(loadPreferences());
   }
   final C2Client client;
@@ -39,7 +42,8 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
       foreground = true,
       _disposed = false,
       _refreshing = false,
-      _refreshAgain = false;
+      _refreshChatAgain = false,
+      _refreshVoiceAgain = false;
   int localGeneration = 0, unread = 0;
   int _micAttempt = 0;
   bool sceneConsent = false;
@@ -104,61 +108,69 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool chat = true, bool voiceState = true}) async {
     if (_disposed || room == null) return;
     if (_refreshing) {
-      _refreshAgain = true;
+      _refreshChatAgain |= chat;
+      _refreshVoiceAgain |= voiceState;
       return;
     }
     _refreshing = true;
     try {
-      final history = await api('GET', '/chat');
-      if (_disposed) return;
-      final next = (history['messages'] as List).cast<Json>();
-      final old = messages.map((m) => m['id']).toSet();
-      unread += next
-          .where(
-            (m) =>
-                !old.contains(m['id']) &&
-                m['sender_id'] != client.view?['own_member_id'],
-          )
-          .length;
-      messages = next;
-      scopes = (history['scopes'] as List).cast<String>();
-      final nextVoice = await api('GET', '/voice');
-      if (_disposed) return;
-      if (voice == null || nextVoice['voice_seq'] >= voice!['voice_seq']) {
-        voice = nextVoice;
+      if (chat) {
+        final history = await api('GET', '/chat');
+        if (_disposed) return;
+        final next = (history['messages'] as List).cast<Json>();
+        final old = messages.map((m) => m['id']).toSet();
+        unread += next
+            .where(
+              (m) =>
+                  !old.contains(m['id']) &&
+                  m['sender_id'] != client.view?['own_member_id'],
+            )
+            .length;
+        messages = next;
+        scopes = (history['scopes'] as List).cast<String>();
       }
-      // The authenticated server retains the room participation choice across
-      // reloads; no token or story state is restored from browser storage.
-      if (voice!['participation'] == 'on' && voice!['reason'] != 'LOBBY') {
-        sceneConsent = true;
-      }
-      if (grant != null &&
-          (voice!['generation'] != grant!['generation'] ||
-              !['connecting', 'connected'].contains(voice!['status']))) {
-        await stop();
-      }
-      if (voice!['participation'] == 'on' &&
-          ['connecting', 'connected'].contains(voice!['status']) &&
-          grant == null &&
-          !joining &&
-          foreground &&
-          sceneConsent &&
-          client.live) {
-        unawaited(join());
-      }
+      if (voiceState) await applyVoice(await api('GET', '/voice'));
       changed();
     } catch (_) {
       if (grant != null) await stop();
     } finally {
       _refreshing = false;
-      if (_refreshAgain && !_disposed) {
-        _refreshAgain = false;
-        unawaited(refresh());
+      if ((_refreshChatAgain || _refreshVoiceAgain) && !_disposed) {
+        final chatAgain = _refreshChatAgain;
+        final voiceAgain = _refreshVoiceAgain;
+        _refreshChatAgain = _refreshVoiceAgain = false;
+        unawaited(refresh(chat: chatAgain, voiceState: voiceAgain));
       }
     }
+  }
+
+  Future<void> applyVoice(Json nextVoice) async {
+    if (_disposed) return;
+    if (voice != null && nextVoice['voice_seq'] < voice!['voice_seq']) return;
+    voice = nextVoice;
+    // The authenticated server retains the room participation choice across
+    // reloads; no token or story state is restored from browser storage.
+    if (voice!['participation'] == 'on' && voice!['reason'] != 'LOBBY') {
+      sceneConsent = true;
+    }
+    if (grant != null &&
+        (voice!['generation'] != grant!['generation'] ||
+            !['connecting', 'connected'].contains(voice!['status']))) {
+      await stop();
+    }
+    if (voice!['participation'] == 'on' &&
+        ['connecting', 'connected'].contains(voice!['status']) &&
+        grant == null &&
+        !joining &&
+        foreground &&
+        sceneConsent &&
+        client.live) {
+      unawaited(join());
+    }
+    changed();
   }
 
   Future<void> send(String scope, String text) async {

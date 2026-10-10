@@ -1,6 +1,6 @@
 defmodule Ruxi.SceneVoice.Maintenance do
   use GenServer
-  alias Ruxi.{DB, Repo}
+  alias Ruxi.DB
   alias Ruxi.SceneVoice.Coordinator
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
 
@@ -31,7 +31,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
   def handle_info(:wake, running) do
     next =
       try do
-        Repo.checkout(fn ->
+        DB.checkout(fn ->
           if DB.one("SELECT to_regclass('ruxi.c2_voice_transitions') IS NOT NULL AS ready")[
                "ready"
              ] do
@@ -52,7 +52,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
               task =
                 Task.Supervisor.async_nolink(Ruxi.VoiceTasks, fn ->
                   try do
-                    Repo.checkout(fn ->
+                    DB.checkout(fn ->
                       Coordinator.recover(DB.str(room))
                       Ruxi.C2.Store.tick(DB.str(room))
                     end)
@@ -68,7 +68,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
           end
         end)
       rescue
-        _ in [Postgrex.Error, DBConnection.ConnectionError, DBConnection.OwnershipError] ->
+        _ in [Postgrex.Error, DBConnection.ConnectionError, DBConnection.OwnershipError, Ruxi.CloudSQL.Error] ->
           running
       end
 

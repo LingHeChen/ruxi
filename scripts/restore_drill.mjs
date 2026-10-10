@@ -9,11 +9,11 @@ const core=new URL('../services/core/',import.meta.url);
 const backup=new URL('../.local/backups/restore-drill.dump',import.meta.url).pathname;
 const ledger=new URL('../.local/erasure-ledger.jsonl',import.meta.url).pathname;
 mkdirSync(new URL('../.local/backups/',import.meta.url),{recursive:true});
-const guest=await (await fetch(base+'/v1/auth/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:randomUUID(),command_id:randomUUID()})})).json();assert.ok(guest.data);
+const guest=await (await fetch(base+'/api/v1/auth/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:randomUUID(),command_id:randomUUID()})})).json();assert.ok(guest.data);
 const started=Date.now();
 execFileSync(pg+'pg_dump',['-h','localhost','-p','55432','-d','ruxi_dev','-n','ruxi','-Fc','-f',backup]);chmodSync(backup,0o600);
 const snapshotAt=Date.now();
-const erase=await fetch(base+'/v1/me/erase',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+guest.data.access_token},body:JSON.stringify({command_id:randomUUID(),confirmation:'ERASE_ACCOUNT'})});assert.ok(erase.ok);
+const erase=await fetch(base+'/api/v1/me/erase',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+guest.data.access_token},body:JSON.stringify({command_id:randomUUID(),confirmation:'ERASE_ACCOUNT'})});assert.ok(erase.ok);
 try {
  execFileSync(pg+'createdb',['-h','localhost','-p','55432',db]);
  execFileSync(pg+'pg_restore',['-h','localhost','-p','55432','-d',db,'--no-owner','--no-privileges',backup]);

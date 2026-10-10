@@ -50,7 +50,7 @@ defmodule Ruxi.Maintenance do
         end
 
         changed =
-          DB.query(
+          DB.checked_query(
             "UPDATE work_items SET status='failed',lease_hash=NULL,lease_until=NULL WHERE id=$1 AND status='leased' AND lease_until <= $2 AND attempt >= 3",
             [row["id"], now]
           )
@@ -87,13 +87,19 @@ defmodule Ruxi.Maintenance do
             []
           end
 
-        for attempt <- 1..max(1, j["attempt"]),
-            kind <- ~w(video.mp4 poster.jpg subtitle.vtt proposal.json) do
-          key = "ruxi/jobs/#{DB.str(j["id"])}/#{attempt}/#{kind}"
-          unless key in keep, do: File.rm(Ruxi.Objects.path(key))
-        end
+        keys =
+          for attempt <- 1..max(1, j["attempt"]),
+              kind <- ~w(video.mp4 poster.jpg subtitle.vtt proposal.json),
+              key = "ruxi/jobs/#{DB.str(j["id"])}/#{attempt}/#{kind}",
+              key not in keep,
+              do: key
 
-        DB.query("UPDATE work_items SET objects_purged_at=$2 WHERE id=$1", [j["id"], now])
+        # Preview/retry must never delete external objects. Mark completion only
+        # after deletion succeeds, leaving failed cleanup eligible for retry.
+        DB.after_commit(fn ->
+          Enum.each(keys, &Ruxi.Objects.delete!/1)
+          DB.query("UPDATE work_items SET objects_purged_at=$2 WHERE id=$1", [j["id"], now])
+        end)
       end
 
       DB.query("DELETE FROM room_summaries WHERE terminal_at <= $1", [now - 180 * 86_400_000])

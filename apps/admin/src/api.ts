@@ -80,7 +80,7 @@ export class ApiClient {
     retried = false,
     extraHeaders: Record<string, string> = {},
   ): Promise<T> {
-    const response = await fetch(this.base + path, {
+    const response = await fetch(this.base + (path.startsWith("/api/") ? path : `/api${path}`), {
       method,
       headers: {
         "Content-Type": "application/json",

@@ -35,7 +35,7 @@ def digest(file: Path) -> str:
 
 async def upload_outputs(client, job: dict, files: dict[str, Path]) -> list[dict]:
     descriptors = [{'kind': kind, 'size_bytes': file.stat().st_size, 'sha256': digest(file)} for kind, file in files.items()]
-    response = await client.post(f'/internal/work/{job["job_id"]}/output-intents', json={
+    response = await client.post(f'/api/internal/work/{job["job_id"]}/output-intents', json={
         'attempt': job['attempt'], 'lease_token': job['lease_token'], 'outputs': descriptors})
     response.raise_for_status()
     intents = response.json()['data']['items']
@@ -43,7 +43,7 @@ async def upload_outputs(client, job: dict, files: dict[str, Path]) -> list[dict
     for intent in intents:
         target = urlsplit(intent['upload_url'])
         origin = urlsplit(str(client.base_url))
-        if (target.scheme, target.netloc) != (origin.scheme, origin.netloc) or not target.path.startswith('/uploads/') or target.query:
+        if (target.scheme, target.netloc) != (origin.scheme, origin.netloc) or not target.path.startswith('/api/uploads/') or target.query:
             raise ValueError('INVALID_OUTPUT_ORIGIN')
         file = files[intent['kind']]
         async def chunks():
@@ -67,7 +67,7 @@ async def transcode(client, job: dict) -> dict:
         root = Path(directory)
         source = root / 'source.bin'
         total = 0
-        async with client.stream('GET', f'/internal/work/{job["job_id"]}/source', headers={
+        async with client.stream('GET', f'/api/internal/work/{job["job_id"]}/source', headers={
             'X-Work-Attempt': str(job['attempt']), 'X-Lease-Token': job['lease_token']}, timeout=600) as r:
             r.raise_for_status()
             with source.open('xb') as stream:

@@ -70,7 +70,9 @@ defmodule Ruxi.ElectorateTest do
       Ecto.Adapters.SQL.query!(
         Ruxi.Repo,
         "DELETE FROM vote_electorate WHERE room_id=$1 AND round_id=$2",
-        [rid, round], mode: :savepoint)
+        [Ecto.UUID.dump!(DB.str(rid)), Ecto.UUID.dump!(DB.str(round))],
+        mode: :savepoint
+      )
     end
 
     DB.query("DELETE FROM votes WHERE room_id=$1", [rid])

@@ -259,7 +259,7 @@ defmodule Ruxi.Accounts do
               "UPDATE sessions SET revoked=true WHERE user_id=$1 AND audience='admin' RETURNING id",
               [user["id"]]
             ),
-          do: RuxiWeb.Endpoint.broadcast("session:#{DB.str(session["id"])}", "disconnect", %{})
+          do: Ruxi.DB.broadcast("session:#{DB.str(session["id"])}", "disconnect", %{})
 
       DB.query(
         "INSERT INTO audit_log(id,user_id,operation,target_id,occurred_at) VALUES($1,$2,'admin.roles',$3,$4)",

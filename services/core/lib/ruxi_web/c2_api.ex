@@ -4,6 +4,10 @@ defmodule RuxiWeb.C2API do
   alias Ruxi.C2.{Studio, Store}
 
   def call(conn) do
+    Ruxi.CloudSQL.reset_metrics()
+    started = System.monotonic_time(:microsecond)
+    conn = put_private(conn, :ruxi_started, started)
+
     try do
       conn = fetch_query_params(conn)
       data = unwrap(dispatch(conn, conn.method, Enum.drop(conn.path_info, 2)))
@@ -22,7 +26,13 @@ defmodule RuxiWeb.C2API do
         "meta" => %{"trace_id" => Util.id(), "server_time" => DB.time(), "protocol_version" => 2}
       })
     rescue
-      _ in [ArgumentError, Ecto.CastError] -> failure(conn, "INVALID_ARGUMENT")
+      e in Ruxi.CloudSQL.Error ->
+        require Logger
+        Logger.warning("cloud SQL request failed: #{e.code || "UNKNOWN"}")
+        failure(conn, "SERVICE_UNAVAILABLE")
+
+      _ in [ArgumentError, Ecto.CastError] ->
+        failure(conn, "INVALID_ARGUMENT")
     catch
       {:error, code} -> failure(conn, code)
     end
@@ -203,6 +213,7 @@ defmodule RuxiWeb.C2API do
         "NOT_ALLOWED" -> 403
         "IDEMPOTENCY_CONFLICT" -> 409
         "OWNER_UNAVAILABLE" -> 503
+        "SERVICE_UNAVAILABLE" -> 503
         "VOICE_UNAVAILABLE" -> 503
         "TARGET_UNAVAILABLE" -> 404
         "STALE_REVISION" -> 409
@@ -219,7 +230,7 @@ defmodule RuxiWeb.C2API do
       "error" => %{
         "code" => code,
         "safe_message" => "操作未完成，请检查当前状态后重试",
-        "retryable" => code == "OWNER_UNAVAILABLE",
+        "retryable" => code in ["OWNER_UNAVAILABLE", "SERVICE_UNAVAILABLE"],
         "trace_id" => Util.id()
       },
       "meta" => %{"trace_id" => Util.id(), "protocol_version" => 2}
@@ -228,8 +239,24 @@ defmodule RuxiWeb.C2API do
 
   defp json(c, status, data),
     do:
-      c
+      timing(c)
       |> put_resp_content_type("application/json")
       |> put_resp_header("cache-control", "no-store")
       |> send_resp(status, Jason.encode!(data))
+
+  defp timing(conn) do
+    metrics = Ruxi.CloudSQL.metrics()
+    elapsed = (System.monotonic_time(:microsecond) - conn.private[:ruxi_started]) / 1000
+    db = metrics.microseconds / 1000
+
+    if metrics.calls > 0 do
+      put_resp_header(
+        conn,
+        "server-timing",
+        "app;dur=#{Float.round(elapsed, 1)}, db;dur=#{Float.round(db, 1)}, db_calls;desc=\"#{metrics.calls}\""
+      )
+    else
+      conn
+    end
+  end
 end

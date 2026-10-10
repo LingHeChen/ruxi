@@ -42,7 +42,7 @@ defmodule Ruxi.Assets do
       %{
         "asset_id" => id,
         "upload_url" =>
-          origin <> "/uploads/" <> Phoenix.Token.sign(RuxiWeb.Endpoint, "upload", cap),
+          origin <> "/api/uploads/" <> Phoenix.Token.sign(RuxiWeb.Endpoint, "upload", cap),
         "headers" => %{"Content-Type" => p["mime_type"]},
         "expires_at" => Util.iso(now + 900_000)
       }
@@ -182,7 +182,7 @@ defmodule Ruxi.Assets do
       data = String.trim(text) <> "\n"
       Objects.put!(key, data, Util.hash(data))
       source = "ruxi/assets/#{next}/source.bin"
-      File.ln!(Objects.path(asset["object_key"]), Objects.path(source))
+      Objects.copy!(asset["object_key"], source)
 
       outputs =
         Map.put(asset["outputs"], "subtitle", %{
@@ -244,7 +244,7 @@ defmodule Ruxi.Assets do
         "sha256" => row["outputs"]["poster"]["sha256"]
       })
 
-    %{"poster_url" => origin <> "/asset-preview/" <> token, "expires_in" => 60}
+    %{"poster_url" => origin <> "/api/asset-preview/" <> token, "expires_in" => 60}
   end
 
   def poster(conn, token) do

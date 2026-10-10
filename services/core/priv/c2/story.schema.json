@@ -73,6 +73,37 @@
             "items": {
               "type": "string"
             }
+          },
+          "description": {
+            "type": "string"
+          },
+          "opening_media": {
+            "type": "string"
+          },
+          "epilogues": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "epilogue_overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "$ref": "#/$defs/condition"
+                },
+                "media": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "media"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [

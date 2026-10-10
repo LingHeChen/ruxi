@@ -253,6 +253,7 @@ class RoomClient extends ChangeNotifier {
     bool retried = false,
     Map<String, String> extraHeaders = const {},
   ]) async {
+    final apiPath = path.startsWith('/api/') ? path : '/api$path';
     final headers = {
       'Content-Type': 'application/json',
       ...extraHeaders,
@@ -262,15 +263,15 @@ class RoomClient extends ChangeNotifier {
     };
     final response =
         await (method == 'GET'
-                ? http.get(Uri.parse('$base$path'), headers: headers)
+                ? http.get(Uri.parse('$base$apiPath'), headers: headers)
                 : method == 'PUT'
                 ? http.put(
-                    Uri.parse('$base$path'),
+                    Uri.parse('$base$apiPath'),
                     headers: headers,
                     body: jsonEncode(body),
                   )
                 : http.post(
-                    Uri.parse('$base$path'),
+                    Uri.parse('$base$apiPath'),
                     headers: headers,
                     body: jsonEncode(body ?? {}),
                   ))
@@ -672,7 +673,7 @@ class RoomClient extends ChangeNotifier {
       memberId = ticket['membership_id'];
       final uri = Uri.parse(base).replace(
         scheme: base.startsWith('https') ? 'wss' : 'ws',
-        path: '/socket/websocket',
+        path: '/api/socket/websocket',
         queryParameters: {'vsn': '2.0.0', 'ticket': ticket['socket_ticket']},
       );
       _socket = WebSocketChannel.connect(uri);

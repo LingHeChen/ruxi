@@ -15,6 +15,7 @@ class NovelMessage {
     this.subtitle,
     this.acknowledge = const [],
     this.round,
+    this.character = false,
     this.clue = false,
     this.confirm = false,
     this.ending = false,
@@ -27,7 +28,7 @@ class NovelMessage {
   final List<Json> choices;
   final List<String> acknowledge;
   final int? round;
-  final bool clue, confirm, ending;
+  final bool clue, confirm, ending, character;
 }
 
 Future<bool?> showNovelMessage(
@@ -201,10 +202,192 @@ class _NovelReaderState extends State<NovelReader> {
     }
   }
 
+  Widget characterDialog(BuildContext context) {
+    final m = widget.message;
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: 1000,
+            height: MediaQuery.sizeOf(context).height * .86,
+            child: Material(
+              color: Colors.transparent,
+              child: NovelPanel(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '✧ ${m.title}',
+                        style: const TextStyle(fontSize: 24, color: novelGold),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, box) {
+                            final narrow = box.maxWidth < 620;
+                            final portrait = ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                color: const Color(0xff0c151b),
+                                child: m.illustration == null
+                                    ? const Icon(Icons.person_outline)
+                                    : Image.asset(
+                                        m.illustration!,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, _, _) =>
+                                            const Icon(Icons.person_outline),
+                                      ),
+                              ),
+                            );
+                            final content = Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    key: const ValueKey(
+                                      'npc-description-scroll',
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: reveal,
+                                      child: StoryText(
+                                        m.text,
+                                        visibleCharacters: _count,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          height: 1.9,
+                                          color: Color(0xffeee7d8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (_error != null)
+                                  Text(
+                                    _error!,
+                                    style: const TextStyle(
+                                      color: Color(0xffedb4a0),
+                                    ),
+                                  ),
+                                if (complete && m.choices.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    '此刻，你会怎么做？',
+                                    style: TextStyle(color: novelGold),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxHeight:
+                                          box.maxHeight * (narrow ? .3 : .44),
+                                    ),
+                                    child: SingleChildScrollView(
+                                      key: const ValueKey('npc-choices-scroll'),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          for (final choice in m.choices)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 8,
+                                              ),
+                                              child: OutlinedButton(
+                                                onPressed:
+                                                    _submitting ||
+                                                        widget.onChoice ==
+                                                            null ||
+                                                        !(widget.choiceAvailable
+                                                                ?.call(
+                                                                  choice,
+                                                                ) ??
+                                                            choice['allowed_now'] ==
+                                                                true)
+                                                    ? null
+                                                    : () => unawaited(
+                                                        select(choice),
+                                                      ),
+                                                style: OutlinedButton.styleFrom(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  padding: const EdgeInsets.all(
+                                                    14,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '◇ ${choice['label']} · ${choice['cost']} 余力',
+                                                  style: const TextStyle(
+                                                    color: novelGold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                if (_submitting)
+                                  const LinearProgressIndicator(minHeight: 2),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: FilledButton(
+                                    onPressed: _submitting
+                                        ? null
+                                        : () => !complete
+                                              ? reveal()
+                                              : Navigator.pop(context, true),
+                                    child: Text(!complete ? '显示全文' : '稍后决定'),
+                                  ),
+                                ),
+                              ],
+                            );
+                            if (narrow) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    height: math.min(140, box.maxHeight * .23),
+                                    child: portrait,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(child: content),
+                                ],
+                              );
+                            }
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  width: box.maxWidth * .36,
+                                  child: portrait,
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(child: content),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final m = widget.message;
     final narrow = MediaQuery.sizeOf(context).width < 600;
+    if (m.character) return characterDialog(context);
     return SafeArea(
       child: Center(
         child: Padding(

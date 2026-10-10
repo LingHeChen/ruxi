@@ -4,6 +4,8 @@
 **/.dart_tool
 **/.venv
 **/__pycache__
+**/node_modules
+**/dist
 .git
 .local
 .env

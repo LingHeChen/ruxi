@@ -9,7 +9,7 @@ async function api(method,path,body={},token='',headers={},expected=200) {
  const value=await r.json();assert.equal(r.status,expected,`${path}: ${value.error?.code ?? r.status}`);return expected===200?value.data:value;
 }
 const credential=JSON.parse(await readFile(new URL('../.local/admin-review.json',import.meta.url),'utf8'));
-const admin=await api('POST','/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
+const admin=await api('POST','/api/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
 const studio=(method,path,body={},rev)=>api(method,'/api/v2'+path,body,admin.access_token,{'Idempotency-Key':uuid(),...(rev?{'If-Match':String(rev)}:{})});
 const story=JSON.parse(await readFile(new URL('../content/c3/rain_archive.json',import.meta.url),'utf8'));
 let project=(await studio('GET','/projects')).items.find(p=>p.title===story.title);
@@ -19,7 +19,7 @@ if(!isDeepStrictEqual(current.content,story))current=await studio('PUT',`/projec
 assert((await studio('POST',`/projects/${project.id}/validate`)).valid);
 await studio('POST',`/projects/${project.id}/reviews`,{content_hash:current.hash,decision:'approve',reason:'C3 密码、判定、封返程和私有投影联调夹具'});
 const release=await studio('POST',`/projects/${project.id}/releases`,{content_hash:current.hash});
-const players=await Promise.all(caps.map(()=>api('POST','/v1/auth/guest',{device_id:uuid(),command_id:uuid()})));
+const players=await Promise.all(caps.map(()=>api('POST','/api/v1/auth/guest',{device_id:uuid(),command_id:uuid()})));
 const old=await api('POST','/api/v2/rooms',{release_id:release.release_id},players[0].access_token,{'Idempotency-Key':uuid()},400);
 assert.equal(old.error.code,'UNSUPPORTED_CAPABILITY');
 const room=await api('POST','/api/v2/rooms',{release_id:release.release_id,capabilities:caps},players[0].access_token,{'Idempotency-Key':uuid()});

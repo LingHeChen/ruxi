@@ -7,7 +7,7 @@ async function api(method,path,body={},token='',headers={}) {
  const value=await r.json();assert(r.ok,`${path}: ${value.error?.code ?? r.status}`);return value.data;
 }
 const credential=JSON.parse(await readFile(new URL('../.local/admin-review.json',import.meta.url),'utf8'));
-const admin=await api('POST','/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
+const admin=await api('POST','/api/v1/admin/auth/login',{username:credential.username,password:credential.password,device_id:uuid(),login_request_id:uuid()});
 const studio=(method,path,body={},rev)=>api(method,'/api/v2'+path,body,admin.access_token,{'Idempotency-Key':uuid(),...(rev?{'If-Match':String(rev)}:{})});
 const story=JSON.parse(await readFile(new URL('../content/c2/restaurant.json',import.meta.url),'utf8'));
 const project=await studio('POST','/projects',{title:`C2 验收 · ${new Date().toISOString()}`,seat_count:3});
@@ -15,7 +15,7 @@ const draft=await studio('PUT',`/projects/${project.id}/draft`,{content:story},1
 await studio('POST',`/projects/${project.id}/reviews`,{content_hash:draft.hash,decision:'approve',reason:'自动化预设路径与三人 Socket 验证'});
 const release=await studio('POST',`/projects/${project.id}/releases`,{content_hash:draft.hash});
 const players=[];
-for(let i=0;i<3;i++)players.push(await api('POST','/v1/auth/guest',{device_id:uuid(),command_id:uuid()}));
+for(let i=0;i<3;i++)players.push(await api('POST','/api/v1/auth/guest',{device_id:uuid(),command_id:uuid()}));
 const room=await api('POST','/api/v2/rooms',{release_id:release.release_id},players[0].access_token,{'Idempotency-Key':uuid()});
 const rid=room.room_id;
 for(const p of players.slice(1))await api('POST','/api/v2/rooms/join',{invite_code:room.invite_code},p.access_token,{'Idempotency-Key':uuid()});
@@ -28,7 +28,7 @@ async function command(i,type,body={},fixed) {
 const roles=['guest','doctor','reporter'];
 for(let i=0;i<3;i++){await command(i,'role.select',{role_id:roles[i]});await command(i,'member.ready',{ready:true});}
 const ticket=await api('POST',`/api/v2/rooms/${rid}/socket-ticket`,{},players[0].access_token);
-const ws=new WebSocket(base.replace(/^http/,'ws')+`/socket/websocket?vsn=2.0.0&ticket=${encodeURIComponent(ticket.socket_ticket)}`);
+const ws=new WebSocket(base.replace(/^http/,'ws')+`/api/socket/websocket?vsn=2.0.0&ticket=${encodeURIComponent(ticket.socket_ticket)}`);
 const frames=[];
 ws.addEventListener('message',e=>frames.push(JSON.parse(e.data)));
 await new Promise((resolve,reject)=>{ws.addEventListener('open',resolve,{once:true});ws.addEventListener('error',reject,{once:true});});
