@@ -112,7 +112,7 @@ defmodule Ruxi.SceneVoice.Operations do
               ])
 
             Util.require!(m != nil, "TARGET_UNAVAILABLE")
-            V.retire_for(r, m)
+            if action == "restrict_member", do: V.retire_for(r, m)
 
             DB.query(
               "INSERT INTO c2_voice_participation(room_id,member_id,device_id,control_epoch,restricted) VALUES($1,$2,$3,$4,$5) ON CONFLICT(room_id,member_id) DO UPDATE SET restricted=$5",
@@ -189,10 +189,18 @@ defmodule Ruxi.SceneVoice.Operations do
     Util.require!(o != nil, "TARGET_UNAVAILABLE")
     t = V.pending(r)
 
+    member_pending =
+      DB.one("SELECT id FROM c2_voice_revocations WHERE room_id=$1 AND phase='pending' LIMIT 1", [
+        r["id"]
+      ]) != nil
+
     %{
       "operation_id" => op,
       "status" =>
-        if(t, do: if(t["phase"] == "blocked", do: "failed", else: "running"), else: "succeeded"),
+        if(t,
+          do: if(t["phase"] == "blocked", do: "failed", else: "running"),
+          else: if(member_pending, do: "running", else: "succeeded")
+        ),
       "error_code" => if(t && t["phase"] == "blocked", do: "RETIREMENT_PENDING", else: nil)
     }
   end

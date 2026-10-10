@@ -85,11 +85,49 @@
         "mode": "token_expiry"
       },
       "scope": "two headless Chromium clients, synthetic microphone; no native-device proof"
+    },
+    "targeted-ban-query": {
+      "date": "2026-10-10T03:43:17.771Z",
+      "sdk": "4.69.3",
+      "before": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 5,
+        "lastLevelAt": 1791603790534,
+        "errors": []
+      },
+      "after": {
+        "connected": 1,
+        "disconnected": 0,
+        "levels": 5,
+        "lastLevelAt": 1791603790534,
+        "errors": []
+      },
+      "replay": "USER_FORBIDDEN",
+      "ban": {
+        "result": "accepted"
+      },
+      "scope": "Three headless Chromium clients; target UID removed from GetRoomOnlineUsers, old token USER_FORBIDDEN; peers remain connected. Synthetic microphone, no native hardware proof."
+    },
+    "targeted-backend-integration": {
+      "passed": true,
+      "room_id": "8fb350c5-ffdf-47fc-acb6-9d14d028a3c8",
+      "targeted_ban": true,
+      "persistent_restriction": true,
+      "old_uid_replay": "USER_FORBIDDEN",
+      "unaffected_peers_keep_audio": true,
+      "release_new_uid": true,
+      "relogin_recovery_ms": 8707,
+      "scene_transition_ms": 8786,
+      "scene_old_room_replay": "ROOM_FORBIDDEN",
+      "platform": "Web Chromium synthetic microphone"
     }
   },
   "limitations": [
-    "Ban API acknowledgement is not a media fence.",
-    "Prepared world transition waits for maximum issued token expiry plus 30 seconds.",
+    "Ban API acknowledgement alone is not a media fence; fast fencing requires a 6-second propagation window and a successful complete online-user query.",
+    "Unknown provider results fall back to maximum issued token expiry plus 30 seconds.",
     "Native hardware, Bluetooth and interruptions require separate acceptance."
-  ]
+  ],
+  "ban_query_verified": true,
+  "ban_propagation_margin_ms": 6000
 }

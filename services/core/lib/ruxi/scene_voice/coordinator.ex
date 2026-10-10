@@ -164,7 +164,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
       p && p["restricted"] -> "RESTRICTED"
       r["voice_disabled"] -> "STORY_DISABLED"
       not scene_enabled?(r, m) -> "STORY_DISABLED"
-      pending(r) -> "RETIRING"
+      pending(r) || member_pending?(r, m) -> "RETIRING"
       not gateway().configured?() -> "RTC_NOT_CONFIGURED"
       Ruxi.SceneVoice.Budget.exhausted?() && lease(r, m) == nil -> "BUDGET_EXHAUSTED"
       not gateway().ready?() -> "FENCE_NOT_VERIFIED"
@@ -298,8 +298,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
       [r["id"], m["id"], body["enabled"], rev, m["device_id"], m["control_epoch"]]
     )
 
-    # Adding a third participant retires the old physical generation too.
-    if body["enabled"] && not authorized?(old, m), do: retire_for(r, m)
+    # New consent is admitted to the existing scene; revoked UIDs are never reused.
     receipt(p, rev, nil)
   end
 
@@ -321,8 +320,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
     Util.require!(channel != nil || length(peers) >= 2, "NOT_READY")
 
     if channel && channel["roster"] != roster do
-      retire_channels(r, [channel], nil)
-      Util.fail("NOT_READY")
+      DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [channel["id"], roster])
     end
 
     channel = channel || create_channel(r, scene, roster)
@@ -434,14 +432,14 @@ defmodule Ruxi.SceneVoice.Coordinator do
 
     prior =
       DB.one(
-        "SELECT rtc_uid FROM c2_voice_leases WHERE channel_id=$1 AND member_id=$2 ORDER BY created_at DESC LIMIT 1",
+        "SELECT rtc_uid FROM c2_voice_leases WHERE channel_id=$1 AND member_id=$2 AND state IN ('issued','connected','detached') ORDER BY created_at DESC LIMIT 1",
         [c["id"], m["id"]]
       )
 
     uid =
       if prior,
         do: prior["rtc_uid"],
-        else: Util.hash(DB.str(c["id"]) <> ":" <> DB.str(m["id"])) |> String.slice(0, 32)
+        else: Util.id() |> String.replace("-", "")
 
     l =
       DB.one(
@@ -505,14 +503,79 @@ defmodule Ruxi.SceneVoice.Coordinator do
     grant(r, l, l, expiry)
   end
 
+  def member_pending?(r, m),
+    do:
+      DB.one(
+        "SELECT id FROM c2_voice_revocations WHERE room_id=$1 AND member_id=$2 AND phase='pending' LIMIT 1",
+        [r["id"], m["id"]]
+      ) != nil
+
+  # Persist revocation of every still-valid UID, including detached old pages.
+  # This does not retire the shared scene channel or pause other players.
   def retire_for(r, m) do
-    channels =
+    DB.query(
+      """
+      INSERT INTO c2_voice_revocations(id,room_id,member_id,channel_id,rtc_uid,token_expires_at,created_at)
+      SELECT gen_random_uuid(),room_id,member_id,channel_id,rtc_uid,max(token_expires_at),$3
+      FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND token_expires_at+30000>$3
+        AND state NOT IN ('closed','revoked') GROUP BY room_id,member_id,channel_id,rtc_uid
+      ON CONFLICT(channel_id,rtc_uid) DO UPDATE SET token_expires_at=greatest(c2_voice_revocations.token_expires_at,excluded.token_expires_at)
+      """,
+      [r["id"], m["id"], DB.time()]
+    )
+
+    detach_member(r, m)
+
+    DB.query(
+      "UPDATE c2_voice_leases SET state='revoked' WHERE room_id=$1 AND member_id=$2 AND state NOT IN ('closed','revoked')",
+      [r["id"], m["id"]]
+    )
+
+    bump(r)
+  end
+
+  def recover_members(id) do
+    jobs =
       DB.rows(
-        "SELECT c.* FROM c2_voice_channels c WHERE c.room_id=$1 AND c.status='active' AND c.scene_id=$2",
-        [r["id"], Communication.actor(r, m)["location"] || ""]
+        "SELECT v.*, c.rtc_room_id FROM c2_voice_revocations v JOIN c2_voice_channels c ON c.id=v.channel_id WHERE v.room_id=$1 AND v.phase='pending'",
+        [DB.uuid(id)]
       )
 
-    retire_channels(r, channels, nil)
+    for job <- jobs do
+      Code.ensure_loaded!(gateway())
+
+      expired =
+        function_exported?(gateway(), :expiry_fenced?, 1) &&
+          gateway().expiry_fenced?(%{"max_token_expires_at" => job["token_expires_at"]})
+
+      result =
+        cond do
+          expired ->
+            :fenced
+
+          function_exported?(gateway(), :revoke, 3) ->
+            gateway().revoke(job["rtc_room_id"], job["rtc_uid"], job["accepted_at"])
+
+          true ->
+            :unknown
+        end
+
+      case result do
+        :fenced ->
+          DB.query("UPDATE c2_voice_revocations SET phase='fenced' WHERE id=$1", [job["id"]])
+
+        :accepted ->
+          DB.query(
+            "UPDATE c2_voice_revocations SET accepted_at=coalesce(accepted_at,$2) WHERE id=$1",
+            [job["id"], DB.time()]
+          )
+
+        _ ->
+          :ok
+      end
+    end
+
+    if jobs != [], do: notify(id)
   end
 
   def before_commit(r, next, epoch, now) do
@@ -596,8 +659,8 @@ defmodule Ruxi.SceneVoice.Coordinator do
         roster = Enum.map(opted, &DB.str(&1["id"])) |> Enum.sort()
 
         # Expiring a presence lease must not revoke unchanged scene permission
-        # for every peer. Tokens remain bounded and all real permission changes
-        # still fence the entire physical generation before world commit.
+        # for every peer. Member revocations fence their UIDs; scene changes
+        # fence the physical generation before world commit.
         for m <- peers do
           l =
             DB.one(
@@ -608,9 +671,12 @@ defmodule Ruxi.SceneVoice.Coordinator do
           if l, do: detach_member(r, m)
         end
 
-        if budget_due || r["status"] != "active" || length(roster) < 2 || roster != c["roster"] do
+        if budget_due || r["status"] != "active" do
           retire_channels(r, [c], nil)
         else
+          if roster != c["roster"],
+            do: DB.query("UPDATE c2_voice_channels SET roster=$2 WHERE id=$1", [c["id"], roster])
+
           Code.ensure_loaded!(gateway())
 
           occupied =
@@ -631,23 +697,37 @@ defmodule Ruxi.SceneVoice.Coordinator do
   end
 
   def recover(id) do
+    recover_members(id)
     r = DB.one("SELECT * FROM c2_rooms WHERE id=$1", [DB.uuid(id)])
     t = if r, do: pending(r), else: nil
 
-    if t && (t["attempts"] == 0 || t["updated_at"] <= DB.time() - 5000) do
+    if t && (t["attempts"] == 0 || t["updated_at"] <= DB.time() - 1000) do
       cs = DB.rows("SELECT * FROM c2_voice_channels WHERE id=ANY($1)", [t["channel_ids"]])
 
       fenced =
-        Enum.all?(cs, fn channel ->
+        Enum.map(cs, fn channel ->
           Code.ensure_loaded!(gateway())
 
           if function_exported?(gateway(), :expiry_fenced?, 1) &&
                gateway().expiry_fenced?(channel) do
             true
           else
-            gateway().retire(channel["rtc_room_id"]) == :fenced
+            result =
+              if function_exported?(gateway(), :revoke, 3),
+                do: gateway().revoke(channel["rtc_room_id"], nil, channel["ban_accepted_at"]),
+                else: gateway().retire(channel["rtc_room_id"])
+
+            if result == :accepted,
+              do:
+                DB.query(
+                  "UPDATE c2_voice_channels SET ban_accepted_at=coalesce(ban_accepted_at,$2) WHERE id=$1",
+                  [channel["id"], DB.time()]
+                )
+
+            result == :fenced
           end
         end)
+        |> Enum.all?()
 
       DB.transaction(fn ->
         fresh = DB.one("SELECT * FROM c2_rooms WHERE id=$1 FOR UPDATE", [r["id"]])

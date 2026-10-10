@@ -6,7 +6,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
 
   def init(state) do
     if Application.get_env(:ruxi, :voice_maintenance, true),
-      do: Process.send_after(self(), :scan, 5000)
+      do: Process.send_after(self(), :scan, 1000)
 
     {:ok, state}
   end
@@ -20,7 +20,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
              ] do
             rooms =
               DB.rows(
-                "SELECT DISTINCT t.room_id FROM c2_voice_transitions t JOIN c2_rooms r ON r.id=t.room_id WHERE t.phase IN ('retiring','blocked') AND (r.owner_id=$1 OR r.lease_until IS NULL OR r.lease_until<$2) LIMIT 32",
+                "SELECT DISTINCT room_id FROM (SELECT t.room_id FROM c2_voice_transitions t JOIN c2_rooms r ON r.id=t.room_id WHERE t.phase IN ('retiring','blocked') AND (r.owner_id=$1 OR r.lease_until IS NULL OR r.lease_until<$2) UNION SELECT room_id FROM c2_voice_revocations WHERE phase='pending') jobs LIMIT 32",
                 [Application.get_env(:ruxi, :core_instance, "local-core"), DB.time()]
               )
 
@@ -55,7 +55,7 @@ defmodule Ruxi.SceneVoice.Maintenance do
           running
       end
 
-    Process.send_after(self(), :scan, 5000)
+    Process.send_after(self(), :scan, 1000)
     {:noreply, next}
   end
 

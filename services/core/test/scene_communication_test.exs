@@ -6,6 +6,7 @@ defmodule Ruxi.TestRtcGateway do
   def token(room, uid, expires),
     do: "test:" <> room <> ":" <> uid <> ":" <> Integer.to_string(expires)
 
+  def revoke(_, _, _), do: Process.get(:rtc_fence_result, :fenced)
   def retire(_), do: Process.get(:rtc_fence_result, :fenced)
   def expiry_fenced?(_), do: Process.get(:rtc_expiry_fenced, false)
 end
@@ -336,7 +337,11 @@ defmodule Ruxi.SceneCommunicationTest do
     assert Voice.pending(r) == nil
     # Actual opt-out still invalidates every previously issued credential.
     {_p, {:ok, _}} = request(s, b, "participation", %{"enabled" => false})
-    assert Voice.pending(r) != nil
+    assert Voice.pending(r) == nil
+    {_, bm} = Communication.context!(b, s.id)
+    assert Voice.member_pending?(r, bm)
+    Voice.recover(s.id)
+    refute Voice.member_pending?(r, bm)
     assert g["generation"] == other["generation"]
   end
 
@@ -392,7 +397,10 @@ defmodule Ruxi.SceneCommunicationTest do
     Voice.socket_disconnected(Map.merge(ctx, %{room: s.id, member: DB.str(m["id"])}), reference)
     assert Voice.pending(r) == nil
     assert Auth.logout(ctx)["revoked"]
-    assert Voice.pending(r) != nil
+    assert Voice.pending(r) == nil
+    assert Voice.member_pending?(r, m)
+    Voice.recover(s.id)
+    refute Voice.member_pending?(r, m)
 
     refute DB.one(
              "SELECT enabled FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2",
@@ -405,5 +413,74 @@ defmodule Ruxi.SceneCommunicationTest do
     assert Auth.logout(Enum.at(s.people, 2))["revoked"]
     r = elem(Communication.context!(hd(s.people), s.id), 0)
     assert Voice.pending(r) == nil
+  end
+
+  test "room restriction targets one UID, survives reconnect, and release issues a new UID", s do
+    [a, b | _] = s.people
+    first = join_pair(s)
+    {_p, {:ok, other}} = request(s, b, "grant", %{})
+    request(s, b, "client_state", %{"lease_id" => other["lease_id"], "status" => "connected"})
+    {r, m} = Communication.context!(a, s.id)
+    DB.query("INSERT INTO admin_roles(user_id,role) VALUES($1,'publisher')", [DB.uuid(b.user)])
+
+    restrict = %{
+      "request_id" => Util.id(),
+      "action" => "restrict_member",
+      "reason" => "test",
+      "body" => %{"member_id" => DB.str(m["id"])}
+    }
+
+    assert {:ok, op} = Ruxi.SceneVoice.Operations.request(b, s.id, restrict)
+    assert Voice.pending(r) == nil
+    assert Communication.voice(a, s.id)["reason"] == "RESTRICTED"
+    assert Communication.voice(b, s.id)["status"] == "connected"
+
+    assert {_, {:error, "LEASE_REVOKED"}} =
+             request(s, a, "renew", %{"lease_id" => first["lease_id"]})
+
+    Process.put(:rtc_fence_result, :unknown)
+    Voice.recover(s.id)
+    assert Voice.member_pending?(r, m)
+
+    assert Ruxi.SceneVoice.Operations.operation(b, s.id, op["operation_id"])["status"] ==
+             "running"
+
+    Voice.socket_connected(Map.merge(a, %{room: s.id, member: DB.str(m["id"])}), Util.id())
+    assert Communication.voice(a, s.id)["reason"] == "RESTRICTED"
+    Process.put(:rtc_fence_result, :fenced)
+    Voice.recover(s.id)
+    refute Voice.member_pending?(r, m)
+
+    assert Ruxi.SceneVoice.Operations.operation(b, s.id, op["operation_id"])["status"] ==
+             "succeeded"
+
+    assert Communication.voice(a, s.id)["reason"] == "RESTRICTED"
+    release = %{restrict | "request_id" => Util.id(), "action" => "release_member"}
+    assert {:ok, _} = Ruxi.SceneVoice.Operations.request(b, s.id, release)
+    {_p, {:ok, restored}} = request(s, a, "grant", %{})
+    assert restored["rtc_room_id"] == first["rtc_room_id"]
+    assert restored["generation"] == first["generation"]
+    refute restored["rtc_uid"] == first["rtc_uid"]
+    assert Communication.voice(b, s.id)["status"] == "connected"
+  end
+
+  test "unknown targeted revocation blocks only that member until verified expiry", s do
+    first = join_pair(s)
+    [a, b | _] = s.people
+    {_p, {:ok, other}} = request(s, b, "grant", %{})
+    request(s, b, "client_state", %{"lease_id" => other["lease_id"], "status" => "connected"})
+    {r, m} = Communication.context!(a, s.id)
+    DB.transaction(fn -> Voice.retire_for(r, m) end)
+    Process.put(:rtc_fence_result, :unknown)
+    Voice.recover(s.id)
+    assert Communication.voice(a, s.id)["reason"] == "RETIRING"
+    assert Communication.voice(b, s.id)["status"] == "connected"
+    assert Voice.pending(r) == nil
+    Process.put(:rtc_expiry_fenced, true)
+    Voice.recover(s.id)
+    refute Voice.member_pending?(r, m)
+    {_p, {:ok, restored}} = request(s, a, "grant", %{})
+    assert restored["rtc_room_id"] == first["rtc_room_id"]
+    refute restored["rtc_uid"] == first["rtc_uid"]
   end
 end

@@ -1,5 +1,5 @@
 defmodule Ruxi.SceneVoice.VolcRtcGateway do
-  @moduledoc "Formal room/UID-bound Volcengine v001 tokens and signed whole-room retirement."
+  @moduledoc "Room/UID-bound tokens with provider-confirmed room and member revocation."
   alias Ruxi.Util
 
   def configured?,
@@ -25,8 +25,7 @@ defmodule Ruxi.SceneVoice.VolcRtcGateway do
     end
   end
 
-  # Only the independently verified forced-expiry fallback is available. A Ban
-  # acknowledgement on its own never commits a scene transition.
+  # Forced expiry remains the fallback when provider revocation cannot be confirmed.
   def expiry_fenced?(channel),
     do: ready?() && Util.now() >= channel["max_token_expires_at"] + 30_000
 
@@ -59,62 +58,134 @@ defmodule Ruxi.SceneVoice.VolcRtcGateway do
 
   defp pack(bytes), do: <<byte_size(bytes)::little-16>> <> bytes
 
-  def retire(room) do
-    if ready?() do
-      Ruxi.Limiter.check!(:volc_ban, 20, 20)
-      body = Jason.encode!(%{"AppId" => app_id(), "RoomId" => room, "ForbiddenInterval" => 180})
-      now = DateTime.utc_now() |> Calendar.strftime("%Y%m%dT%H%M%SZ")
+  # Require a successful timed ban, a propagation window, and authoritative
+  # absence. API acknowledgement alone never fences existing media.
+  def revoke(room, uid, nil), do: ban(room, uid)
 
-      {url, headers} =
-        signed_request(
-          body,
-          now,
-          System.fetch_env!("VOLC_ACCESS_KEY_ID"),
-          System.fetch_env!("VOLC_SECRET_ACCESS_KEY")
-        )
+  def revoke(room, uid, accepted_at) do
+    with true <- ready?(),
+         {:ok, bytes} <- File.read(Application.app_dir(:ruxi, "priv/voice/rtc-evidence.json")),
+         {:ok, %{"ban_query_verified" => true}} <- Jason.decode(bytes),
+         true <- Util.now() >= accepted_at + 6000,
+         {:ok, users} <- online(room) do
+      if (uid == nil && users == []) || (uid != nil && uid not in users),
+        do: :fenced,
+        else: :unknown
+    else
+      _ -> :unknown
+    end
+  end
 
-      req =
-        {String.to_charlist(url),
-         Enum.map(headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end),
-         ~c"application/json", body}
+  def retire(room), do: ban(room, nil)
+  def retire_member(room, uid), do: ban(room, uid)
 
-      case :httpc.request(
-             :post,
-             req,
-             [
-               timeout: 6000,
-               connect_timeout: 3000,
-               ssl: [
-                 verify: :verify_peer,
-                 customize_hostname_check: [
-                   match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-                 ],
-                 cacerts: :public_key.cacerts_get()
-               ]
-             ],
-             body_format: :binary
-           ) do
-        {:ok, {{_, 200, _}, _, response}} ->
-          case Jason.decode(response) do
-            {:ok, %{"ResponseMetadata" => metadata, "Result" => %{"Message" => "success"}}}
-            when not is_map_key(metadata, "Error") ->
-              :accepted
+  defp ban(room, uid) do
+    body = %{"AppId" => app_id(), "RoomId" => room, "ForbiddenInterval" => 600}
+    body = if uid, do: Map.put(body, "UserId", uid), else: body
 
-            _ ->
-              :unknown
-          end
+    with true <- ready?(),
+         {:ok, %{"Message" => "success"}} <- api(:post, "BanRoomUser", body) do
+      :accepted
+    else
+      _ -> :unknown
+    end
+  end
+
+  def online(room) do
+    with {:ok, result} <-
+           api(:get, "GetRoomOnlineUsers", %{"AppId" => app_id(), "RoomId" => room}) do
+      case result do
+        %{"RoomExists" => false} ->
+          {:ok, []}
+
+        %{"RoomExists" => true, "TotalUser" => total} when is_integer(total) ->
+          users = (result["VisibleUserList"] || []) ++ (result["InvisibleUserList"] || [])
+          if length(users) == total, do: {:ok, users}, else: :unknown
 
         _ ->
           :unknown
       end
     else
-      :unknown
+      _ -> :unknown
     end
   end
 
-  def signed_request(body, now, access, secret) do
+  def api(method, action, params) do
+    Ruxi.Limiter.check!(:volc_ban, 20, 20)
+    body = if method == :post, do: Jason.encode!(params), else: ""
+    query_params = if method == :get, do: params, else: %{}
+    now = DateTime.utc_now() |> Calendar.strftime("%Y%m%dT%H%M%SZ")
+
+    {url, headers} =
+      signed_request(
+        body,
+        now,
+        System.fetch_env!("VOLC_ACCESS_KEY_ID"),
+        System.fetch_env!("VOLC_SECRET_ACCESS_KEY"),
+        method,
+        action,
+        query_params
+      )
+
+    base =
+      {String.to_charlist(url),
+       Enum.map(headers, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)}
+
+    req =
+      if method == :get,
+        do: base,
+        else: {elem(base, 0), elem(base, 1), ~c"application/json", body}
+
+    case :httpc.request(
+           method,
+           req,
+           [
+             timeout: 6000,
+             connect_timeout: 3000,
+             ssl: [
+               verify: :verify_peer,
+               customize_hostname_check: [
+                 match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+               ],
+               cacerts: :public_key.cacerts_get()
+             ]
+           ],
+           body_format: :binary
+         ) do
+      {:ok, {{_, 200, _}, _, response}} ->
+        case Jason.decode(response) do
+          {:ok, %{"ResponseMetadata" => metadata, "Result" => result}}
+          when not is_map_key(metadata, "Error") ->
+            {:ok, result}
+
+          _ ->
+            :unknown
+        end
+
+      _ ->
+        :unknown
+    end
+  end
+
+  def signed_request(
+        body,
+        now,
+        access,
+        secret,
+        method \\ :post,
+        action \\ "BanRoomUser",
+        params \\ %{}
+      ) do
     host = "rtc.volcengineapi.com"
-    query = "Action=BanRoomUser&Version=2023-11-01"
+
+    query =
+      params
+      |> Map.merge(%{"Action" => action, "Version" => "2023-11-01"})
+      |> Enum.sort()
+      |> Enum.map_join("&", fn {k, v} ->
+        URI.encode_www_form(k) <> "=" <> URI.encode_www_form(v)
+      end)
+
     hash = Util.hash(body)
 
     headers = [
@@ -126,7 +197,11 @@ defmodule Ruxi.SceneVoice.VolcRtcGateway do
 
     names = Enum.map_join(headers, ";", &elem(&1, 0))
     canon = Enum.map_join(headers, "", fn {k, v} -> k <> ":" <> v <> "\n" end)
-    canonical = "POST\n/\n" <> query <> "\n" <> canon <> "\n" <> names <> "\n" <> hash
+
+    canonical =
+      String.upcase(to_string(method)) <>
+        "\n/\n" <> query <> "\n" <> canon <> "\n" <> names <> "\n" <> hash
+
     date = String.slice(now, 0, 8)
     scope = date <> "/cn-north-1/rtc/request"
 

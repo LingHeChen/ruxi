@@ -330,7 +330,7 @@ class _PanelState extends State<SceneCommunicationPanel> {
       'FENCE_NOT_VERIFIED': '语音隔离验证尚未完成，暂不开放连接。',
       'RESTRICTED': '你在这个房间的语音已被限制。',
       'SUSPENDED': '游戏已暂停，语音同步暂停。',
-      'RETIRING': '场景或语音权限发生变化，正在完成隔离（最长约 150 秒）。完成后自动恢复收听；麦克风保持关闭。',
+      'RETIRING': '正在切换语音连接，通常几秒内恢复收听；麦克风保持关闭。服务暂时不可用时，隔离确认可能需要更久。',
     }[reason];
     final on = state?['participation'] == 'on';
     return ListView(

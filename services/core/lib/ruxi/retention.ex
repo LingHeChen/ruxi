@@ -101,9 +101,15 @@ defmodule Ruxi.Retention do
         DB.query("DELETE FROM c2_voice_usage WHERE left_at<=$1", [now - 30 * @day])
 
         DB.query(
-          "DELETE FROM c2_voice_leases WHERE state IN ('closed','expired','detached') AND created_at<=$1",
+          "DELETE FROM c2_voice_leases WHERE state IN ('closed','expired','detached','revoked') AND created_at<=$1",
           [now - 30 * @day]
         )
+
+        if DB.one("SELECT to_regclass('ruxi.c2_voice_revocations') IS NOT NULL AS ready")["ready"] do
+          DB.query("DELETE FROM c2_voice_revocations WHERE phase='fenced' AND created_at<=$1", [
+            now - 30 * @day
+          ])
+        end
 
         DB.query("DELETE FROM c2_voice_daily_usage WHERE day<(CURRENT_DATE-180)")
       end
