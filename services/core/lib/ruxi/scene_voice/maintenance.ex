@@ -4,6 +4,18 @@ defmodule Ruxi.SceneVoice.Maintenance do
   alias Ruxi.SceneVoice.Coordinator
   def start_link(_), do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
 
+  # Best-effort low-latency wake; periodic scans remain the durable fallback.
+  def wake do
+    if Application.get_env(:ruxi, :voice_maintenance, true) do
+      if pid = Process.whereis(__MODULE__) do
+        Process.send_after(pid, :wake, 25)
+        Process.send_after(pid, :wake, 125)
+      end
+    end
+
+    :ok
+  end
+
   def init(state) do
     if Application.get_env(:ruxi, :voice_maintenance, true),
       do: Process.send_after(self(), :scan, 1000)
@@ -12,6 +24,11 @@ defmodule Ruxi.SceneVoice.Maintenance do
   end
 
   def handle_info(:scan, running) do
+    Process.send_after(self(), :scan, 1000)
+    handle_info(:wake, running)
+  end
+
+  def handle_info(:wake, running) do
     next =
       try do
         Repo.checkout(fn ->
@@ -55,7 +72,6 @@ defmodule Ruxi.SceneVoice.Maintenance do
           running
       end
 
-    Process.send_after(self(), :scan, 1000)
     {:noreply, next}
   end
 

@@ -12,6 +12,7 @@ import 'package:ruxi/ui/scene_communication_panel.dart';
 class FakeIdentity extends RoomClient {
   final sent = <Json>[];
   final voiceRequests = <Json>[];
+  Completer<Json>? voiceGate;
   Json voice = {
     'voice_seq': 1,
     'voice_revision': 1,
@@ -35,7 +36,11 @@ class FakeIdentity extends RoomClient {
         'scopes': ['global', 'scene', 'faction'],
       };
     }
-    if (path.endsWith('/voice')) return voice;
+    if (path.endsWith('/voice')) {
+      final gate = voiceGate;
+      voiceGate = null;
+      return gate == null ? voice : await gate.future;
+    }
     if (path.endsWith('/messages')) {
       sent.add(body!);
       return {'message_id': 'one'};
@@ -113,6 +118,27 @@ void main() {
     };
     return (SceneCommunication(c2, rtc: rtc), c2, id, rtc);
   }
+
+  testWidgets(
+    'voice update during an in-flight refresh is applied immediately',
+    (tester) async {
+      final (c, client, id, _) = fixture();
+      final gate = Completer<Json>();
+      id.voiceGate = gate;
+      final first = c.refresh();
+      await tester.pump();
+      id.voice = {...id.voice, 'voice_seq': 2};
+      await c.refresh();
+      gate.complete({...id.voice, 'voice_seq': 1});
+      await first;
+      await tester.pump();
+      expect(c.voice?['voice_seq'], 2);
+      c.dispose();
+      client.dispose();
+      id.dispose();
+      await tester.pump();
+    },
+  );
 
   testWidgets(
     'text scopes remain separate and sending does not create a game intent',

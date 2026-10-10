@@ -58,15 +58,26 @@ defmodule Ruxi.SceneVoice.VolcRtcGateway do
 
   defp pack(bytes), do: <<byte_size(bytes)::little-16>> <> bytes
 
-  # Require a successful timed ban, a propagation window, and authoritative
+  # Require a successful timed ban and authoritative
   # absence. API acknowledgement alone never fences existing media.
-  def revoke(room, uid, nil), do: ban(room, uid)
+  def revoke(room, uid, nil) do
+    case ban(room, uid) do
+      :accepted ->
+        # Query immediately; presence is the completion signal, not a timer.
+        case revoke(room, uid, Util.now()) do
+          :fenced -> :fenced
+          _ -> :accepted
+        end
 
-  def revoke(room, uid, accepted_at) do
+      other ->
+        other
+    end
+  end
+
+  def revoke(room, uid, _accepted_at) do
     with true <- ready?(),
          {:ok, bytes} <- File.read(Application.app_dir(:ruxi, "priv/voice/rtc-evidence.json")),
          {:ok, %{"ban_query_verified" => true}} <- Jason.decode(bytes),
-         true <- Util.now() >= accepted_at + 6000,
          {:ok, users} <- online(room) do
       if (uid == nil && users == []) || (uid != nil && uid not in users),
         do: :fenced,

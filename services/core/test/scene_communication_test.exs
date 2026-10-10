@@ -215,12 +215,12 @@ defmodule Ruxi.SceneCommunicationTest do
     assert {_, {:error, "LEASE_REVOKED"}} = request(s, a, "renew", %{"lease_id" => g["lease_id"]})
   end
 
-  test "unknown media fence freezes a durable deterministic world plan; verified fence resumes once",
+  test "room suspension still waits for a confirmed whole-room fence",
        s do
     _ = join_pair(s)
     a = hd(s.people)
-    {r, m} = Communication.context!(a, s.id)
-    next = put_in(r["state"], ["actors", m["role_id"], "location"], "new_scene")
+    {r, _m} = Communication.context!(a, s.id)
+    next = Engine.suspend(r["state"], DB.time())
     assert {:ok, :deferred} = DB.transaction(fn -> Voice.before_commit(r, next, 0, DB.time()) end)
     assert elem(Communication.context!(a, s.id), 0)["state"] == r["state"]
     Process.put(:rtc_fence_result, :unknown)
@@ -233,7 +233,7 @@ defmodule Ruxi.SceneCommunicationTest do
     Voice.recover(s.id)
     Store.tick(s.id)
     fresh = elem(Communication.context!(a, s.id), 0)
-    assert get_in(fresh, ["state", "actors", m["role_id"], "location"]) == "new_scene"
+    assert fresh["state"]["status"] == "suspended"
     assert Voice.pending(fresh) == nil
 
     assert DB.one(
@@ -345,7 +345,7 @@ defmodule Ruxi.SceneCommunicationTest do
     assert g["generation"] == other["generation"]
   end
 
-  test "expired presence only detaches its member; detached credentials still fence scene moves",
+  test "expired presence only detaches its member; scene movement revokes only the moving member",
        s do
     g = join_pair(s)
     [a, b | _] = s.people
@@ -360,8 +360,10 @@ defmodule Ruxi.SceneCommunicationTest do
     assert Voice.pending(r) == nil
     assert Communication.voice(b, s.id)["status"] == "connected"
     next = put_in(r["state"], ["actors", am["role_id"], "location"], "new_scene")
-    assert {:ok, :deferred} = DB.transaction(fn -> Voice.before_commit(r, next, 0, DB.time()) end)
-    assert Voice.pending(r) != nil
+    assert {:ok, :ready} = DB.transaction(fn -> Voice.before_commit(r, next, 0, DB.time()) end)
+    assert Voice.pending(r) == nil
+    assert Voice.member_pending?(r, am)
+    assert Communication.voice(b, s.id)["status"] == "connected"
     assert elem(Communication.context!(a, s.id), 0)["state"] == r["state"]
   end
 

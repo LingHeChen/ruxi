@@ -38,7 +38,8 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
       connected = false,
       foreground = true,
       _disposed = false,
-      _refreshing = false;
+      _refreshing = false,
+      _refreshAgain = false;
   int localGeneration = 0, unread = 0;
   int _micAttempt = 0;
   bool sceneConsent = false;
@@ -104,7 +105,11 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> refresh() async {
-    if (_disposed || room == null || _refreshing) return;
+    if (_disposed || room == null) return;
+    if (_refreshing) {
+      _refreshAgain = true;
+      return;
+    }
     _refreshing = true;
     try {
       final history = await api('GET', '/chat');
@@ -149,6 +154,10 @@ class SceneCommunication extends ChangeNotifier with WidgetsBindingObserver {
       if (grant != null) await stop();
     } finally {
       _refreshing = false;
+      if (_refreshAgain && !_disposed) {
+        _refreshAgain = false;
+        unawaited(refresh());
+      }
     }
   }
 

@@ -513,16 +513,17 @@ defmodule Ruxi.SceneVoice.Coordinator do
   # Persist revocation of every still-valid UID, including detached old pages.
   # This does not retire the shared scene channel or pause other players.
   def retire_for(r, m) do
-    DB.query(
-      """
-      INSERT INTO c2_voice_revocations(id,room_id,member_id,channel_id,rtc_uid,token_expires_at,created_at)
-      SELECT gen_random_uuid(),room_id,member_id,channel_id,rtc_uid,max(token_expires_at),$3
-      FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND token_expires_at+30000>$3
-        AND state NOT IN ('closed','revoked') GROUP BY room_id,member_id,channel_id,rtc_uid
-      ON CONFLICT(channel_id,rtc_uid) DO UPDATE SET token_expires_at=greatest(c2_voice_revocations.token_expires_at,excluded.token_expires_at)
-      """,
-      [r["id"], m["id"], DB.time()]
-    )
+    jobs =
+      DB.query(
+        """
+        INSERT INTO c2_voice_revocations(id,room_id,member_id,channel_id,rtc_uid,token_expires_at,created_at)
+        SELECT gen_random_uuid(),room_id,member_id,channel_id,rtc_uid,max(token_expires_at),$3
+        FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND token_expires_at+30000>$3
+          AND state NOT IN ('closed','revoked') GROUP BY room_id,member_id,channel_id,rtc_uid
+        ON CONFLICT(channel_id,rtc_uid) DO UPDATE SET token_expires_at=greatest(c2_voice_revocations.token_expires_at,excluded.token_expires_at)
+        """,
+        [r["id"], m["id"], DB.time()]
+      )
 
     detach_member(r, m)
 
@@ -532,6 +533,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
     )
 
     bump(r)
+    if jobs.num_rows > 0, do: Ruxi.SceneVoice.Maintenance.wake()
   end
 
   def recover_members(id) do
@@ -582,25 +584,26 @@ defmodule Ruxi.SceneVoice.Coordinator do
     channels =
       DB.rows("SELECT * FROM c2_voice_channels WHERE room_id=$1 AND status='active'", [r["id"]])
 
-    changed =
-      Enum.filter(channels, fn c ->
-        next["status"] != "active" ||
-          Enum.any?(Communication.members(r), fn m ->
-            a = Communication.actor(r, m)
-            b = get_in(next, ["actors", m["role_id"]]) || %{}
+    if next["status"] != "active" do
+      if channels == [],
+        do: :ready,
+        else:
+          (
+            retire_channels(r, channels, %{"state" => next, "epoch" => epoch, "at" => now})
+            :deferred
+          )
+    else
+      # Scene movement is a member handoff, not destruction of a shared room.
+      # Commit gameplay immediately. Only the moving member's next RTC grant
+      # waits for provider-confirmed revocation of its old UID.
+      for m <- Communication.members(r) do
+        old = Communication.actor(r, m)["location"]
+        new = get_in(next, ["actors", m["role_id"], "location"])
+        if old != new, do: retire_for(r, m)
+      end
 
-            a["location"] != b["location"] &&
-              (a["location"] == c["scene_id"] || b["location"] == c["scene_id"])
-          end)
-      end)
-
-    if changed == [],
-      do: :ready,
-      else:
-        (
-          retire_channels(r, changed, %{"state" => next, "epoch" => epoch, "at" => now})
-          :deferred
-        )
+      :ready
+    end
   end
 
   defp retire_channels(_, [], _), do: :ok
