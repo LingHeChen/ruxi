@@ -10,10 +10,9 @@ defmodule Ruxi.SceneVoice.Coordinator do
       {r, m} = Communication.context!(ctx, ctx.room, true)
       old = participation(r, m)
 
-      # A replacement page must not reuse a lease whose old page can still send
-      # a late client_state:left. Retire that generation before restoring it.
-      if old && old["socket_ref"] && old["socket_ref"] != reference && lease(r, m),
-        do: retire_for(r, m)
+      # Page replacement changes presence, not scene authorization. A fresh
+      # lease prevents a delayed old-page left/heartbeat from touching it.
+      if old && old["socket_ref"] != reference, do: detach_member(r, m)
 
       DB.query(
         "INSERT INTO c2_voice_participation(room_id,member_id,device_id,control_epoch,socket_ref) VALUES($1,$2,$3,$4,$5) ON CONFLICT(room_id,member_id) DO UPDATE SET socket_ref=$5",
@@ -35,7 +34,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
       p = if r && m, do: participation(r, m), else: nil
 
       if p && p["socket_ref"] == reference do
-        retire_for(r, m)
+        detach_member(r, m)
 
         DB.query(
           "UPDATE c2_voice_participation SET socket_ref=NULL WHERE room_id=$1 AND member_id=$2",
@@ -45,6 +44,42 @@ defmodule Ruxi.SceneVoice.Coordinator do
         bump(r)
       end
     end)
+  end
+
+  # Explicit logout/revocation changes authorization even if its socket already
+  # disappeared. Ordinary transport loss must never be confused with this.
+  def revoke_identity(user, device \\ nil) do
+    if DB.one("SELECT to_regclass('ruxi.c2_voice_participation') IS NOT NULL AS ready")["ready"] do
+      members =
+        DB.rows(
+          "SELECT m.room_id,m.id FROM c2_room_members m JOIN c2_voice_participation p ON p.room_id=m.room_id AND p.member_id=m.id WHERE m.user_id=$1 AND p.enabled ORDER BY m.room_id",
+          [
+            DB.uuid(user)
+          ]
+        )
+
+      for item <- members do
+        DB.transaction(fn ->
+          r = DB.one("SELECT * FROM c2_rooms WHERE id=$1 FOR UPDATE", [item["room_id"]])
+          m = DB.one("SELECT * FROM c2_room_members WHERE id=$1", [item["id"]])
+
+          if r && m && (device == nil || m["device_id"] == DB.uuid(device)) do
+            retire_for(r, m)
+
+            DB.query(
+              "UPDATE c2_voice_participation SET enabled=false WHERE room_id=$1 AND member_id=$2",
+              [r["id"], m["id"]]
+            )
+
+            bump(r)
+          end
+        end)
+
+        notify(DB.str(item["room_id"]))
+      end
+    end
+
+    :ok
   end
 
   def pending(r),
@@ -61,11 +96,29 @@ defmodule Ruxi.SceneVoice.Coordinator do
         m["id"]
       ])
 
-  defp active?(p, m),
+  defp authorized?(p, m),
     do:
-      (p != nil and p["socket_ref"] != nil and p["enabled"]) && not p["restricted"] &&
-        p["device_id"] == m["device_id"] &&
-        p["control_epoch"] == m["control_epoch"]
+      p != nil && p["enabled"] && not p["restricted"] &&
+        p["device_id"] == m["device_id"] && p["control_epoch"] == m["control_epoch"]
+
+  defp active?(p, m), do: authorized?(p, m) && p["socket_ref"] != nil
+
+  defp roster(r, m),
+    do: Enum.filter(colocated(r, m), &authorized?(participation(r, &1), &1))
+
+  defp detach_member(r, m) do
+    now = DB.time()
+
+    DB.query(
+      "UPDATE c2_voice_usage SET left_at=$3 WHERE left_at IS NULL AND lease_id IN (SELECT id FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND state IN ('issued','connected'))",
+      [r["id"], m["id"], now]
+    )
+
+    DB.query(
+      "UPDATE c2_voice_leases SET state='detached',expires_at=$3 WHERE room_id=$1 AND member_id=$2 AND state IN ('issued','connected')",
+      [r["id"], m["id"], now]
+    )
+  end
 
   defp lease(r, m),
     do:
@@ -137,8 +190,8 @@ defmodule Ruxi.SceneVoice.Coordinator do
         why == "LOBBY" && enabled -> "waiting"
         why -> "unavailable"
         enabled != true -> "off"
-        length(eligible(r, m)) < 2 -> "waiting"
         l && l["channel_status"] == "active" && l["state"] == "connected" -> "connected"
+        length(eligible(r, m)) < 2 -> "waiting"
         true -> "connecting"
       end
 
@@ -237,7 +290,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
   defp execute(r, m, %{"action" => "participation", "body" => body} = p) do
     Util.require!(Map.keys(body) == ["enabled"] && is_boolean(body["enabled"]), "INPUT_INVALID")
     old = participation(r, m)
-    if not body["enabled"] && active?(old, m), do: retire_for(r, m)
+    if not body["enabled"] && authorized?(old, m), do: retire_for(r, m)
     rev = bump(r)
 
     DB.query(
@@ -246,7 +299,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
     )
 
     # Adding a third participant retires the old physical generation too.
-    if body["enabled"] && not active?(old, m), do: retire_for(r, m)
+    if body["enabled"] && not authorized?(old, m), do: retire_for(r, m)
     receipt(p, rev, nil)
   end
 
@@ -255,15 +308,9 @@ defmodule Ruxi.SceneVoice.Coordinator do
     authorize!(r, m)
     Util.require!(not Ruxi.SceneVoice.Budget.exhausted?(), "VOICE_UNAVAILABLE")
 
-    DB.query(
-      "UPDATE c2_voice_leases SET state='expired' WHERE room_id=$1 AND expires_at<=$2 AND state IN ('issued','connected')",
-      [r["id"], DB.time()]
-    )
-
     peers = eligible(r, m)
-    Util.require!(length(peers) >= 2, "NOT_READY")
     scene = Communication.actor(r, m)["location"]
-    roster = Enum.map(peers, &DB.str(&1["id"])) |> Enum.sort()
+    roster = Enum.map(roster(r, m), &DB.str(&1["id"])) |> Enum.sort()
 
     channel =
       DB.one(
@@ -271,13 +318,16 @@ defmodule Ruxi.SceneVoice.Coordinator do
         [r["id"], scene]
       )
 
+    Util.require!(channel != nil || length(peers) >= 2, "NOT_READY")
+
     if channel && channel["roster"] != roster do
       retire_channels(r, [channel], nil)
       Util.fail("NOT_READY")
     end
 
     channel = channel || create_channel(r, scene, roster)
-    l = lease(r, m) || create_lease(r, m, channel)
+    detach_member(r, m)
+    l = create_lease(r, m, channel)
     Util.require!(l["channel_id"] == channel["id"], "LEASE_REVOKED")
     revision = bump(r)
     grant(Map.put(r, "voice_revision", revision), l, channel, l["token_expires_at"])
@@ -296,7 +346,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
     Util.require!(l && DB.str(l["id"]) == body["lease_id"], "LEASE_REVOKED")
 
     if action == "client_state" && body["status"] in ~w(left failed) do
-      retire_for(r, m)
+      detach_member(r, m)
       receipt(p, bump(r), nil)
     else
       authorize!(r, m)
@@ -382,6 +432,17 @@ defmodule Ruxi.SceneVoice.Coordinator do
   defp create_lease(r, m, c) do
     now = DB.time()
 
+    prior =
+      DB.one(
+        "SELECT rtc_uid FROM c2_voice_leases WHERE channel_id=$1 AND member_id=$2 ORDER BY created_at DESC LIMIT 1",
+        [c["id"], m["id"]]
+      )
+
+    uid =
+      if prior,
+        do: prior["rtc_uid"],
+        else: Util.hash(DB.str(c["id"]) <> ":" <> DB.str(m["id"])) |> String.slice(0, 32)
+
     l =
       DB.one(
         "INSERT INTO c2_voice_leases VALUES($1,$2,$3,$4,$5,$6,$7,'issued',$8,$9,$10,$10) RETURNING *",
@@ -392,7 +453,7 @@ defmodule Ruxi.SceneVoice.Coordinator do
           c["id"],
           m["device_id"],
           m["control_epoch"],
-          Util.id(),
+          uid,
           now + 30_000,
           now + 120_000,
           now
@@ -531,22 +592,40 @@ defmodule Ruxi.SceneVoice.Coordinator do
             &(Communication.actor(r, &1)["location"] == c["scene_id"])
           )
 
-        opted =
-          Enum.filter(peers, fn m ->
-            active?(participation(r, m), m) && m["last_seen_at"] > DB.time() - 30_000
-          end)
-
+        opted = Enum.filter(peers, &authorized?(participation(r, &1), &1))
         roster = Enum.map(opted, &DB.str(&1["id"])) |> Enum.sort()
 
-        expired =
-          DB.one(
-            "SELECT count(*) AS n FROM c2_voice_leases WHERE channel_id=$1 AND state IN ('issued','connected') AND expires_at<=$2",
-            [c["id"], DB.time()]
-          )["n"] > 0
+        # Expiring a presence lease must not revoke unchanged scene permission
+        # for every peer. Tokens remain bounded and all real permission changes
+        # still fence the entire physical generation before world commit.
+        for m <- peers do
+          l =
+            DB.one(
+              "SELECT id FROM c2_voice_leases WHERE room_id=$1 AND member_id=$2 AND state IN ('issued','connected') AND expires_at<=$3",
+              [r["id"], m["id"], DB.time()]
+            )
 
-        if budget_due || r["status"] != "active" || length(roster) < 2 || roster != c["roster"] ||
-             expired,
-           do: retire_channels(r, [c], nil)
+          if l, do: detach_member(r, m)
+        end
+
+        if budget_due || r["status"] != "active" || length(roster) < 2 || roster != c["roster"] do
+          retire_channels(r, [c], nil)
+        else
+          Code.ensure_loaded!(gateway())
+
+          occupied =
+            DB.one(
+              "SELECT count(*) AS n FROM c2_voice_leases WHERE channel_id=$1 AND state IN ('issued','connected') AND expires_at>$2",
+              [c["id"], DB.time()]
+            )["n"] > 0
+
+          if not occupied && function_exported?(gateway(), :expiry_fenced?, 1) &&
+               gateway().expiry_fenced?(c) do
+            DB.query("UPDATE c2_voice_channels SET status='closed' WHERE id=$1", [c["id"]])
+            DB.query("UPDATE c2_voice_leases SET state='closed' WHERE channel_id=$1", [c["id"]])
+            bump(r)
+          end
+        end
       end
     end)
   end

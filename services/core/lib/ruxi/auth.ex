@@ -205,6 +205,7 @@ defmodule Ruxi.Auth do
 
   def logout(ctx) do
     DB.query("UPDATE sessions SET revoked=true WHERE id=$1", [DB.uuid(ctx.session)])
+    Ruxi.SceneVoice.Coordinator.revoke_identity(ctx.user, ctx.device)
     RuxiWeb.Endpoint.broadcast("session:#{ctx.session}", "disconnect", %{})
     %{"revoked" => true}
   end
@@ -215,6 +216,8 @@ defmodule Ruxi.Auth do
             DB.uuid(user)
           ]),
         do: RuxiWeb.Endpoint.broadcast("session:#{DB.str(row["id"])}", "disconnect", %{})
+
+    Ruxi.SceneVoice.Coordinator.revoke_identity(user)
   end
 
   def account(ctx, operation, p, fun) do

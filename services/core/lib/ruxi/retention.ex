@@ -101,7 +101,7 @@ defmodule Ruxi.Retention do
         DB.query("DELETE FROM c2_voice_usage WHERE left_at<=$1", [now - 30 * @day])
 
         DB.query(
-          "DELETE FROM c2_voice_leases WHERE state IN ('closed','expired') AND created_at<=$1",
+          "DELETE FROM c2_voice_leases WHERE state IN ('closed','expired','detached') AND created_at<=$1",
           [now - 30 * @day]
         )
 

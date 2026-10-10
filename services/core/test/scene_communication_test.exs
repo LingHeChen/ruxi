@@ -7,6 +7,7 @@ defmodule Ruxi.TestRtcGateway do
     do: "test:" <> room <> ":" <> uid <> ":" <> Integer.to_string(expires)
 
   def retire(_), do: Process.get(:rtc_fence_result, :fenced)
+  def expiry_fenced?(_), do: Process.get(:rtc_expiry_fenced, false)
 end
 
 defmodule Ruxi.SceneCommunicationTest do
@@ -266,7 +267,7 @@ defmodule Ruxi.SceneCommunicationTest do
              )
   end
 
-  test "replacement socket retires old lease and late old disconnect cannot break recovery", s do
+  test "page replacement rotates only its lease and ignores delayed old-page requests", s do
     g = join_pair(s)
     ctx = hd(s.people)
     {r, m} = Communication.context!(ctx, s.id)
@@ -280,7 +281,7 @@ defmodule Ruxi.SceneCommunicationTest do
     connected = Map.merge(ctx, %{room: s.id, member: DB.str(m["id"])})
     fresh = Util.id()
     assert {:ok, _} = Voice.socket_connected(connected, fresh)
-    assert Voice.pending(r) != nil
+    assert Voice.pending(r) == nil
     assert {:ok, _} = Voice.socket_disconnected(connected, old)
 
     assert DB.one(
@@ -288,12 +289,121 @@ defmodule Ruxi.SceneCommunicationTest do
              [r["id"], m["id"]]
            )["socket_ref"] == fresh
 
-    Voice.recover(s.id)
-    Store.tick(s.id)
-    assert Communication.voice(ctx, s.id)["participation"] == "on"
-    assert Communication.voice(ctx, s.id)["reason"] == nil
     {_p, {:ok, restored}} = request(s, ctx, "grant", %{})
-    assert restored["generation"] > g["generation"]
+    assert restored["generation"] == g["generation"]
+    assert restored["rtc_room_id"] == g["rtc_room_id"]
+    assert restored["rtc_uid"] == g["rtc_uid"]
     refute restored["lease_id"] == g["lease_id"]
+
+    assert {_, {:error, "LEASE_REVOKED"}} =
+             request(s, ctx, "client_state", %{"lease_id" => g["lease_id"], "status" => "left"})
+
+    assert {_, {:error, "LEASE_REVOKED"}} =
+             request(s, ctx, "renew", %{"lease_id" => g["lease_id"]})
+
+    assert Voice.pending(r) == nil
+  end
+
+  test "socket loss and local media leave preserve peers and scene permissions", s do
+    g = join_pair(s)
+    [a, b | _] = s.people
+    {r, am} = Communication.context!(a, s.id)
+    {_p, {:ok, other}} = request(s, b, "grant", %{})
+
+    {_p, {:ok, _}} =
+      request(s, b, "client_state", %{"lease_id" => other["lease_id"], "status" => "connected"})
+
+    reference =
+      DB.one("SELECT socket_ref FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2", [
+        r["id"],
+        am["id"]
+      ])["socket_ref"]
+
+    assert {:ok, _} =
+             Voice.socket_disconnected(
+               Map.merge(a, %{room: s.id, member: DB.str(am["id"])}),
+               reference
+             )
+
+    Voice.reconcile(s.id)
+    assert Voice.pending(r) == nil
+    assert Communication.voice(b, s.id)["status"] == "connected"
+
+    {_p, {:ok, _}} =
+      request(s, b, "client_state", %{"lease_id" => other["lease_id"], "status" => "left"})
+
+    Voice.reconcile(s.id)
+    assert Voice.pending(r) == nil
+    # Actual opt-out still invalidates every previously issued credential.
+    {_p, {:ok, _}} = request(s, b, "participation", %{"enabled" => false})
+    assert Voice.pending(r) != nil
+    assert g["generation"] == other["generation"]
+  end
+
+  test "expired presence only detaches its member; detached credentials still fence scene moves",
+       s do
+    g = join_pair(s)
+    [a, b | _] = s.people
+    {_p, {:ok, other}} = request(s, b, "grant", %{})
+
+    {_p, {:ok, _}} =
+      request(s, b, "client_state", %{"lease_id" => other["lease_id"], "status" => "connected"})
+
+    DB.query("UPDATE c2_voice_leases SET expires_at=0 WHERE id=$1", [DB.uuid(g["lease_id"])])
+    Voice.reconcile(s.id)
+    {r, am} = Communication.context!(a, s.id)
+    assert Voice.pending(r) == nil
+    assert Communication.voice(b, s.id)["status"] == "connected"
+    next = put_in(r["state"], ["actors", am["role_id"], "location"], "new_scene")
+    assert {:ok, :deferred} = DB.transaction(fn -> Voice.before_commit(r, next, 0, DB.time()) end)
+    assert Voice.pending(r) != nil
+    assert elem(Communication.context!(a, s.id), 0)["state"] == r["state"]
+  end
+
+  test "empty channels close after verified token expiry without freezing the world", s do
+    g = join_pair(s)
+
+    {_p, {:ok, _}} =
+      request(s, hd(s.people), "client_state", %{"lease_id" => g["lease_id"], "status" => "left"})
+
+    Process.put(:rtc_expiry_fenced, true)
+    Voice.reconcile(s.id)
+    r = elem(Communication.context!(hd(s.people), s.id), 0)
+    assert Voice.pending(r) == nil
+
+    assert DB.one("SELECT status FROM c2_voice_channels WHERE room_id=$1", [r["id"]])["status"] ==
+             "closed"
+
+    {_p, {:ok, restored}} = request(s, hd(s.people), "grant", %{})
+    assert restored["generation"] > g["generation"]
+  end
+
+  test "explicit logout fences voice even after a soft disconnect", s do
+    _ = join_pair(s)
+    ctx = hd(s.people)
+    {r, m} = Communication.context!(ctx, s.id)
+
+    reference =
+      DB.one("SELECT socket_ref FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2", [
+        r["id"],
+        m["id"]
+      ])["socket_ref"]
+
+    Voice.socket_disconnected(Map.merge(ctx, %{room: s.id, member: DB.str(m["id"])}), reference)
+    assert Voice.pending(r) == nil
+    assert Auth.logout(ctx)["revoked"]
+    assert Voice.pending(r) != nil
+
+    refute DB.one(
+             "SELECT enabled FROM c2_voice_participation WHERE room_id=$1 AND member_id=$2",
+             [r["id"], m["id"]]
+           )["enabled"]
+  end
+
+  test "logout of a non-participant does not interrupt other players", s do
+    _ = join_pair(s)
+    assert Auth.logout(Enum.at(s.people, 2))["revoked"]
+    r = elem(Communication.context!(hd(s.people), s.id), 0)
+    assert Voice.pending(r) == nil
   end
 end
